@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#171410" />
+  <meta name="description" content="หนึ่งชีวิตในสำนัก — เกม Idle จำลองชีวิตยุทธภพ" />
+  <title>หนึ่งชีวิตในสำนัก</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@400;500;600;700&family=Sriracha&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=loadout-3" />
+</head>
+<body>
+  <div id="app">
+    <section id="auth-screen" class="screen setup-screen auth-screen">
+      <div class="setup-card panel auth-card">
+        <p class="eyebrow">ยืนยันตัวตน</p>
+        <h2>เข้าสู่หนึ่งชีวิตในสำนัก</h2>
+        <p>ใช้ Gmail เป็นชื่อสำหรับแยกเซฟบนอุปกรณ์นี้ หรือทดลองเล่นแบบ Guest</p>
+        <form id="gmail-login-form" class="auth-form">
+          <label for="gmail-email">Gmail</label>
+          <input id="gmail-email" type="email" autocomplete="email" placeholder="yourname@gmail.com" required />
+          <button type="submit" class="btn btn-primary">ใช้ Gmail เป็นชื่อเซฟ</button>
+        </form>
+        <div class="auth-divider"><span>หรือ</span></div>
+        <button id="guest-login-btn" class="btn btn-secondary">เข้าแบบ Guest (ไม่เซฟ)</button>
+        <small class="auth-note">เวอร์ชันไฟล์ออฟไลน์นี้ใช้ Gmail เป็นชื่อบัญชีสำหรับแยกเซฟบนอุปกรณ์ และไม่ขอรหัสผ่าน</small>
+      </div>
+    </section>
+
+    <section id="mode-screen" class="screen setup-screen mode-screen" hidden>
+      <div class="setup-card panel mode-select-card">
+        <p class="eyebrow">เลือกเส้นทางการเล่น</p>
+        <h2>เริ่มต้นชะตาของเจ้า</h2>
+        <p id="account-status">ยังไม่ได้เข้าสู่ระบบ</p>
+        <div class="mode-grid mode-select-grid">
+          <button id="mode-story-btn" class="mode-card"><span class="mode-kicker">แนะนำสำหรับผู้เล่นใหม่</span><strong>โหมดเนื้อเรื่อง</strong><small>สวมบทหลินอัน ตัดสินใจและติดตามเรื่องราวในหนึ่งชีวิต</small><span class="mode-arrow">เลือกเนื้อเรื่อง →</span></button>
+          <button id="mode-free-btn" class="mode-card"><span class="mode-kicker">จำลองชีวิตในยุทธภพ</span><strong>โหมดอิสระ</strong><small>สร้างตัวละคร เลือกกฎชีวิต และเติบโตในโลกเดียวกับตัวละครเนื้อเรื่อง</small><span class="mode-arrow">สร้างชีวิตของเจ้า →</span></button>
+        </div>
+        <div class="mode-select-actions">
+          <button id="mode-continue-btn" class="btn btn-secondary" hidden>เล่นต่อจากเซฟ</button>
+          <button id="mode-logout-btn" class="text-btn">กลับไปเลือกบัญชี</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="title-screen" class="screen title-screen" hidden>
+      <div class="mountain-layer mountain-back"></div>
+      <div class="mountain-layer mountain-front"></div>
+      <div class="title-card">
+        <p class="eyebrow">บันทึกชะตายุทธภพ · ต้นแบบบทที่หนึ่ง</p>
+        <div class="seal" aria-hidden="true">一<br>生</div>
+        <h1>หนึ่งชีวิต<br><span>ในสำนัก</span></h1>
+        <p class="prologue">จากเด็กห้าขวบในคืนตระกูลล่ม<br>สู่สิบสองปีแห่งการหนีตาย เติบโต และทวงคืนความจริง</p>
+        <div class="title-actions">
+          <button id="new-game-btn" class="btn btn-primary">เริ่มชีวิตใหม่</button>
+          <button id="continue-btn" class="btn btn-secondary" hidden>เล่นต่อ</button>
+        </div>
+        <div class="title-sub-actions">
+          <button id="title-codex-btn" class="text-btn">สมุดบันทึกชะตา (Codex)</button>
+          <button id="title-import-btn" class="text-btn">นำเข้าไฟล์บันทึก</button>
+        </div>
+        <input id="title-import-input" type="file" accept=".json,application/json" hidden />
+        <p class="save-note">บันทึกอัตโนมัติบนอุปกรณ์นี้</p>
+      </div>
+    </section>
+
+    <section id="setup-screen" class="screen setup-screen" hidden>
+      <div class="setup-card panel">
+        <p class="eyebrow">ตั้งค่าชีวิต</p>
+        <p class="choice-label" hidden>เลือกโหมด</p>
+        <div class="mode-grid" id="mode-choices" hidden>
+          <button class="mode-card selected" data-mode="story"><strong>โหมดเนื้อเรื่อง</strong><small>หลินอัน · 1 ชีวิต · ปลดล็อกบทจบ 14 แบบ</small></button>
+          <button class="mode-card" data-mode="free"><strong>โหมดอิสระ</strong><small>SimLife · เลือกกติกาการเกิดใหม่และปล่อยโลกเดินเอง</small></button>
+        </div>
+        <div id="story-character-choices" class="mode-grid">
+          <p class="choice-label">เลือกเส้นเรื่อง</p>
+          <button class="mode-card selected" data-character="lin-an"><strong>หลินอัน · หนึ่งชีวิต</strong><small>ตระกูลล่มสลาย · บทจบ 14 แบบ</small></button>
+          <button class="mode-card" data-character="dream-walker"><strong>ผู้จำลองอนาคต</strong><small>กำหนดบทบาท ทดลองอนาคต และรับรางวัลจากผลจำลอง</small></button>
+          <button class="mode-card" data-character="revenant"><strong>ผู้เกิดใหม่ล้างแค้น</strong><small>ตายหลายครั้ง เกิดใหม่เป็นทารก และกลับไปแก้แค้น</small></button>
+          <button class="mode-card" data-character="dynasty-heir"><strong>ผู้สืบทอดตระกูล</strong><small>ตายแล้วส่งต่อชีวิตให้ทายาทจนตระกูลผงาด</small></button>
+          <button class="mode-card" data-character="isekai-underdog"><strong>ผู้ถูกดูแคลนจากต่างโลก</strong><small>เกิดใหม่ในร่างสวะและไต่ขึ้นเหนือทุกคน</small></button>
+        </div>
+        <div id="free-rule-choices" class="mode-grid" hidden>
+          <p class="choice-label">กฎการต่อชีวิตในโหมดอิสระ</p>
+          <button class="mode-card selected" data-rule="one-life"><strong>หนึ่งชีวิต (ตายแล้วจบ)</strong><small>สิ้นอายุขัยหรือเสียชีวิตจะจบชีวิตนั้นจริง ไม่เกิดใหม่</small></button>
+          <button class="mode-card" data-rule="rebirth"><strong>เกิดใหม่</strong><small>ตายแล้วเกิดเป็นทารกในร่างใหม่ โลกเดิมยังคงดำเนินต่อไป</small></button>
+          <button class="mode-card" data-rule="revenge-rebirth"><strong>เกิดใหม่ล้างแค้น</strong><small>เริ่มชีวิตใหม่ในร่างทารกโดยใช้กฎเกิดใหม่ล้างแค้น</small></button>
+          <button class="mode-card" data-rule="dynasty"><strong>สืบทอดตระกูล</strong><small>ตายแล้วเล่นต่อเป็นทารกในสายตระกูล</small></button>
+          <button class="mode-card" data-rule="unlucky-isekai"><strong>ต่างโลกผู้ซวย</strong><small>เกิดใหม่พร้อมชะตากำเนิดสุ่มและข้อเสีย</small></button>
+          <button class="mode-card" data-rule="unlimited-simulation"><strong>จำลองอนาคต</strong><small>เมื่อตาย คำนวณผลจำลองและบันทึกรางวัล</small></button>
+
+        </div>
+        <h2>ทายาทคนสุดท้ายของตระกูลหลิน</h2>
+        <p id="setup-description">เรื่องราวเริ่มเมื่ออายุ 5 ขวบ ในคืนที่บ้านถูกเผา—ก่อนเจ้าจะรู้จักคำว่าสำนักหรือยุทธภพ</p>
+        <label for="hero-name">ตัวเอกของเรื่อง</label>
+        <input id="hero-name" value="หลินอัน" readonly aria-readonly="true" />
+        <small id="story-lock-note" class="story-lock-note">ชื่อนี้ถูกกำหนดโดยเนื้อเรื่องและไม่สามารถเปลี่ยนได้</small>
+        <label for="hero-gender">เพศของตัวละคร</label>
+        <select id="hero-gender">
+          <option value="male">ชาย</option>
+          <option value="female">หญิง</option>
+          <option value="unspecified">ไม่ระบุ</option>
+        </select>
+        <p class="choice-label">เลือกพรสวรรค์กำเนิด</p>
+        <div id="talent-choices" class="talent-grid">
+          <button class="talent-card selected" data-talent="jade">
+            <span class="talent-icon">◆</span><strong>ชีพจรหยก</strong>
+            <small>ฝึกตนเร็วขึ้น 25%</small>
+          </button>
+          <button class="talent-card" data-talent="keen">
+            <span class="talent-icon">◎</span><strong>ดวงตาเฉียบคม</strong>
+            <small>สำรวจพบสิ่งลับง่ายขึ้น</small>
+          </button>
+          <button class="talent-card" data-talent="steady">
+            <span class="talent-icon">▰</span><strong>ใจมั่นคง</strong>
+            <small>สุขภาพสูง และพักฟื้นดีขึ้น</small>
+          </button>
+          <button class="talent-card" data-talent="iron">
+            <span class="talent-icon">盾</span><strong>กระดูกเหล็ก</strong>
+            <small>ร่างกายและป้องกันเริ่มต้นสูง</small>
+          </button>
+          <button class="talent-card" data-talent="swift">
+            <span class="talent-icon">風</span><strong>ก้าววายุ</strong>
+            <small>ว่องไวสูงและหลบหนีเก่ง</small>
+          </button>
+          <button class="talent-card" data-talent="lucky">
+            <span class="talent-icon">福</span><strong>วาสนาพบพาน</strong>
+            <small>โอกาสพบเหตุการณ์หายากเพิ่มขึ้น</small>
+          </button>
+        </div>
+        <p class="choice-label">เลือกระดับรากวิญญาณ</p>
+        <small id="root-choice-hint" class="story-lock-note" style="display:block;margin-bottom:6px;font-size:0.72rem;color:#7a6d59;"></small>
+        <div id="root-choices" class="root-grid">
+          <button class="root-card root-locked" data-root="none" disabled aria-disabled="true" title="ยังไม่เปิดให้เลือก"><strong>ไร้ราก · ปิดผนึก</strong><small>ยังไม่เปิดให้เลือกในหน้าสร้างตัวละคร</small></button>
+          <button class="root-card selected" data-root="human"><strong>มนุษย์</strong><small>สมดุล · ความเร็วฝึก 100%</small></button>
+          <button class="root-card" data-root="earth"><strong>ปฐพี</strong><small>ร่างกายมั่นคง · ความเร็ว 120%</small></button>
+          <button class="root-card" data-root="heaven"><strong>สวรรค์</strong><small>ปราณบริสุทธิ์ · ความเร็ว 145%</small></button>
+          <button class="root-card" data-root="immortal"><strong>เซียน</strong><small>เหนือสามัญ · ความเร็ว 175%</small></button>
+          <button class="root-card" data-root="legend"><strong>ตำนาน</strong><small>หนึ่งในหมื่นปี · ความเร็ว 210%</small></button>
+        </div>
+        <div class="setup-summary" id="setup-summary" aria-live="polite"></div>
+        <div class="setup-actions">
+          <button id="back-title-btn" class="btn btn-secondary">ย้อนกลับ</button>
+          <button id="begin-btn" class="btn btn-primary">เริ่มชะตา</button>
+        </div>
+      </div>
+    </section>
+
+    <main id="game-screen" class="screen game-shell" hidden>
+      <header class="topbar">
+        <div class="brand-mini"><span class="mini-seal">生</span><div><strong>หนึ่งชีวิตในสำนัก</strong><small id="chapter-label">บทที่ ๑ · ลมก่อนพายุ</small></div></div>
+        <div id="topbar-clock" class="topbar-clock"><span class="clock-icon">⏳</span><span id="topbar-clock-text">โลก ปี 1 ด.1 · อายุ 5 ปี</span></div>
+        <div class="time-controls">
+          <button id="pause-btn" class="icon-btn" aria-label="หยุดเวลา">Ⅱ</button>
+          <button id="auto-btn" class="icon-btn auto-btn" aria-label="เปิดโหมดอัตโนมัติ">AUTO</button>
+          <div id="topbar-auto-controls" class="topbar-auto-controls" hidden>
+            <select id="auto-activity-select" class="auto-activity-select" aria-label="กิจกรรมของโหมดอัตโนมัติ">
+              <option value="train">ฝึกตน</option><option value="work">ทำงาน</option><option value="explore">สำรวจ</option><option value="rest">พักฟื้น</option><option value="study">เรียนรู้</option><option value="social">เข้าสังคม</option><option value="craft">สร้างของ</option><option value="family">ดูแลครอบครัว</option><option value="quest">รับภารกิจ</option><option value="sect">สำนัก/ราชการ</option><option value="travel">เดินทาง</option><option value="free">ใช้ชีวิตอิสระ</option>
+            </select>
+            <select id="auto-free-rule-select" class="auto-activity-select" aria-label="กฎ Auto ใช้ชีวิตอิสระ">
+              <option value="off">อิสระ: ปิดการเลือกแทน</option><option value="safe">อิสระ: ปลอดภัย</option><option value="balanced">อิสระ: สมดุล</option><option value="risk">อิสระ: เสี่ยง</option>
+            </select>
+            <select id="auto-quest-rule-select" class="auto-activity-select" aria-label="กฎภารกิจอัตโนมัติ"><option value="accept-track">รับและติดตาม</option><option value="pause">พักไว้รอเลือก</option></select>
+            <select id="auto-doctrine-select" class="auto-activity-select" aria-label="หลักดำเนินชีวิต">
+              <option value="survive">ประคองลมหายใจ</option><option value="seek_truth">ตามรอยความจริง</option><option value="build_legacy">วางรากฐาน</option><option value="cultivate">มุ่งฝึกตน</option><option value="route">ตามเส้นทางชีวิต</option>
+            </select>
+            <select id="auto-family-rule-select" class="auto-activity-select" aria-label="กฎดูแลครอบครัว">
+              <option value="save">ครอบครัว: ประหยัดเงิน</option><option value="health">ครอบครัว: รักษาสุขภาพ</option><option value="education">ครอบครัว: เน้นการศึกษา</option><option value="pay_debt">ครอบครัว: ชำระหนี้</option>
+            </select>
+          </div>
+          <button class="speed-btn active" data-speed="1" aria-label="ความเร็วปกติ 1 เท่า">×1</button>
+          <button class="speed-btn" data-speed="2" aria-label="เร่งเวลา 2 เท่า">×2</button>
+          <button class="speed-btn" data-speed="4" aria-label="เร่งเวลา 4 เท่า">×4</button>
+          <button id="grow-phase-btn" class="chip-btn grow-phase-btn" type="button" aria-label="เติบโตสู่ช่วงวัยถัดไป">🌱 เติบโตสู่วัยถัดไป</button>
+        </div>
+        <button id="menu-btn" class="icon-btn menu-btn" aria-label="เมนู">☰</button>
+      </header>
+
+      <div class="game-grid">
+        <aside class="left-column">
+          <section class="hero-card panel">
+            <div class="portrait-wrap">
+              <div id="hero-sprite" class="pixel-hero training" aria-label="ภาพตัวละครพิกเซล">
+                <i class="hair"></i><i class="head"></i><i class="body"></i><i class="belt"></i><i class="arm left"></i><i class="arm right"></i><i class="leg left"></i><i class="leg right"></i>
+              </div>
+              <span id="activity-badge" class="activity-badge">ฝึกตน</span>
+            </div>
+            <div class="hero-info">
+              <h2 id="hero-display-name">หลินอัน</h2>
+              <p id="hero-subtitle">ศิษย์นอก · หลอมกาย ขั้น 1</p>
+              <p id="root-display" class="root-display">รากวิญญาณมนุษย์</p>
+              <div class="mini-stats">
+                <span>อายุ <b id="age-stat">16 ปี</b></span>
+                <span>อายุขัย <b id="lifespan-stat">74 ปี</b></span>
+              </div>
+              <div class="time-context-row">
+                <span id="world-calendar-stat" class="time-pill world-time" title="เดือนในปฏิทินของโลก (ไม่รีเซ็ตเมื่อเกิดใหม่)">🌏 โลก: ปี 1 เดือน 1</span>
+                <span id="character-month-stat" class="time-pill hero-time" title="อายุชีวิตตัวละคร">👤 ชีวิต: 5 ปี (60 ด.)</span>
+              </div>
+              <div id="status-chips-bar" class="status-chips-bar" aria-live="polite">
+                <span class="status-chip normal-chip">✓ สภาพร่างกายปกติ</span>
+              </div>
+            </div>
+            <div class="bar-group">
+              <div class="bar-label"><span>สุขภาพ</span><b id="health-label">100 / 100</b></div>
+              <div class="bar health"><i id="health-bar"></i></div>
+              <small id="health-conditions" aria-live="polite"></small>
+            <div class="bar-label"><span>ปราณที่มีอยู่</span><b id="qi-label">0 / 0</b></div>
+            <div class="bar qi"><i id="qi-bar"></i></div>
+              <div class="bar-label"><span>ความก้าวหน้าการฝึก</span><b id="cultivation-label">0 / 100</b></div>
+              <div class="bar cultivation"><i id="cultivation-bar"></i></div>
+            </div>
+            <div class="combat-stats">
+              <div><span>โจมตี</span><b id="attack-stat">1</b></div>
+              <div><span>ป้องกัน</span><b id="defense-stat">1</b></div>
+              <div><span>กายา</span><b id="body-stat">1</b></div>
+              <div><span>ว่องไว</span><b id="agility-stat">1</b></div>
+              <div><span>ประสิทธิภาพฝึก</span><b id="training-stat">100%</b></div>
+            </div>
+            <details id="secondary-attributes-details" class="secondary-attributes-details">
+              <summary class="secondary-attributes-summary">✦ คุณสมบัติแฝง & สถิติพื้นฐาน (กดเพื่อดู)</summary>
+              <div class="core-attributes">
+                <div><span>กาย</span><b id="attr-body-stat">10</b></div>
+                <div><span>ปัญญา</span><b id="attr-intellect-stat">10</b></div>
+                <div><span>จิตใจ</span><b id="attr-spirit-stat">10</b></div>
+                <div><span>เสน่ห์</span><b id="attr-charm-stat">10</b></div>
+                <div><span>โชค</span><b id="attr-luck-stat">10</b></div>
+                <div><span>กรรม</span><b id="karma-stat">0</b></div>
+              </div>
+              <div class="pre-cultivation-stats" id="pre-cultivation-stats">
+                <div><span>พื้นฐานกาย</span><b id="body-foundation-stat">0</b></div>
+                <div><span>ชำนาญยุทธ์</span><b id="martial-skill-stat">0</b></div>
+                <div><span>วินัย</span><b id="discipline-stat">0</b></div>
+              </div>
+            </details>
+            <p class="power-formula">พลังรวมคำนวณจากฐานบำเพ็ญเป็นหลัก แล้วเสริมด้วยโจมตี ป้องกัน กายา และว่องไว</p>
+            <div class="resource-row">
+              <div><span class="resource-icon coin">●</span><small>ตำลึง</small><b id="money-stat">12</b></div>
+              <div><span class="resource-icon spirit">✦</span><small>พลังรวม</small><b id="power-stat">8</b></div>
+              <div><span class="resource-icon rep">▲</span><small>ชื่อเสียงยุทธภพ</small><b id="rep-stat">0</b></div>
+            </div>
+          </section>
+
+          <section class="panel goal-panel">
+            <div class="panel-heading"><span class="heading-glyph">目</span><div><small>เป้าหมายปัจจุบัน</small><h3 id="goal-title">หนีออกจากเมืองที่ถูกเผา</h3></div></div>
+            <p id="goal-text">เอาชีวิตรอด ค้นหาคนที่ไว้ใจได้ และรักษาร่องรอยสุดท้ายของตระกูลหลิน</p>
+            <div class="deadline"><span>คืนตัดสินอยู่ข้างหน้า</span><b id="months-left">216 เดือน</b></div>
+            <div class="destiny-title"><span>ร่องรอยจากการตัดสินใจ</span><small>มีผลต่อเหตุการณ์และบทจบ</small></div>
+            <div class="destiny-tracks">
+              <div title="การช่วยเหลือและคำนึงถึงผู้อื่น"><span>仁 เมตตา</span><b id="path-compassion">0</b></div>
+              <div title="ความผูกพันและหน้าที่ต่อสำนัก"><span>義 ภักดี</span><b id="path-duty">0</b></div>
+              <div title="การรักษาชีวิตและเลือกทางของตน"><span>風 อิสระ</span><b id="path-freedom">0</b></div>
+              <div title="ข้อมูล ความลับ และการมองการณ์ไกล"><span>智 หยั่งรู้</span><b id="path-insight">0</b></div>
+            </div>
+          </section>
+        </aside>
+
+        <section class="center-column">
+          <div id="scene" class="scene scene-sect">
+            <div class="sun"></div><div class="cloud c1"></div><div class="cloud c2"></div>
+            <div class="far-mountain m1"></div><div class="far-mountain m2"></div>
+            <div class="temple"><i class="roof roof-top"></i><i class="roof roof-main"></i><i class="wall"></i><i class="door"></i></div>
+            <div class="pine p1"></div><div class="pine p2"></div>
+            <div class="scene-ground"></div>
+            <div class="scene-caption"><span id="location-name">สำนักเมฆาคราม</span><small id="weather-text">เช้าอากาศแจ่มใส · เดือน 1 ปี 1</small></div>
+          </div>
+
+          <section class="panel activity-panel">
+            <div class="section-title"><div><small>กิจกรรมประจำเดือน</small><h2>เลือกเส้นทางของเจ้า</h2></div><span id="current-activity-note">กำลังฝึกตน</span></div>
+            <label class="activity-mobile-picker" for="activity-mobile-select">กิจกรรมเดือนนี้<select id="activity-mobile-select" aria-label="เลือกกิจกรรมประจำเดือน">
+              <option value="train">ฝึกตน</option><option value="work">ทำงาน</option><option value="explore">สำรวจ</option><option value="rest">พักฟื้น</option><option value="study">เรียนรู้</option><option value="social">เข้าสังคม</option><option value="craft">สร้างของ</option><option value="family">ดูแลครอบครัว</option><option value="quest">รับภารกิจ</option><option value="sect">สำนัก/ราชการ</option><option value="travel">เดินทาง</option><option value="free">ใช้ชีวิตอิสระ</option>
+            </select></label>
+            <div id="work-location-control" class="rest-location-control" hidden>
+              <label>สถานที่ทำงาน<select id="work-location-select" aria-label="เลือกสถานที่ทำงาน"></select></label>
+              <p id="work-location-meta" class="rest-location-meta"></p>
+            </div>
+            <div id="rest-location-control" class="rest-location-control" hidden>
+              <label>สถานที่พัก<select id="rest-location-select" aria-label="เลือกสถานที่พัก"></select></label>
+              <p id="rest-location-meta" class="rest-location-meta"></p>
+              <div class="rest-control-row"><button id="rent-inn-btn" class="chip-btn" hidden>เช่าโรงเตี๊ยม 5 ตำลึง</button><label>Auto พักเมื่อสุขภาพต่ำ<select id="auto-rest-rule-select" aria-label="กฎพักอัตโนมัติ"><option value="off">ปิด</option><option value="70">ต่ำกว่า 70%</option><option value="50">ต่ำกว่า 50%</option><option value="30">ต่ำกว่า 30%</select></label><label>Auto ยาฉุกเฉิน<select id="auto-medicine-rule-select" aria-label="กฎใช้ยาอัตโนมัติ"><option value="off">ปิด (ใช้ยาด้วยตนเอง)</option><option value="35">ฉุกเฉิน (สุขภาพ &lt; 35% หรือแก้พิษ)</option><option value="50">ระมัดระวัง (สุขภาพ &lt; 50% หรือแก้พิษ/เมื่อย)</option></select></label><button id="start-long-rest-btn" class="chip-btn">พักยาว 3 เดือน</button><button id="cancel-long-rest-btn" class="chip-btn" hidden>ยกเลิกพักยาว</button></div>
+            </div>
+            <div id="exploration-control" class="rest-location-control" hidden>
+              <label>เส้นทางสำรวจ<select id="exploration-area-select" aria-label="เลือกเส้นทางสำรวจ"></select></label>
+              <p id="exploration-area-meta" class="rest-location-meta"></p>
+              <div class="rest-control-row"><label>Auto สำรวจ<select id="auto-explore-rule-select" aria-label="กฎสำรวจอัตโนมัติ"><option value="safe">ปลอดภัยก่อน</option><option value="balanced">สมดุล</option><option value="secret">ค้นหาพื้นที่ลับ</option></select></label></div>
+              <div id="exploration-journal" class="exploration-journal"><strong>บันทึกการสำรวจ</strong><p id="exploration-journal-visited"></p><p id="exploration-journal-news"></p><p id="exploration-journal-last"></p></div>
+            </div>
+            <div id="social-control" class="social-control" hidden><div class="social-control-row"><label>พบที่<select id="social-target-select" aria-label="เลือกสถานที่เข้าสังคม"><option value="auto">ให้ชะตาเลือก</option><option value="city">เมือง</option><option value="sect">สำนัก</option><option value="home">บ้านและญาติ</option><option value="market">ตลาด</option><option value="teahouse">โรงน้ำชา</option></select></label><span id="social-target-meta" class="rest-location-meta"></span></div><div class="social-control-row"><label>กฎ Auto Social<select id="auto-social-rule-select" aria-label="กฎเข้าสังคมอัตโนมัติ"><option value="maintain">รักษาความสัมพันธ์</option><option value="avoid_conflict">หลีกเลี่ยงความขัดแย้ง</option><option value="build_alliance">สร้างพันธมิตร</option></select></label><label>งบขั้นต่ำ <input id="auto-social-money" type="number" min="0" step="1" value="0" aria-label="งบขั้นต่ำสำหรับเข้าสังคม"></label></div></div>
+            <div id="official-control" class="rest-location-control" hidden><label>สายงาน<select id="official-affiliation-select" aria-label="เลือกสายงานสำนักหรือราชการ"><option value="city">ราชการเมือง</option><option value="border">รักษาชายแดน</option><option value="sect">สำนัก</option></select></label><label>ประเภทงาน<select id="official-assignment-select" aria-label="เลือกประเภทงานสำนักหรือราชการ"></select></label><label>แนวทางสอบเลื่อนขั้น<select id="official-exam-choice-select" aria-label="เลือกแนวทางสอบเลื่อนขั้น"><option value="power">พลัง</option><option value="case">คดี</option><option value="loyalty">ความภักดี</option></select></label><p id="official-career-meta" class="rest-location-meta"></p></div>
+              <div id="travel-control" class="rest-location-control" hidden><label>ปลายทาง<select id="travel-destination-select" aria-label="เลือกปลายทางเดินทาง"></select></label><label>พาหนะ<select id="travel-vehicle-select" aria-label="เลือกพาหนะเดินทาง"><option value="foot">เดินเท้า</option><option value="caravan">คาราวาน</option><option value="horse">ม้าเร็ว</option><option value="cloudstep">ย่างก้าวเมฆา</option></select></label><p id="travel-meta" class="rest-location-meta"></p><div class="rest-control-row"><label>Auto เดินทาง<select id="auto-travel-rule-select" aria-label="กฎเดินทางอัตโนมัติ"><option value="safe">ปลอดภัย</option><option value="fast">เร็ว</option><option value="opportunist">ฉวยโอกาส</option></select></label><button id="start-travel-btn" class="chip-btn">ออกเดินทาง</button></div></div>
+              <div id="training-control" class="training-control" hidden><label>เป้าหมายการฝึก<select id="training-goal-select" aria-label="เลือกเป้าหมายการฝึก"><option value="safe">ฝึกปลอดภัย</option><option value="progress">เร่งความก้าวหน้า</option><option value="mastery">เน้นความชำนาญวิชา</option><option value="breakthrough">เตรียมทะลวงขั้น</option><option value="body">ฝึกกายควบคู่</option></select></label><p id="training-status" class="training-status"></p><label>กฎ Auto ฝึกตน<select id="auto-training-rule-select" aria-label="กฎ Auto ฝึกตน"><option value="stop">หยุดรอเลือกก่อนทะลวง</option><option value="auto-item">ใช้ของช่วยอัตโนมัติ</option><option value="auto-foundation">ฝึกพื้นฐานต่ออัตโนมัติ</option></select></label></div>
+              <div id="learning-control" class="learning-control" hidden><label>ประเภทความรู้<select id="learning-focus-select" aria-label="เลือกประเภทความรู้"><option value="lore">ความรู้โลกและประวัติศาสตร์</option><option value="cultivation">คัมภีร์บำเพ็ญเพียร</option><option value="martial">วิชาต่อสู้และกระบวนท่า</option><option value="survival">การเอาตัวรอดและเส้นทาง</option></select></label><label>วิชาที่จะอ่าน<select id="learning-technique-select" aria-label="เลือกวิชาที่จะอ่าน"></select></label><p id="learning-status" class="training-status"></p><label>กฎ Auto เรียนรู้<select id="auto-learning-rule-select" aria-label="กฎ Auto เรียนรู้"><option value="balanced">เรียนสมดุล</option><option value="cultivation">เน้นคัมภีร์บำเพ็ญ</option><option value="martial">เน้นวิชาต่อสู้</option><option value="survival">เน้นเอาตัวรอด</option></select></label></div>
+            <div class="activity-grid">
+              <button class="activity-card selected" data-activity="train"><span class="act-icon">氣</span><div><strong>ฝึกตน</strong><small>เพิ่มพลังและความชำนาญ</small></div><b>+ปราณ</b></button>
+              <button class="activity-card" data-activity="work"><span class="act-icon">銭</span><div><strong>ทำงาน</strong><small>รับงานสำนัก หาเงินและชื่อเสียง</small></div><b>+เงิน</b></button>
+              <button class="activity-card" data-activity="explore"><span class="act-icon">山</span><div><strong>สำรวจ</strong><small>ค้นหาความลับและวัตถุดิบ</small></div><b>+โอกาส</b></button>
+              <button class="activity-card" data-activity="rest"><span class="act-icon">心</span><div><strong>พักฟื้น</strong><small>ฟื้นสุขภาพและลดความเสี่ยง</small></div><b>+สุขภาพ</b></button>
+              <button class="activity-card" data-activity="study"><span class="act-icon">書</span><div><strong>เรียนรู้</strong><small>เพิ่มปัญญา ความรู้ และหยั่งรู้</small></div><b>+ปัญญา</b></button>
+              <button class="activity-card" data-activity="social"><span class="act-icon">友</span><div><strong>เข้าสังคม</strong><small>สร้างความสัมพันธ์และชื่อเสียง</small></div><b>+ผู้คน</b></button>
+              <button class="activity-card" data-activity="craft"><span class="act-icon">鍛</span><div><strong>สร้างของ</strong><small>ใช้วัตถุดิบทำของช่วยชีวิต</small></div><b>+ของ</b></button>
+              <button class="activity-card" data-activity="family"><span class="act-icon">家</span><div><strong>ดูแลครอบครัว</strong><small>เสริมสายสัมพันธ์และตระกูล</small></div><b>+มรดก</b></button>
+              <button class="activity-card" data-activity="quest"><span class="act-icon">令</span><div><strong>รับภารกิจ</strong><small>เดินหน้าเควสและช่วยผู้คน</small></div><b>+เควส</b></button>
+              <button class="activity-card" data-activity="sect"><span class="act-icon">門</span><div><strong>สำนัก/ราชการ</strong><small>สะสมผลงานและตำแหน่ง</small></div><b>+ผลงาน</b></button>
+              <button class="activity-card" data-activity="travel"><span class="act-icon">行</span><div><strong>เดินทาง</strong><small>เปิดพื้นที่และโอกาสใหม่</small></div><b>+อิสระ</b></button>
+              <button class="activity-card" data-activity="free"><span class="act-icon">風</span><div><strong>ใช้ชีวิตอิสระ</strong><small>ปล่อยให้ชะตาพาไป</small></div><b>+ชะตา</b></button>
+            </div>
+          </section>
+
+          <section class="panel log-panel">
+            <div class="section-title compact"><div><small>สิ่งที่เกิดขึ้น</small><h2>บันทึกชีวิต</h2></div><button id="expand-log-btn" class="text-btn">ดูทั้งหมด</button></div>
+            <div id="life-log" class="life-log"></div>
+          </section>
+        </section>
+
+        <aside class="right-column">
+          <section class="panel relations-panel" data-tab-panel="overview">
+            <div class="section-title compact"><div><small>ผู้คนในชะตา</small><h2>ความสัมพันธ์</h2></div></div>
+            <div id="relations-list" class="relations-list"></div>
+            <div class="section-title compact faction-title"><div><small>ชื่อเสียงแยกฝ่าย</small><h2>สามฝ่ายยุทธภพ</h2></div></div>
+            <div id="factions-list" class="factions-list"></div>
+          </section>
+          <section class="panel quests-panel" data-tab-panel="overview">
+            <div class="section-title compact"><div><small>เส้นทางที่ยังไม่จบ</small><h2>เควส</h2></div><span id="quest-slots-label">0/3</span></div>
+            <div id="quests-list" class="quests-list"></div>
+            <div id="quests-available" class="quests-list quests-available"></div>
+            <div id="quests-history" class="quests-history"></div>
+          </section>
+          <div class="panel-tabbar" role="tablist" aria-label="แผงจัดการตัวละคร"><button type="button" class="panel-tab active" data-panel-tab="overview" role="tab" aria-selected="true">ภาพรวม</button><button type="button" class="panel-tab" data-panel-tab="techniques" role="tab" aria-selected="false">วิชา</button><button type="button" class="panel-tab" data-panel-tab="items" role="tab" aria-selected="false">ไอเทม</button><button type="button" class="panel-tab" data-panel-tab="life" role="tab" aria-selected="false">ชีวิต</button><button type="button" class="panel-tab" data-panel-tab="world" role="tab" aria-selected="false">โลก</button></div>
+          <section class="panel techniques-panel" data-tab-panel="techniques" hidden>
+            <div class="section-title compact"><div><small>วิชาที่ฝึกฝน</small><h2>เคล็ดวิชา</h2></div></div>
+            <div class="training-focus-head"><strong>โฟกัสการฝึก</strong><span id="training-selection-count">0/2</span></div>
+            <div id="training-selection" class="training-selection"></div>
+            <small id="training-selection-note" class="training-selection-note">ไม่เลือก = สุ่มฝึก 1 วิชาที่มี</small>
+            <div id="technique-loadout-status" class="loadout-panel"></div>
+            <div id="techniques-list" class="techniques-list"></div>
+          </section>
+          <section class="panel treasures-panel" data-tab-panel="items" hidden>
+            <div class="section-title compact"><div><small>สมบัติและอาวุธ</small><h2>ของวิเศษ</h2></div></div>
+            <div id="item-loadout-status" class="item-loadout-status"></div>
+            <div id="treasures-list" class="techniques-list"></div>
+          </section>
+          <section class="panel crafting-panel" data-tab-panel="items" hidden>
+            <div class="section-title compact"><div><small>วัตถุดิบและตำรับ</small><h2>สร้างของ</h2></div><span id="craft-month-label">เดือนนี้</span></div>
+            <div id="materials-list" class="materials-list"></div>
+            <div class="craft-auto-controls"><label>Auto Craft <select id="craft-auto-mode" aria-label="กฎสร้างของอัตโนมัติ"><option value="stop">หยุดเมื่อสูตรใช้ไม่ได้</option><option value="fallback">ใช้สูตรสำรอง</option><option value="learn">ฝึกความรู้</option></select></label><label>สูตรหลัก <select id="craft-auto-recipe" aria-label="สูตรหลักของ Auto Craft"></select></label></div>
+            <div id="craft-training" class="craft-auto-controls"></div>
+            <div id="craft-tabs" class="craft-auto-controls" aria-label="หมวดสูตร"></div>
+            <div id="crafting-list" class="crafting-list"></div>
+            <div id="consumables-list" class="consumables-list"></div>
+            <div id="selling-list" class="consumables-list"></div>
+          </section>
+          <section class="panel household-panel" data-tab-panel="life" hidden>
+            <div class="section-title compact"><div><small>ชีวิตประจำวัน</small><h2>ครัวเรือน</h2></div><span id="household-debt-label">หนี้ 0</span></div>
+            <div id="household-status" class="household-status"></div>
+            <div class="household-controls"><select id="job-select" aria-label="เลือกอาชีพ"></select><select id="housing-select" aria-label="เลือกที่อยู่อาศัย"></select><label>Auto พักจากงาน<select id="auto-work-rule-select" aria-label="กฎพักจากงาน"><option value="off">ปิด</option><option value="6">เมื่อเหนื่อย 6</option><option value="4">เมื่อเหนื่อย 4</option><option value="2">เมื่อเหนื่อย 2</option></select></label></div>
+            <button id="household-loan-btn" class="household-loan-btn" type="button">กู้เงิน 30 ตำลึง</button>
+          </section>
+          <section class="panel family-panel" data-tab-panel="life" hidden>
+            <div class="section-title compact"><div><small>มรดกและคนรุ่นถัดไป</small><h2>ครอบครัว</h2></div><span id="family-building-label">0 อาคาร</span></div>
+            <div id="family-status" class="family-status"></div>
+            <div class="family-actions"><button id="marry-btn" type="button">แต่งงาน</button><button id="child-btn" type="button">มีบุตร</button></div>
+            <div id="family-buildings" class="family-buildings"></div>
+          </section>
+          <section class="panel legacy-panel" data-tab-panel="world" hidden>
+            <div class="section-title compact"><div><small>แกนเฉพาะของชีวิตนี้</small><h2>คำสัตย์และรอยแผล</h2></div></div>
+            <div id="oath-status" class="oath-status"></div>
+            <div id="world-pressure-status" class="world-pressure-status"></div>
+            <div id="world-scars-list" class="world-scars-list"></div>
+            <section class="replay-meta-panel" aria-label="Replay และ Meta Progression">
+              <div class="section-title compact"><div><small>ชีวิตที่ผ่านไป</small><h3>Replay / Meta</h3></div><span id="replay-meta-count" class="badge">0 ชีวิต</span></div>
+              <div id="replay-meta-status" class="world-timeline-status"></div>
+              <div id="replay-life-history" class="world-news-list"></div>
+              <div id="replay-unlocks" class="world-scars-list"></div>
+            </section>
+          </section>
+          <section class="panel omen-panel" data-tab-panel="world" hidden>
+            <small>ลางแห่งโลก</small>
+            <p id="world-omen">พ่อค้าเร่พูดถึงโจรชุดดำที่ปรากฏใกล้ชายแดน</p>
+            <div id="world-timeline-status" class="world-timeline-status"></div>
+            <div id="world-news-list" class="world-news-list"></div>
+            <div id="life-direction-panel" class="life-direction-panel"></div>
+          </section>
+          <section id="sect-defense-panel" class="panel defense-panel" data-tab-panel="world" hidden>
+            <div class="section-title compact">
+              <div><small>แนวต้านเมฆาคราม</small><h2>ความพร้อมรับศึก</h2></div>
+              <span id="sect-morale-badge" class="badge">มั่นคง</span>
+            </div>
+            <div class="defense-status-row">
+              <div><small>ค่ายกล & กำลังพล</small><strong id="sect-readiness-label">ปานกลาง</strong></div>
+              <div><small>ขวัญกำลังใจ</small><strong id="sect-morale-label">มั่นคง</strong></div>
+            </div>
+            <div class="defense-status-row"><div><small>ตำแหน่ง</small><strong id="sect-rank-label">ศิษย์นอก</strong></div><div><small>แต้มผลงาน</small><strong id="sect-merit-label">0</strong></div></div>
+            <div class="bar defense-bar"><i id="sect-defense-bar"></i></div>
+            <p id="sect-defense-hint" class="defense-hint">การเสริมสร้างค่ายกล ฝึกฝนศิษย์ และเตรียมพร้อมรับมือภัยคุกคามจะช่วยให้สำนักยืนหยัดได้มั่นคง</p>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <div id="event-modal" class="modal-backdrop" hidden>
+      <article class="event-modal" role="dialog" aria-modal="true" aria-labelledby="event-title">
+        <div id="event-art" class="event-art art-gate"><div class="event-silhouette"></div><span id="event-tag">เหตุการณ์สำคัญ</span></div>
+        <div class="event-body">
+          <p id="event-kicker" class="eyebrow">เดือนที่ 1 · ประตูสำนัก</p>
+          <h2 id="event-title">ก้าวแรกใต้เมฆาคราม</h2>
+          <p id="event-text"></p>
+          <div id="event-choices" class="event-choices"></div>
+          <p id="choice-hint" class="choice-hint">ผลลัพธ์บางอย่างจะปรากฏในอนาคต</p>
+        </div>
+      </article>
+    </div>
+
+    <div id="drawer" class="drawer-backdrop" hidden>
+      <aside class="drawer">
+        <div class="drawer-head"><h2>เมนู</h2><button id="close-drawer-btn" class="icon-btn" aria-label="ปิดเมนู">×</button></div>
+        <div class="settings-row"><span>ลดการเคลื่อนไหว</span><button id="motion-toggle" class="toggle" aria-label="ลดการเคลื่อนไหว" aria-pressed="false"><i></i></button></div>
+        <div class="settings-row"><span>ขนาดตัวอักษร</span><button id="font-toggle" class="chip-btn">ปกติ</button></div>
+        <hr />
+        <button id="drawer-codex-btn" class="drawer-btn">สมุดบันทึกชะตา (Codex)</button>
+        <button id="export-btn" class="drawer-btn">ส่งออกไฟล์บันทึก</button>
+        <label class="drawer-btn file-label">นำเข้าไฟล์บันทึก<input id="import-input" type="file" accept=".json,application/json" hidden /></label>
+        <button id="restart-btn" class="drawer-btn danger">เริ่มชีวิตใหม่</button>
+        <p class="drawer-note">บันทึกเก็บในเบราว์เซอร์ และอาจหายเมื่อล้างข้อมูลเว็บไซต์</p>
+      </aside>
+    </div>
+
+    <div id="summary-screen" class="screen summary-screen" hidden>
+      <div class="summary-scroll">
+        <p class="eyebrow">บันทึกชีวิตฉบับสมบูรณ์</p>
+        <span id="ending-seal" class="ending-seal">義</span>
+        <div class="ending-header-row">
+          <div id="ending-grade" class="ending-grade"><small>เกรดชะตา</small><b>มนุษย์</b></div>
+          <div id="ending-rarity" class="ending-rarity"><small>ดัชนีความน่าจะเป็น</small><b id="rarity-fraction">1 ใน 1 คน</b><span id="rarity-pct">(100%)</span></div>
+        </div>
+        <h1 id="ending-title">บันทึกชีวิตสิ้นสุด</h1>
+        <p id="ending-quote" class="ending-quote"></p>
+        <div id="ending-stats" class="ending-stats"></div>
+        <div id="life-summary-meta" class="life-summary-meta"></div>
+        <section id="ending-achievement" class="ending-achievement achievement-black" aria-label="Achievement บทจบ">
+          <img id="achievement-art" src="assets/ending-achievement-wuxia.png" alt="ภาพประกอบ Achievement บทจบ">
+          <div class="achievement-overlay">
+            <span id="achievement-mark" class="achievement-mark">義</span>
+            <strong id="achievement-title">ผู้พิทักษ์เมฆาคราม</strong>
+            <small id="achievement-grade">ผ่านพอดี · 0 คะแนน</small>
+          </div>
+        </section>
+        <div id="ending-story" class="ending-story"></div>
+        <section class="ending-infographic">
+          <div class="infographic-head"><small>INFOGRAPHIC · เส้นทางชีวิต</small><h2>จุดเปลี่ยนแห่งชะตา</h2></div>
+          <div id="ending-timeline" class="ending-timeline"></div>
+        </section>
+        <div class="summary-actions">
+          <button id="replay-btn" class="btn btn-primary">เริ่มอีกหนึ่งชีวิต</button>
+          <button id="summary-codex-btn" class="btn btn-secondary">สมุดบันทึกชะตา</button>
+          <button id="summary-export-btn" class="btn btn-secondary">เก็บบันทึกชีวิต</button>
+        </div>
+        <p id="ending-unlock" class="ending-unlock"></p>
+      </div>
+    </div>
+
+    <div id="codex-modal" class="modal-backdrop" hidden>
+      <article class="codex-modal panel" role="dialog" aria-modal="true" aria-labelledby="codex-title">
+        <div class="codex-head">
+          <div>
+            <p class="eyebrow">บันทึกชะตายุทธภพ</p>
+            <h2 id="codex-title">ตราประทับ 14 ชะตา · Achievement Codex</h2>
+          </div>
+          <button id="close-codex-btn" class="icon-btn" aria-label="ปิดสมุดบันทึกชะตา">×</button>
+        </div>
+        <p id="codex-progress-text" class="codex-progress">ตราประทับที่ค้นพบ 0 / 14 ชะตา</p>
+        <div id="codex-grid" class="codex-grid"></div>
+      </article>
+    </div>
+
+    <div id="offline-modal" class="modal-backdrop" hidden>
+      <article class="codex-modal panel" role="dialog" aria-modal="true" aria-labelledby="offline-title" style="max-width: 650px;">
+        <div class="codex-head">
+          <div>
+            <p class="eyebrow">ความคืบหน้านอกเกม</p>
+            <h2 id="offline-title">สรุปช่วงเวลาออฟไลน์</h2>
+          </div>
+          <button id="close-offline-btn" class="icon-btn" aria-label="ปิดหน้ารายงาน">×</button>
+        </div>
+        <div id="offline-summary-content" style="margin-top: 16px; line-height: 1.7; font-size: 0.88rem;"></div>
+        <div style="margin-top: 20px; text-align: right;">
+          <button id="confirm-offline-btn" class="btn btn-primary">รับทราบและเข้าสู่เกม</button>
+        </div>
+      </article>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="app.js?v=age-activities-7"></script>
+</body>
+</html>
