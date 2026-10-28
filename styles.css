@@ -522,3 +522,11 @@ html,body{max-width:100%;overflow-x:hidden}
   .event-body, .event-choices, .choice-btn { min-width: 0; max-width: 100%; box-sizing: border-box; overflow-wrap: anywhere; }
   .choice-btn { grid-template-columns: 28px minmax(0, 1fr); }
 }
+
+/* ตัวละครอยู่บนฉากเดียวกัน เพื่อลดพื้นที่การ์ดสถานะ */
+.scene .portrait-wrap{position:absolute;left:50%;bottom:29px;transform:translateX(-50%);width:130px;height:145px;background:none;overflow:visible;z-index:3;pointer-events:none}
+.scene .portrait-wrap:before{display:none}
+.scene .activity-badge{right:auto;left:50%;bottom:-18px;transform:translateX(-50%);white-space:nowrap;z-index:4}
+.scene-caption{z-index:4}
+
+@media(max-width:760px){.hero-card{grid-template-columns:minmax(0,1fr)}.hero-info,.bar-group,.resource-row{grid-column:1/-1}}

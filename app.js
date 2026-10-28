@@ -125,10 +125,10 @@
   const TRAVEL_EVENTS = [
     { id: 'travel_bandits', activity: 'travel', rarity: 'uncommon', tag: 'ภัยระหว่างทาง', title: 'เงาโจรบนสันเขา', text: 'โจรดักทางเรียกค่าผ่านแดนจากขบวนของเจ้า', unlock: s => !!s.travel?.active, choices: [
       { text: 'ฝ่าวงล้อม', check: { stat: 'body', difficulty: 22 }, effects: [{ type: 'stat', path: 'hero.reputation', value: 3 }, { type: 'path', key: 'freedom', value: 2 }], failureEffects: [{ type: 'stat', path: 'hero.health', value: -12 }] },
-      { text: 'จ่ายเงินและเก็บแรงไว้เดินทางต่อ', effects: [{ type: 'stat', path: 'hero.money', value: -8 }, { type: 'path', key: 'compassion', value: 1 }] }
+      { text: 'จ่ายเงินและเก็บแรงไว้เดินทางต่อ', requires: s => s.hero.money >= 8, locked: 'ต้องมีเงินอย่างน้อย 8 ตำลึง', effects: [{ type: 'stat', path: 'hero.money', value: -8 }, { type: 'path', key: 'compassion', value: 1 }] }
     ] },
     { id: 'travel_storm', activity: 'travel', rarity: 'extraordinary', tag: 'ภัยธรรมชาติ', title: 'พายุปิดช่องเขา', text: 'ฝนหล่มและก้อนหินถล่มทำให้เส้นทางเดิมใช้เวลาเพิ่มขึ้น', unlock: s => !!s.travel?.active, choices: [
-      { text: 'อ้อมเขาและรักษาขบวน', effects: [{ type: 'stat', path: 'hero.health', value: -5 }, { type: 'stat', path: 'hero.money', value: -4 }], effect: s => extendTravel(s, 1, 'พายุปิดช่องเขา') },
+      { text: 'อ้อมเขาและรักษาขบวน', requires: s => s.hero.money >= 4, locked: 'ต้องมีเงินอย่างน้อย 4 ตำลึงสำหรับการอ้อมทาง', effects: [{ type: 'stat', path: 'hero.health', value: -5 }, { type: 'stat', path: 'hero.money', value: -4 }], effect: s => extendTravel(s, 1, 'พายุปิดช่องเขา') },
       { text: 'เสี่ยงฝ่าช่องเขา', check: { stat: 'luck', difficulty: 25 }, effects: [{ type: 'path', key: 'freedom', value: 4 }], failureEffects: [{ type: 'stat', path: 'hero.health', value: -18 }] }
     ] },
     { id: 'travel_wayfarer', activity: 'travel', rarity: 'normal', tag: 'ผู้เดินทาง', title: 'ผู้เดินทางร่วมทาง', text: 'คนแปลกหน้าขอร่วมขบวนและแลกข่าวสารจากปลายทาง', unlock: s => !!s.travel?.active, choices: [{ text: 'แบ่งเสบียงและฟังข่าว', effects: [{ type: 'relation', key: 'acquaintance', value: 2 }, { type: 'path', key: 'insight', value: 2 }] }] },
@@ -308,15 +308,15 @@
     if (found.length) addLog(`พบวัตถุดิบเพิ่มเติม: ${found.join(' · ')}`);
   }
   const CRAFT_EVENTS = [
-    { id: 'craft_lost_formula', activity: 'craft', rarity: 'uncommon', minMonth: 12, title: 'สูตรที่หายไป', text: 'ระหว่างจัดชั้นตำรา เจ้าพบเศษสูตรเก่าที่อาจต่อยอดความรู้ได้ แต่ต้องแลกกับเวลาตามหาส่วนที่ขาด', choices: [
+    { id: 'craft_lost_formula', minAge: 12, activity: 'craft', rarity: 'uncommon', minMonth: 12, title: 'สูตรที่หายไป', text: 'ระหว่างจัดชั้นตำรา เจ้าพบเศษสูตรเก่าที่อาจต่อยอดความรู้ได้ แต่ต้องแลกกับเวลาตามหาส่วนที่ขาด', choices: [
       { text: 'รื้อค้นจนพบเค้าสูตร', effects: [{ type: 'craftKnowledge', key: 'alchemy', value: 1 }, { type: 'path', key: 'insight', value: 1 }], effect: s => addLog('เจ้าต่อเศษสูตรที่หายไปกลับมาได้ ความรู้ปรุงยาเพิ่มขึ้น', true) },
       { text: 'เก็บไว้เป็นเบาะแสแล้วกลับไปทำงาน', effects: [{ type: 'stat', path: 'hero.money', value: 2 }], effect: s => addLog('เจ้าขายข่าวเรื่องสูตรให้คนรู้จักแทน') }
     ] },
-    { id: 'craft_spoiled_materials', activity: 'craft', rarity: 'uncommon', minMonth: 6, title: 'วัตถุดิบเริ่มเสีย', text: 'ความชื้นทำให้วัตถุดิบชุดหนึ่งเสื่อมสภาพ เจ้าต้องตัดสินใจว่าจะคัดทิ้งหรือเสี่ยงใช้ต่อ', choices: [
+    { id: 'craft_spoiled_materials', minAge: 12, activity: 'craft', rarity: 'uncommon', minMonth: 6, unlock: s => (s.materials?.herb || 0) >= 1, title: 'วัตถุดิบเริ่มเสีย', text: 'ความชื้นทำให้วัตถุดิบชุดหนึ่งเสื่อมสภาพ เจ้าต้องตัดสินใจว่าจะคัดทิ้งหรือเสี่ยงใช้ต่อ', choices: [
       { text: 'คัดทิ้งและรักษาเตาให้ปลอดภัย', effects: [{ type: 'material', key: 'herb', value: -1 }, { type: 'stat', path: 'hero.health', value: 2 }], effect: s => addLog('เจ้าคัดวัตถุดิบเสียออกจากคลังอย่างระมัดระวัง') },
-      { text: 'เสี่ยงใช้วัตถุดิบต่อ', effects: [{ type: 'stat', path: 'hero.health', value: -5 }, { type: 'craftKnowledge', key: 'alchemy', value: 1 }], effect: s => addLog('กลิ่นพิษทำให้เจ้าบาดเจ็บ แต่ได้บทเรียนราคาแพง', true) }
+      { text: 'เสี่ยงใช้วัตถุดิบต่อ', effects: [{ type: 'material', key: 'herb', value: -1 }, { type: 'stat', path: 'hero.health', value: -5 }, { type: 'craftKnowledge', key: 'alchemy', value: 1 }], effect: s => addLog('กลิ่นพิษทำให้เจ้าบาดเจ็บ แต่ได้บทเรียนราคาแพง', true) }
     ] },
-    { id: 'craft_special_customer', activity: 'craft', rarity: 'rare', minMonth: 24, title: 'ลูกค้าพิเศษหน้าร้าน', text: 'ผู้เดินทางปิดบังตัวตนมาขอของสนับสนุน เขาจ่ายดี แต่การรับงานอาจทำให้ความสัมพันธ์บางสายเปลี่ยนไป', choices: [
+    { id: 'craft_special_customer', minAge: 12, activity: 'craft', rarity: 'rare', minMonth: 24, title: 'ลูกค้าพิเศษหน้าร้าน', text: 'ผู้เดินทางปิดบังตัวตนมาขอของสนับสนุน เขาจ่ายดี แต่การรับงานอาจทำให้ความสัมพันธ์บางสายเปลี่ยนไป', choices: [
       { text: 'รับงานและรักษาคำสั่งซื้อ', requires: s => canCraft(s, RECIPES.find(r => r.id === 'support_kit')), locked: 'ต้องมีวัตถุดิบและความรู้สำหรับชุดสนับสนุน', effects: [{ type: 'money', value: 6 }, { type: 'craftKnowledge', key: 'support', value: 1 }, { type: 'relationship', key: 'acquaintance', value: 2 }], effect: s => addLog('ลูกค้าพิเศษจ่ายเงินตรงเวลาและฝากช่องทางติดต่อไว้', true) },
       { text: 'ปฏิเสธเพื่อไม่เสี่ยง', effects: [{ type: 'path', key: 'freedom', value: 1 }], effect: s => addLog('เจ้าไม่รับงานที่ไม่รู้ที่มา') }
     ] }
@@ -2221,6 +2221,46 @@
     ]
   };
 
+  // Outcomes are authored for each legendary situation; helping another patient
+  // does not heal the player and an accusation alone does not cause an injury.
+  const LEGENDARY_OUTCOMES = {
+    infant: [
+      [[], []],
+      [[{type:'stat',path:'hero.reputation',value:3}], []],
+      [[], []]
+    ],
+    'young-child': [
+      [[{type:'stat',path:'hero.reputation',value:3}], []],
+      [[{type:'stat',path:'hero.reputation',value:3}], []],
+      [[{type:'stat',path:'hero.reputation',value:2}], []]
+    ],
+    child: [
+      [[{type:'stat',path:'hero.reputation',value:4}], []],
+      [[{type:'stat',path:'hero.reputation',value:4}, {type:'stat',path:'hero.health',value:-2}], []],
+      [[{type:'stat',path:'hero.reputation',value:4}], []]
+    ],
+    youth: [
+      [[{type:'stat',path:'hero.reputation',value:4}], [{type:'stat',path:'hero.attributes.intellect',value:1}]],
+      [[{type:'stat',path:'hero.reputation',value:5}, {type:'stat',path:'hero.health',value:-3}], []],
+      [[{type:'stat',path:'hero.reputation',value:3}], []]
+    ],
+    builder: [
+      [[{type:'stat',path:'hero.reputation',value:4}], []],
+      [[{type:'stat',path:'hero.reputation',value:4}], [{type:'stat',path:'hero.attributes.intellect',value:1}]],
+      [[{type:'stat',path:'hero.reputation',value:4}, {type:'stat',path:'hero.health',value:-2}], []]
+    ],
+    middle: [
+      [[{type:'stat',path:'hero.reputation',value:4}], []],
+      [[{type:'stat',path:'hero.reputation',value:4}], [{type:'stat',path:'hero.attributes.intellect',value:1}]],
+      [[{type:'stat',path:'hero.reputation',value:3}], [{type:'stat',path:'hero.attributes.intellect',value:1}]]
+    ],
+    elder: [
+      [[{type:'stat',path:'hero.reputation',value:3}], []],
+      [[{type:'stat',path:'hero.reputation',value:4}, {type:'stat',path:'hero.health',value:-1}], []],
+      [[{type:'stat',path:'hero.reputation',value:3}], [{type:'stat',path:'hero.attributes.intellect',value:1}]]
+    ]
+  };
+
   function annualRareChoices(s, activity, rarity, power, seed, frame, index, ageYear, scene) {
     const phase = annualLifePhase(s);
     const choiceVariants = [
@@ -2237,18 +2277,18 @@
     const child = phase.id === 'child';
     const severe = Math.min(rarity === 'legendary' ? power * 2 : power, young ? 6 : child ? 10 : 24);
     const difficulty = 10 + power;
-    const dangerous = !scene || /ติดตาม|ไล่ล่า|โจมตี|กลุ่มติดอาวุธ|เส้นทางอันตราย|ข่มขู่|ศึก|ปะทะ|เฝ้าเส้นทาง|ค้นหาคนรู้เรื่อง/.test(scene[1]);
-    const failure = dangerous ? [{ type: 'stat', path: 'hero.health', value: -severe }] : [{ type: 'stat', path: 'hero.reputation', value: -1 }];
-    const scenario = scene?.[1] || '';
-    const evidence = /หลักฐาน|ทะเบียน|เอกสาร|บันทึก|คำสั่งปลอม|คำให้การ/.test(scenario);
-    const healing = /ป่วย|ผู้รักษา/.test(scenario);
-    const resultPath = healing ? 'hero.health' : evidence && !young ? 'hero.attributes.intellect' : 'hero.reputation';
-    const resultLabel = { 'hero.health': 'สุขภาพ', 'hero.attributes.intellect': 'ปัญญา', 'hero.reputation': 'ชื่อเสียง' }[resultPath];
-    const resultValue = healing ? 6 : evidence && !young ? 2 : 6;
+    const dangerousScenes = { infant: [1], 'young-child': [0, 1], child: [0, 1], youth: [1, 2], builder: [2], middle: [], elder: [] };
+    const dangerous = scene ? (dangerousScenes[phase.id] || []).includes(index) : false;
+    const failure = dangerous ? [{ type: 'stat', path: 'hero.health', value: -severe }] : [];
+    const authored = scene ? LEGENDARY_OUTCOMES[phase.id]?.[index] : null;
+    const positive = authored?.[0] || [];
+    const cautious = authored?.[1] || [];
+    const successNote = gradedOutcomeNote(positive) || 'ไม่มีผลต่อค่าที่แสดง';
+    const cautiousNote = gradedOutcomeNote(cautious) || 'ไม่มีผลต่อค่าที่แสดง';
     return [
-      { text: texts[0], note: `หากสำเร็จ ${resultLabel} +${resultValue} · หากพลาด${dangerous ? `เสียสุขภาพ ${severe}` : 'เสียชื่อเสียง 1'}`, check: { stat: checkStat, difficulty }, failureEffects: failure, effects: [{ type: 'path', key: healing ? 'compassion' : evidence ? 'insight' : 'duty', value: Math.ceil(power / 2) }, { type: 'stat', path: resultPath, value: resultValue }] },
-      { text: texts[1], note: healing ? 'ไม่ต้องทดสอบ · ฟื้นสุขภาพเล็กน้อย' : evidence && !young ? 'ไม่ต้องทดสอบ · ฝึกพิจารณาหลักฐาน' : 'ไม่ต้องทดสอบ · รวบรวมข้อมูลก่อน', effects: [{ type: 'path', key: 'insight', value: Math.max(1, Math.ceil(power / 3)) }, ...(healing ? [{ type: 'stat', path: 'hero.health', value: 2 }] : evidence && !young ? [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }] : [])] },
-      { text: texts[2], note: 'หลีกเลี่ยงความเสี่ยง', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
+      { text: texts[0], note: `หากสำเร็จ ${successNote} · หากพลาด${dangerous ? `เสียสุขภาพ ${severe}` : 'ยังทำไม่สำเร็จ'}`, check: { stat: checkStat, difficulty }, failureEffects: failure, effects: [{ type: 'path', key: 'duty', value: Math.ceil(power / 2) }, ...positive] },
+      { text: texts[1], note: `ไม่ต้องทดสอบ · ${cautiousNote}`, effects: [{ type: 'path', key: 'insight', value: Math.max(1, Math.ceil(power / 3)) }, ...cautious] },
+      { text: texts[2], note: 'ไม่ได้เข้าไปเกี่ยวข้อง', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
     ];
   }
 
@@ -2940,7 +2980,7 @@
       unlock: s => familyAllowed(s) && ensureFamilyState(s).conflict >= 8,
       title: 'รอยร้าวในเรือน', text: 'หนี้ ความเหนื่อยล้า และความคาดหวังต่างกันทำให้คนในครอบครัวเริ่มขัดแย้ง',
       choices: [
-        { text: 'หยุดงานเพื่อพูดคุยและไกล่เกลี่ย', note: 'ความขัดแย้งลดลง แต่เสียรายได้ของเดือนนี้', effects: [{ type: 'stat', path: 'hero.money', value: -3 }], effect: s => { const f = ensureFamilyState(s); f.conflict = Math.max(0, f.conflict - 10); f.bond = clamp(f.bond + 6, 0, 100); addFamilyChronicle(s, 'ไกล่เกลี่ยรอยร้าวในเรือน', 3); } },
+        { text: 'หยุดงานเพื่อพูดคุยและไกล่เกลี่ย', note: 'ความขัดแย้งลดลง ใช้เงิน 3 ตำลึง', requires: s => s.hero.money >= 3, locked: 'ต้องมีเงินอย่างน้อย 3 ตำลึง', effects: [{ type: 'stat', path: 'hero.money', value: -3 }], effect: s => { const f = ensureFamilyState(s); f.conflict = Math.max(0, f.conflict - 10); f.bond = clamp(f.bond + 6, 0, 100); addFamilyChronicle(s, 'ไกล่เกลี่ยรอยร้าวในเรือน', 3); } },
         { text: 'ปล่อยให้เวลาตัดสิน', note: 'ความขัดแย้งรุนแรงขึ้นและชื่อเสียงครอบครัวเสียหาย', effect: s => { const f = ensureFamilyState(s); f.conflict = clamp(f.conflict + 8, 0, 100); s.hero.reputation -= 3; f.legacyScore = Math.max(0, f.legacyScore - 2); addFamilyChronicle(s, 'ความขัดแย้งถูกปล่อยให้ลุกลาม', -2); } }
       ]
     },
@@ -2991,18 +3031,19 @@
       text: 'เจ้าพบสถานที่สงบให้หยุดพักหนึ่งคืน คุณภาพของที่พักขึ้นอยู่กับสถานที่ที่เจ้าครอบครองและทรัพย์ที่มี',
       freeWeight: s => ((s.hero?.health || 0) < (s.hero?.maxHealth || 100) * .65 ? 2.2 : .55) * freeLifeLocationWeight(s, ['owned', 'estate', 'rented', 'retainer', 'sect']),
       choices: [
-        { text: 'จ่ายค่าที่พักและพักให้เต็มที่', auto: 'safe', effects: [{ type: 'flag', key: 'freeLifeShelterKnown', value: true }, { type: 'stat', path: 'hero.money', value: -2 }, { type: 'stat', path: 'hero.health', value: s => Math.max(4, Math.round((restRoute(s).heal || 8) * .45)) }] },
+        { text: 'จ่ายค่าที่พักและพักให้เต็มที่', auto: 'safe', requires: s => s.hero.money >= 2, locked: 'ต้องมีเงินอย่างน้อย 2 ตำลึง', note: 'ใช้เงิน 2 ตำลึงเพื่อพักฟื้น', effects: [{ type: 'flag', key: 'freeLifeShelterKnown', value: true }, { type: 'stat', path: 'hero.money', value: -2 }, { type: 'stat', path: 'hero.health', value: s => Math.max(4, Math.round((restRoute(s).heal || 8) * .45)) }] },
         { text: 'นอนกลางแจ้งโดยไม่เสียเงิน', auto: 'safe', effects: [{ type: 'stat', path: 'hero.health', value: 2 }, { type: 'path', key: 'freedom', value: 1 }] }
       ]
     },
     {
       id: 'free-life-road-merchant', freeLife: true, activity: 'free', rarity: 'rare', tag: 'การเดินทางและทรัพยากร',
       title: 'พ่อค้าร่วมทาง',
-      text: 'พ่อค้ารับซื้อของที่เจ้าหาได้ระหว่างทาง และชวนให้เดินทางไปยังเมืองถัดไปพร้อมกัน',
+      text: 'พ่อค้ารับซื้อสมุนไพรทั่วไป และชวนเจ้าเดินร่วมทางช่วงหนึ่งโดยช่วยออกค่าเสบียง',
       freeWeight: s => (1 + ((s.hero?.money || 0) >= 20 ? .45 : 0) + ((s.hero?.attributes?.luck || 0) / 80)) * freeLifeLocationWeight(s, ['roadside', 'inn', 'hidden_cave']),
       choices: [
-        { text: 'แลกวัตถุดิบเป็นเงินและข่าวสาร', auto: 'safe', effects: [{ type: 'material', key: 'herb', value: -1 }, { type: 'stat', path: 'hero.money', value: 7 }, { type: 'path', key: 'freedom', value: 2 }] },
-        { text: 'ร่วมทางไปเมืองใหม่', auto: 'safe', effects: [{ type: 'flag', key: 'freeLifeTraveled', value: true }, { type: 'faction', key: 'jianghu', value: 1 }, { type: 'stat', path: 'hero.money', value: -2 }, { type: 'stat', path: 'hero.health', value: -1 }, { type: 'stat', path: 'hero.attributes.luck', value: 2 }, { type: 'path', key: 'freedom', value: 3 }] }
+        { text: 'ขายสมุนไพรให้พ่อค้า', auto: 'safe', requires: s => (s.materials?.herb || 0) >= 1, locked: 'ต้องมีสมุนไพรทั่วไปอย่างน้อย 1', note: 'สมุนไพรทั่วไป −1 · เงิน +7', effects: [{ type: 'material', key: 'herb', value: -1 }, { type: 'stat', path: 'hero.money', value: 7 }, { type: 'path', key: 'freedom', value: 2 }] },
+        { text: 'เดินร่วมทางกับพ่อค้าชั่วคราว', auto: 'safe', requires: s => s.hero.money >= 2, locked: 'ต้องมีเงินอย่างน้อย 2 ตำลึง', note: 'ใช้เงิน 2 ตำลึงและเสียสุขภาพเล็กน้อย', effects: [{ type: 'flag', key: 'freeLifeTraveled', value: true }, { type: 'faction', key: 'jianghu', value: 1 }, { type: 'stat', path: 'hero.money', value: -2 }, { type: 'stat', path: 'hero.health', value: -1 }, { type: 'stat', path: 'hero.attributes.luck', value: 2 }, { type: 'path', key: 'freedom', value: 3 }] },
+        { text: 'ขอบคุณและแยกทางกับพ่อค้า', auto: 'safe', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
       ]
     },
     {
@@ -3050,7 +3091,7 @@
       ],
       child: [
         ['missing-token', 'ป้ายที่หายไป', 'เด็กคนหนึ่งทำป้ายส่งของหาย หากหาไม่พบผู้รับอาจไม่เชื่อว่าเขาได้รับมอบหมาย', 'intellect'],
-        ['leaking-bundle', 'ห่อของเปียกฝน', 'คนขายยาขอให้เจ้าช่วยแยกของที่เปียกฝนก่อนสมุนไพรเสียหาย', 'money'],
+        ['leaking-bundle', 'ห่อของเปียกฝน', 'คนขายยาขอให้เจ้าช่วยแยกของที่เปียกฝนก่อนสมุนไพรเสียหาย และเสนอสมุนไพรแห้งเป็นค่าตอบแทน', 'money'],
         ['wrong-message', 'ข่าวส่งผิดคน', 'เจ้าพบว่าข้อความที่ส่งต่อกันอาจผิดเพียงคำเดียว แต่ความหมายเปลี่ยนไปมาก', 'reputation'],
         ['minor-contest', 'การแข่งขันเล็ก ๆ', 'คนวัยเดียวกันชวนแข่งความแม่นยำโดยใช้รางวัลที่แต่ละคนหามาเอง', 'bodyFoundation']
       ],
@@ -3244,8 +3285,8 @@
       ],
       [
         "missing-change",
-        "เงินทอนขาด",
-        "คนขายให้เงินทอนผิดและยังไม่รู้ตัว เจ้ามีโอกาสทักก่อนจากกัน",
+        "เงินทอนเกิน",
+        "คนขายให้เงินทอนเกินและยังไม่รู้ตัว เจ้ามีโอกาสทักก่อนจากกัน",
         "reputation"
       ],
       [
@@ -3295,7 +3336,7 @@
       [
         "strap",
         "สายสัมภาระขาด",
-        "คนเดินทางขอเชือกและแรงช่วยผูกสัมภาระที่หลุดระหว่างทาง",
+        "คนเดินทางขอให้ช่วยใช้เชือกของเขาผูกสัมภาระที่หลุดระหว่างทาง",
         "health"
       ],
       [
@@ -3479,7 +3520,7 @@
       [
         "shipment",
         "สินค้าขาดหาย",
-        "บัญชีสินค้าระบุห่อเกินมาหนึ่งห่อ คนส่งและผู้รับกล่าวโทษกัน",
+        "บัญชีสินค้าระบุห่อสมุนไพรเกินมาหนึ่งห่อ คนส่งและผู้รับกล่าวโทษกันว่าใครเป็นเจ้าของ",
         "money"
       ],
       [
@@ -3763,6 +3804,33 @@
     ['extraordinary','manual','คัมภีร์ใต้ก้อนหิน','เจ้าพบคัมภีร์กระบี่หายากซ่อนใต้ก้อนหิน แต่ทางเข้ามีร่องรอยสัตว์'],
     ['epic','manual','คัมภีร์ในซากเก่า','ในซากสถานที่ร้าง เจ้าพบคัมภีร์กระบี่มหากาพย์วางอยู่หลังสิ่งกีดขวางที่อาจพังลงมา']
   ];
+
+  const DISCOVERY_ACTIONS = {
+    'uncommon/herb': ['ค่อย ๆ เก็บสมุนไพรบนไหล่ทาง', 'ดูจุดวางเท้าก่อนเข้าใกล้', 'ปล่อยสมุนไพรไว้ริมทาง'],
+    'extraordinary/herb': ['เอื้อมเก็บสมุนไพรใต้ร่มหิน', 'ตรวจพื้นดินรอบร่มหินก่อน', 'ออกห่างจากพื้นดินที่ไม่มั่นคง'],
+    'epic/herb': ['ฝ่าหมอกเข้าไปเก็บสมุนไพร', 'จำทางกลับก่อนเข้าใกล้หมอก', 'ไม่เสี่ยงหลงทางเพื่อสมุนไพร'],
+    'uncommon/weapon': ['เก็บกระบี่ที่ถูกทิ้งไว้', 'ตรวจร่องรอยการต่อสู้จากรอบนอก', 'วางกระบี่ไว้ที่เดิม'],
+    'extraordinary/weapon': ['เข้าไปนำห่อกระบี่ออกมา', 'ตรวจบริเวณรอบห่อก่อน', 'ไม่เข้าใกล้ห่อในพื้นที่เสี่ยง'],
+    'epic/weapon': ['ฝ่าซากค่ายไปนำกระบี่ออกมา', 'ตรวจซากที่อาจพังจากระยะไกล', 'ทิ้งกระบี่ไว้ในซากค่าย'],
+    'uncommon/manual': ['นำห่อกันฝนและคัมภีร์กระบี่ติดตัว', 'ตรวจหน้าที่ขาดจากภายนอกห่อ', 'ปล่อยบันทึกชำรุดไว้'],
+    'extraordinary/manual': ['ยกหินเพื่อนำคัมภีร์กระบี่ออกมา', 'ตรวจรอยสัตว์ก่อนเข้าไป', 'ออกจากพื้นที่ที่มีรอยสัตว์'],
+    'epic/manual': ['ฝ่าสิ่งกีดขวางเพื่อนำคัมภีร์กระบี่ออกมา', 'ตรวจสิ่งกีดขวางที่เสี่ยงพัง', 'ไม่ฝ่าซากเก่าเข้าไป'],
+    'uncommon/manual_fist': ['นำห่อคัมภีร์หมัดออกจากสัมภาระเก่า', 'ดูสภาพผ้ากันฝนก่อนเปิดห่อ', 'ทิ้งสัมภาระเก่าไว้'],
+    'extraordinary/manual_fist': ['เก็บคัมภีร์หมัดข้างแผ่นไม้', 'ตรวจรอยฝึกบนแผ่นไม้ก่อน', 'ไม่แตะคัมภีร์ข้างแผ่นไม้'],
+    'epic/manual_fist': ['เข้าไปนำสมุดหมัดจากซากเก่า', 'ตรวจโครงซากที่อาจพัง', 'ออกจากซากโดยไม่เอาสมุด'],
+    'uncommon/manual_blade': ['เก็บสมุดดาบจากห่อของที่ถูกทิ้ง', 'ตรวจห่อของผู้เดินทางก่อน', 'ปล่อยห่อไว้ข้างทาง'],
+    'extraordinary/manual_blade': ['นำตำราดาบออกจากใต้รากไม้', 'ตรวจความลาดชันก่อนลงไป', 'ไม่ลงไปยังรากไม้'],
+    'epic/manual_blade': ['นำม้วนดาบออกจากหลังแผ่นหิน', 'ตรวจว่าแผ่นหินมั่นคงหรือไม่', 'ถอยห่างจากแผ่นหิน'],
+    'uncommon/manual_defense': ['นำบทคุ้มกายออกจากห่อเปียกฝน', 'ตรวจว่าห่อกระดาษเสียหายเพียงใด', 'ปล่อยห่อเปียกไว้'],
+    'extraordinary/manual_defense': ['เปิดหีบเก่าเพื่อนำบันทึกรับแรง', 'สังเกตหีบและรอยทางรอบข้าง', 'ไม่เปิดหีบเก่า'],
+    'epic/manual_defense': ['ฝ่าเศษหินเข้าไปนำตำราป้องกัน', 'ดูจังหวะเศษหินหล่นก่อนเข้าใกล้', 'ไม่เข้าไปในซากปรัก'],
+    'uncommon/manual_movement': ['เก็บคัมภีร์ย่างก้าวพร้อมภาพรอยเท้า', 'สังเกตลำดับรอยเท้าบนผืนผ้า', 'วางผืนผ้าไว้ที่พบ'],
+    'extraordinary/manual_movement': ['เก็บม้วนก้าวข้ามธารใกล้กระแสน้ำ', 'ดูกระแสน้ำก่อนเข้าใกล้', 'ถอยจากทางน้ำไหลเชี่ยว'],
+    'epic/manual_movement': ['เข้าไปนำตำราจากที่ซ่อนกลางหมอก', 'จำทางกลับจากขอบหมอก', 'ไม่เสี่ยงเข้าไปในหมอก'],
+    'uncommon/manual_cultivation': ['นำสมุดลมหายใจออกจากห่อผ้า', 'ตรวจสัมภาระรอบห่อก่อน', 'ปล่อยห่อผ้าไว้'],
+    'extraordinary/manual_cultivation': ['เข้าไปนำม้วนโคจรปราณออกมา', 'ตรวจพื้นดินที่ไม่มั่นคงก่อน', 'ถอยจากบริเวณพื้นดินร่วน'],
+    'epic/manual_cultivation': ['ฝ่าซากหอไปนำคัมภีร์ปราณ', 'สังเกตส่วนหอที่อาจพัง', 'ออกจากซากหอโดยไม่เอาคัมภีร์']
+  };
 
   // Manual type determines the learned technique and its loadout slot.
   const MANUAL_DISCOVERY_TYPES = {
@@ -4267,6 +4335,44 @@
     "text": "เจ้าพบคัมภีร์เคล็ดปราณขอบฟ้าในหอร้างที่หน้าต่างเปิดรับลมแรง"
   }
 ]);
+  const EXTRA_MANUAL_ACTIONS = {
+    discovery_alt_fist_uncommon: ['ดึงห่อผ้าออกจากระหว่างท่อนไม้', 'ดูว่าท่อนไม้กดห่ออยู่ตรงไหน', 'ปล่อยห่อผ้าไว้'],
+    discovery_alt_fist_rare: ['เปิดหีบหลังแผ่นไม้ชำรุด', 'ตรวจแผ่นไม้ที่บังหีบก่อน', 'ไม่เปิดหีบหลังแผ่นไม้'],
+    discovery_alt_fist_epic: ['ขึ้นชั้นหินไปหยิบคัมภีร์ในศาลา', 'ดูหลังคาศาลาที่ชำรุดจากด้านนอก', 'ไม่เข้าไปใต้หลังคาศาลา'],
+    discovery_alt_blade_uncommon: ['แก้ผ้าใบจากด้ามไม้แล้วเก็บตำรา', 'ตรวจผ้าใบที่พันรอบด้ามไม้', 'วางด้ามไม้กับผ้าใบไว้'],
+    discovery_alt_blade_rare: ['ลอดทางแคบไปเอาคัมภีร์จากช่องหิน', 'มองความกว้างของทางเข้าก่อน', 'ไม่ลอดเข้าไปในช่องทางแคบ'],
+    discovery_alt_blade_epic: ['ค้นหลังเตาหินเพื่อนำคัมภีร์ออกมา', 'สังเกตเศษซากรอบเตาหิน', 'ออกจากบริเวณเตาเก่า'],
+    discovery_alt_sword_uncommon: ['แก้กล่องออกจากซากแพไม้', 'ดูเชือกที่ผูกกล่องกับแพ', 'ทิ้งกล่องไว้กับซากแพ'],
+    discovery_alt_sword_rare: ['นำคัมภีร์ออกจากโพรงไม้', 'ตรวจรอยขุดเก่าข้างโพรง', 'ไม่แตะโพรงไม้'],
+    discovery_alt_sword_epic: ['หยิบตำราใต้โคมหินที่เอน', 'ดูว่าโคมหินเอนไปทางใด', 'เดินผ่านโคมหินโดยไม่หยิบตำรา'],
+    discovery_alt_defense_uncommon: ['ดึงคัมภีร์ออกจากท่อนไม้กลวง', 'ดูร่องท่อนไม้ก่อนเอื้อมมือ', 'ปล่อยท่อนไม้ไว้'],
+    discovery_alt_defense_rare: ['นำห่อกันน้ำจากข้างทางน้ำ', 'สำรวจความลึกของน้ำตื้น', 'ไม่เก็บห่อที่ริมน้ำ'],
+    discovery_alt_defense_epic: ['ปีนขึ้นไปหยิบคัมภีร์จากซอกผา', 'ตรวจจุดจับบนผาก่อนปีน', 'ไม่ปีนขึ้นซอกผา'],
+    discovery_alt_movement_uncommon: ['ยกหินสัญลักษณ์เท้าเพื่อเก็บตำรา', 'ดูเครื่องหมายเท้าบนก้อนหิน', 'ไม่ขยับก้อนหิน'],
+    discovery_alt_movement_rare: ['คลี่ผืนผ้าและเก็บคัมภีร์', 'พิจารณาแผนก้าวเป็นวงบนผ้า', 'ปล่อยผืนผ้าม้วนไว้'],
+    discovery_alt_movement_epic: ['ข้ามพื้นที่ยุบไปเอาคัมภีร์ในหอ', 'ตรวจพื้นหอจากปากทาง', 'ออกจากหอพื้นทรุด'],
+    discovery_alt_cultivation_uncommon: ['แกะเปลือกไม้เพื่อเก็บคัมภีร์', 'ตรวจเปลือกไม้แห้งที่ห่อไว้', 'ทิ้งเปลือกไม้ไว้'],
+    discovery_alt_cultivation_rare: ['เปิดผ้าผนึกไหดินแล้วเก็บคัมภีร์', 'ตรวจผ้าที่ปิดปากไห', 'ไม่เปิดไหดิน'],
+    discovery_alt_cultivation_epic: ['ยกพื้นหินชำรุดเพื่อเอากล่องทองแดง', 'ตรวจรอยชำรุดบนพื้นหิน', 'ไม่ยกพื้นหิน'],
+    discovery_third_fist_uncommon: ['เก็บห่อป่านหลังหลักทาง', 'ตรวจหลักทางและห่อป่านก่อน', 'ปล่อยห่อป่านไว้หลังหลัก'],
+    discovery_third_fist_rare: ['เคลื่อนเศษหินเพื่อเอาคัมภีร์ในโพรง', 'ดูเศษหินที่ปิดโพรงดิน', 'ไม่ขุดโพรงที่มีหินร่วง'],
+    discovery_third_fist_epic: ['เข้าใต้หน้าผาแตกร้าวไปเอากล่องหิน', 'ตรวจรอยแตกจากนอกหน้าผา', 'ออกห่างจากหน้าผา'],
+    discovery_third_blade_uncommon: ['ดึงตำราดาบออกจากซอกตอไม้', 'สำรวจตอไม้ริมทางเก่า', 'ทิ้งตำราในตอไม้'],
+    discovery_third_blade_rare: ['ปลดผ้าคลุมจากกิ่งไม้เพื่อเก็บตำรา', 'ดูว่าผ้าคลุมติดกิ่งตรงไหน', 'ไม่ปลดผ้าจากกิ่งไม้'],
+    discovery_third_blade_epic: ['ไปเปิดหีบบนทางลาดที่ถูกฝนกัดเซาะ', 'ตรวจความมั่นคงของทางลาด', 'ไม่ขึ้นทางลาดที่สึกกร่อน'],
+    discovery_third_sword_uncommon: ['เปิดกระบอกลายใบสนแล้วเก็บคัมภีร์', 'ดูรายละเอียดลายบนกระบอกไม้', 'ปล่อยกระบอกไม้ไว้'],
+    discovery_third_sword_rare: ['นำกล่องเคลือบสีจากใต้ชายหินเปียกฝน', 'ดูพื้นเปียกใต้ชายหินก่อน', 'ไม่เข้าใต้ชายหินเปียก'],
+    discovery_third_sword_epic: ['เปิดหีบไม้ใต้ศิลาลายดาว', 'ตรวจรอยดาวบนศิลาก่อน', 'ปล่อยหีบไว้ใต้ศิลา'],
+    discovery_third_defense_uncommon: ['แก้ห่อผ้าจากกิ่งไม้ต่ำ', 'ตรวจปมที่ผูกห่อกับกิ่ง', 'ไม่แก้ห่อจากกิ่งไม้'],
+    discovery_third_defense_rare: ['ยกกระเบื้องแตกเพื่อเอาม้วนผ้า', 'ดูขอบกระเบื้องแตกก่อนยก', 'ไม่แตะกระเบื้องแตก'],
+    discovery_third_defense_epic: ['เข้าไปเอากล่องเก่าจากถ้ำที่มีหินหล่น', 'ฟังเสียงหินหล่นจากปากถ้ำ', 'ไม่เข้าไปในถ้ำ'],
+    discovery_third_movement_uncommon: ['เก็บคัมภีร์บนแผ่นผ้ารอยเท้า', 'ดูภาพรอยเท้าหลายจังหวะ', 'วางแผ่นผ้าไว้'],
+    discovery_third_movement_rare: ['ยกแผ่นหินรอยเท้าเพื่อเอาคัมภีร์', 'ตรวจแนวรอยขีดบนแผ่นหิน', 'ไม่ยกแผ่นหิน'],
+    discovery_third_movement_epic: ['ฝ่าลมแรงไปหยิบคัมภีร์หลังโขดหิน', 'ดูทิศลมก่อนเข้าใกล้โขดหิน', 'ไม่เข้าไปด้านหลังโขดหิน'],
+    discovery_third_cultivation_uncommon: ['เปิดภาชนะดินแล้วหยิบถุงคัมภีร์', 'ตรวจสภาพภาชนะดินก่อนเปิด', 'วางภาชนะดินไว้'],
+    discovery_third_cultivation_rare: ['เก็บห่อกันชื้นข้างแนวหิน', 'ตรวจห่อกันชื้นก่อนหยิบ', 'ปล่อยห่อไว้ข้างแนวหิน'],
+    discovery_third_cultivation_epic: ['เข้าไปเก็บคัมภีร์ที่หน้าต่างหอร้าง', 'มองภายในหอร้างจากทางเข้า', 'ไม่เข้าไปในหอร้าง']
+  };
   const ADDITIONAL_MANUAL_TYPES = { ...MANUAL_DISCOVERY_TYPES, sword: { label: 'กระบี่', slot: 'combat', subtype: 'jian', manualSubtype: 'attack_jian', learningType: 'martial' } };
 
   function discoveryManualName(techniqueId) {
@@ -4329,7 +4435,7 @@
     'uncommon/adult/cart': ['รับจ้างช่วยซ่อมล้อรถเข็น', 'ตรวจความเสียหายและตกลงค่าจ้างก่อน', 'ปฏิเสธงานซ่อม'],
     'uncommon/adult/receipt': ['ยืนยันการรับของให้ลูกจ้าง', 'ตรวจรายละเอียดกับผู้ว่าจ้างก่อน', 'ไม่รับรองสิ่งที่ยังไม่แน่ใจ'],
     'uncommon/adult/recipe': ['ช่วยเรียงขั้นตอนสูตรในบันทึก', 'ถามช่างถึงขั้นตอนที่จำได้ก่อน', 'คืนบันทึกให้ช่างตรวจเอง'],
-    'uncommon/adult/strap': ['ช่วยผูกสัมภาระและให้เชือก', 'ตรวจว่าห่อใดต้องผูกให้แน่นก่อน', 'เดินทางต่อโดยไม่รับช่วย'],
+    'uncommon/adult/strap': ['ช่วยผูกสัมภาระด้วยเชือกของคนเดินทาง', 'ตรวจว่าห่อใดต้องผูกให้แน่นก่อน', 'เดินทางต่อโดยไม่รับช่วย'],
     'uncommon/adult/delivery': ['รับค่าตอบแทนและส่งห่อแทน', 'ตรวจผู้รับและปลายทางก่อนรับงาน', 'ปฏิเสธงานส่งของ'],
     'uncommon/adult/herbs': ['ช่วยตรวจชื่อห่อยาก่อนส่งให้คนไข้', 'เทียบฉลากกับรายการยาก่อน', 'ปล่อยให้ผู้รักษาตรวจเอง'],
     'uncommon/adult/witness': ['ช่วยไกล่เกลี่ยข้อตกลงของทั้งสอง', 'ฟังคำบอกเล่าของแต่ละฝ่ายก่อน', 'ไม่เข้าไปตัดสินข้อพิพาท'],
@@ -4360,7 +4466,7 @@
     'epic/child/broken-truce': ['นำสำเนาข้อตกลงไปเตือนทั้งสองฝ่าย', 'ขอให้ผู้ใหญ่ช่วยตรวจว่าฉบับใดถูกต้อง', 'เก็บสำเนาไว้และหลบจากพื้นที่'],
     'epic/child/poisoned-well': ['นำข้อมูลไปบอกผู้รักษาที่กำลังหาต้นตอพิษ', 'ทวนรายละเอียดที่รู้กับผู้รักษาก่อน', 'อยู่ห่างจากบริเวณที่มีคนป่วย'],
     'epic/child/stolen-register': ['นำทะเบียนไปแจ้งผู้ที่ตามหาคนสูญหาย', 'ตรวจชื่อและสัญลักษณ์กับผู้ใหญ่ก่อน', 'เก็บทะเบียนไว้โดยไม่เปิดเผย'],
-    'epic/child/merchant-hostage': ['แจ้งผู้ที่ช่วยตัวประกันได้ว่ามีคนถูกบังคับ', 'สังเกตขบวนและขอให้ผู้ใหญ่ช่วยตรวจสอบ', 'หลีกเลี่ยงผู้คุมและไม่รับเงิน'],
+    'epic/child/merchant-hostage': ['แจ้งผู้ที่ช่วยตัวประกันได้ว่ามีคนถูกบังคับ', 'รับเงินจากผู้คุมและตกลงปิดปาก', 'หลีกเลี่ยงผู้คุมและไม่รับเงิน'],
     'epic/child/witness': ['ช่วยพาพยานไปพบคนที่คุ้มครองได้', 'ถามพยานว่ามีผู้ใดไว้ใจได้ก่อน', 'หลบจากพื้นที่โดยไม่เข้าไปเกี่ยวข้อง'],
     'epic/child/supplies': ['แจ้งผู้รักษาเรื่องเสบียงที่อยู่กับคนติดอาวุธ', 'ตรวจเครื่องหมายและขอให้ผู้ใหญ่ช่วย', 'ถอยออกห่างจากคนติดอาวุธ'],
     'epic/child/fever': ['ช่วยผู้รักษาตรวจอาหารของคนป่วย', 'ถามว่าคนป่วยแต่ละคนกินสิ่งใดก่อน', 'อยู่ห่างจากกลุ่มคนป่วย'],
@@ -4377,7 +4483,7 @@
     'epic/adult/medicine': ['พาขบวนยาหาทางผ่านโดยไม่เปิดชื่อผู้ส่ง', 'เจรจากับผู้คุมทางและตรวจทางเลือกก่อน', 'ไม่เข้าร่วมขบวนยา'],
     'epic/adult/contract': ['ปฏิเสธเงื่อนไขส่งตัวพยานและแจ้งผู้เกี่ยวข้อง', 'ตรวจสัญญาและหาหลักฐานก่อนตัดสินใจ', 'ไม่ลงนามในสัญญา'],
     'epic/adult/shortage': ['นำบัญชีไปแจ้งผู้จัดเสบียงผู้ลี้ภัย', 'ตรวจผู้เบิกและรายการส่งของก่อน', 'ไม่เข้าไปเกี่ยวข้องกับบัญชี'],
-    'epic/adult/truce': ['ช่วยผู้ส่งสารนำหลักฐานไปยังที่เจรจา', 'ตรวจผู้เสนอรางวัลและหาทางส่งสารปลอดภัย', 'ไม่รับทั้งหลักฐานและรางวัล'],
+    'epic/adult/truce': ['ช่วยผู้ส่งสารนำหลักฐานไปยังที่เจรจา', 'รับรางวัลแล้วช่วยยึดหลักฐานจากผู้ส่งสาร', 'ไม่รับทั้งหลักฐานและรางวัล'],
     'epic/adult/remedy': ['นำข้อสงสัยเรื่องสูตรยาไปแจ้งผู้รักษาคนอื่น', 'ตรวจสูตรต้นฉบับก่อนกล่าวหาผู้จัดหา', 'หยุดยุ่งกับสูตรยา'],
     'epic/adult/captives': ['นำรายชื่อไปแจ้งครอบครัวและผู้ช่วยเหลือ', 'ตรวจความถูกต้องของบัญชีก่อนเปิดเผย', 'เก็บรายชื่อไว้'],
     'epic/adult/caravan': ['ช่วยคุ้มกันแยกขบวนจริงจากขบวนลวง', 'ตรวจเส้นทางและหลักฐานของแต่ละขบวนก่อน', 'ไม่ร่วมเสี่ยงกับขบวน'],
@@ -4422,14 +4528,167 @@
     'extraordinary/adult/disputed-testimony': ['ช่วยพยานให้การโดยไม่ถูกกดดัน', 'ฟังคำให้การทั้งสองและหาหลักฐานก่อน', 'ไม่รับหน้าที่ตรวจคำให้การ'],
     'extraordinary/adult/buried-technique': ['ตรวจคำเตือนเดิมที่ถูกเขียนทับ', 'ขอผู้รู้ช่วยอ่านลายมือทั้งสองชั้น', 'ไม่ฝึกจากบันทึกที่ยังอ่านไม่ครบ'],
     'extraordinary/adult/contract': ['ขอตรวจตราเดิมก่อนลงนาม', 'ถามผู้ว่าจ้างว่าเหตุใดจึงมีตราซ้อน', 'ปฏิเสธการลงนาม'],
-    'extraordinary/adult/shipment': ['ช่วยตรวจห่อสินค้าเทียบกับบัญชี', 'รับฟังทั้งคนส่งและผู้รับก่อน', 'ไม่ตัดสินข้อกล่าวหา'],
+    'extraordinary/adult/shipment': ['ช่วยตรวจห่อสินค้าเทียบกับบัญชี', 'เก็บห่อสมุนไพรไว้เองระหว่างที่ทั้งสองโต้เถียง', 'ไม่ตัดสินข้อกล่าวหา'],
     'extraordinary/adult/witness': ['นำลายมือในจดหมายไปให้ผู้เกี่ยวข้องตรวจ', 'เทียบจดหมายกับลายมือผู้ส่งที่อ้างก่อน', 'ไม่เปิดเผยจดหมาย'],
     'extraordinary/adult/healer': ['ช่วยหาแหล่งบันทึกตำรับยาทั้งสอง', 'ถามผู้รักษาเรื่องอาการและวิธีปรุงก่อน', 'ให้ผู้รักษาตรวจตำรับกันเอง'],
-    'extraordinary/adult/training': ['ช่วยงานผู้รู้แลกความรู้หน้าที่หาย', 'ถามขอบเขตงานและความรู้ที่จะแลกก่อน', 'ไม่รับข้อแลกเปลี่ยน'],
+    'extraordinary/adult/training': ['ช่วยงานผู้รู้แล้วฝึกตามความรู้ที่แลกมา', 'ช่วยงานและขอฝึกเข้มกับผู้รู้', 'ไม่รับข้อแลกเปลี่ยน'],
     'extraordinary/adult/route': ['ตรวจตำแหน่งหลักเขตกับเส้นทางเดิม', 'ถามผู้เดินทางว่าพบหลักเขตเมื่อใด', 'ไม่ย้ายหลักเขตโดยยังไม่แน่ใจ'],
     'extraordinary/adult/cargo': ['ตรวจตราและรายละเอียดห่อสินค้ากับพ่อค้า', 'เปรียบเทียบห่อกับสินค้าที่รับรองแล้ว', 'ไม่รับรองว่าสินค้าเป็นของแท้'],
     'extraordinary/adult/promise': ['เล่ารายละเอียดคำมั่นให้ผู้เกี่ยวข้องฟัง', 'ทวนสิ่งที่จำได้ก่อนให้การ', 'ไม่รับหน้าที่เป็นพยาน']
   };
+
+  // Authored consequences only where the action and its cost or reward are clear.
+  // Empty arrays mean the player gains no material reward for that choice.
+  const GRADED_SCENE_OUTCOMES = {
+    'uncommon/adult/split-payment': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'uncommon/adult/herb-exchange': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'uncommon/adult/measure': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'uncommon/adult/receipt': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'uncommon/adult/strap': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'uncommon/adult/witness': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'extraordinary/adult/counterfeit-seal': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'extraordinary/adult/buried-technique': [[{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], [], []],
+    'extraordinary/adult/contract': [[], [], []],
+    'extraordinary/adult/witness': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'extraordinary/adult/training': [[], [], []],
+    'extraordinary/adult/route': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'extraordinary/adult/promise': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/adult/war-supply': [[{ type: 'stat', path: 'hero.reputation', value: 4 }], [], []],
+    'epic/adult/secret-alliance': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/adult/rival-convoy': [[{ type: 'stat', path: 'hero.reputation', value: 4 }, { type: 'stat', path: 'hero.health', value: -2 }], [], []],
+    'epic/adult/witness': [[{ type: 'stat', path: 'hero.reputation', value: 4 }, { type: 'stat', path: 'hero.health', value: -2 }], [], []],
+    'epic/adult/medicine': [[{ type: 'stat', path: 'hero.reputation', value: 5 }, { type: 'stat', path: 'hero.health', value: -3 }], [], []],
+    'epic/adult/contract': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/adult/truce': [[{ type: 'stat', path: 'hero.reputation', value: 4 }], [{ type: 'stat', path: 'hero.money', value: 10 }, { type: 'stat', path: 'hero.reputation', value: -5 }], []],
+    'epic/adult/remedy': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'epic/adult/captives': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/adult/caravan': [[{ type: 'stat', path: 'hero.reputation', value: 4 }, { type: 'stat', path: 'hero.health', value: -4 }], [], []],
+    'uncommon/child/errand': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'uncommon/child/torn-page': [[{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], [], []],
+    'uncommon/child/argument': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'extraordinary/child/false-map': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'extraordinary/child/wounded-courier': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'extraordinary/child/sealed-box': [[], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'extraordinary/child/claim': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'extraordinary/child/trail': [[{ type: 'stat', path: 'hero.reputation', value: 2 }, { type: 'stat', path: 'hero.health', value: -1 }], [], []],
+    'extraordinary/child/herb': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'extraordinary/child/song': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'extraordinary/child/merchant': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'extraordinary/child/practice': [[], [], []],
+    'extraordinary/child/courier': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/child/broken-truce': [[{ type: 'stat', path: 'hero.reputation', value: 4 }], [], []],
+    'epic/child/poisoned-well': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/child/stolen-register': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/child/merchant-hostage': [[{ type: 'stat', path: 'hero.reputation', value: 4 }], [{ type: 'stat', path: 'hero.money', value: 6 }, { type: 'stat', path: 'hero.reputation', value: -4 }], []],
+    'epic/child/witness': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/child/supplies': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/child/fever': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/child/treaty': [[{ type: 'stat', path: 'hero.reputation', value: 4 }], [], []],
+    'epic/child/prisoner': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/child/poison': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/child/route': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/child/ransom': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'uncommon/young-child/found-purse': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'uncommon/young-child/broken-toy': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'uncommon/young-child/herb-label': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'uncommon/young-child/hungry-traveler': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'uncommon/young-child/drawing': [[{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], [], []],
+    'uncommon/young-child/kite': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'uncommon/young-child/seeds': [[{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], [], []],
+    'uncommon/young-child/bundle': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'uncommon/young-child/cup': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'uncommon/young-child/shoe': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'uncommon/young-child/song': [[{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], [], []],
+    'uncommon/young-child/basket': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'extraordinary/young-child/coded-rhyme': [[{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], [], []],
+    'extraordinary/young-child/silent-compass': [[], [], [{ type: 'treasure', name: 'เข็มทิศแปลก', bonus: {}, grade: 'uncommon' }]],
+    'extraordinary/young-child/fugitive-child': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'extraordinary/young-child/unusual-seed': [[], [], [{ type: 'treasure', name: 'เมล็ดปริศนา', bonus: {}, grade: 'uncommon' }]],
+    'extraordinary/young-child/stone': [[], [], [{ type: 'treasure', name: 'หินเปลี่ยนสี', bonus: {}, grade: 'uncommon' }]],
+    'extraordinary/young-child/ribbon': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'extraordinary/young-child/scroll': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'extraordinary/young-child/bell': [[], [], [{ type: 'treasure', name: 'กระดิ่งค้นหาโลหะ', bonus: {}, grade: 'uncommon' }]],
+    'extraordinary/young-child/medicine': [[], [], []],
+    'extraordinary/young-child/carving': [[], [], [{ type: 'treasure', name: 'รูปสลักสองสัญลักษณ์', bonus: {}, grade: 'uncommon' }]],
+    'extraordinary/young-child/warning': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'extraordinary/young-child/animal': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/young-child/witnessed-ambush': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/young-child/hidden-supplies': [[], [], []],
+    'epic/young-child/rare-fever': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/young-child/rival-messengers': [[], [], []],
+    'epic/young-child/warning': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/young-child/supplies': [[], [], []],
+    'epic/young-child/healer': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/young-child/missing': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/young-child/message': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/young-child/medicine': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/young-child/bridge': [[], [], []],
+    'epic/young-child/ledger': [[], [], []],
+    'uncommon/infant/gentle-healer': [[{ type: 'stat', path: 'hero.health', value: 2 }], [], []],
+    'uncommon/infant/warm-wrap': [[{type:'treasure', name:'ผ้าห่มหนา', bonus:{}, grade:'common'}], [], []],
+    'uncommon/infant/cloth': [[{type:'treasure', name:'ผ้าห่อเด็ก', bonus:{}, grade:'common'}], [], []],
+    'uncommon/infant/porridge': [[], [], []],
+    'uncommon/infant/rain': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'uncommon/infant/bowl': [[], [], []],
+    'uncommon/infant/basket': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'uncommon/infant/coin': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [], []],
+    'uncommon/infant/song': [[], [], []],
+    'uncommon/infant/package': [[], [], []],
+    'extraordinary/infant/sealed-remedy': [[{ type: 'stat', path: 'hero.health', value: 3 }], [], []],
+    'extraordinary/infant/borrowed-name': [[], [], []],
+    'extraordinary/infant/pursued-messenger': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'extraordinary/infant/medicine-debt': [[], [], []],
+    'extraordinary/infant/mark': [[], [], []],
+    'extraordinary/infant/medicine': [[], [], []],
+    'extraordinary/infant/escort': [[], [], []],
+    'extraordinary/infant/water': [[], [], []],
+    'extraordinary/infant/letter': [[], [], []],
+    'extraordinary/infant/traveler': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'extraordinary/infant/payment': [[{ type: 'stat', path: 'hero.money', value: 4 }], [], []],
+    'epic/infant/evacuation-choice': [[], [], []],
+    'epic/infant/dangerous-scroll': [[{ type: 'stat', path: 'hero.money', value: 6 }], [], []],
+    'epic/infant/healer-conflict': [[], [], []],
+    'epic/infant/contested-protection': [[], [], []],
+    'epic/infant/refugees': [[], [], []],
+    'epic/infant/healer': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/infant/writ': [[], [], []],
+    'epic/infant/carrier': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/infant/storm': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'epic/infant/rescue': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/infant/remedy': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [], []],
+    'epic/infant/border': [[], [], []],
+    'uncommon/infant/herbal-cloth': [[{ type: 'material', key: 'herb', value: 1 }], [{ type: 'material', key: 'herb', value: 1 }], []],
+    'uncommon/infant/lost-wage': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [{ type: 'stat', path: 'hero.reputation', value: 1 }], []],
+    'extraordinary/infant/bell': [[{ type: 'stat', path: 'hero.money', value: 3 }], [], [{ type: 'treasure', name: 'กระดิ่งตราพ่อค้า', bonus: {}, grade: 'uncommon' }]],
+    'uncommon/child/missing-token': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'uncommon/child/leaking-bundle': [[{ type: 'material', key: 'herb', value: 1 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'uncommon/child/wrong-message': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'uncommon/child/minor-contest': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [{ type: 'stat', path: 'hero.bodyFoundation', value: 1 }], []],
+    'uncommon/child/practice': [[{ type: 'stat', path: 'hero.bodyFoundation', value: 2 }], [], [{ type: 'stat', path: 'hero.bodyFoundation', value: 1 }]],
+    'uncommon/child/missing-change': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], [{ type: 'stat', path: 'hero.money', value: 1 }, { type: 'stat', path: 'hero.reputation', value: -2 }]],
+    'uncommon/child/herb': [[{ type: 'stat', path: 'hero.reputation', value: 1 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'uncommon/child/stray-dog': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'uncommon/child/parcel': [[{ type: 'stat', path: 'hero.reputation', value: 1 }, { type: 'stat', path: 'hero.health', value: -1 }], [], []],
+    'extraordinary/child/strange-exercise': [[{ type: 'stat', path: 'hero.bodyFoundation', value: 3 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'extraordinary/child/hidden-ledger': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'uncommon/adult/tired-carrier': [[{ type: 'stat', path: 'hero.money', value: 4 }, { type: 'stat', path: 'hero.health', value: -1 }], [], []],
+    'uncommon/adult/cart': [[{ type: 'stat', path: 'hero.money', value: 4 }, { type: 'stat', path: 'hero.health', value: -1 }], [], []],
+    'uncommon/adult/delivery': [[{ type: 'stat', path: 'hero.money', value: 4 }, { type: 'stat', path: 'hero.health', value: -1 }], [], []],
+    'uncommon/adult/road-witness': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [], []],
+    'uncommon/adult/recipe': [[{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], [], []],
+    'uncommon/adult/herbs': [[{ type: 'stat', path: 'hero.reputation', value: 2 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'extraordinary/adult/medicine-caravan': [[{ type: 'stat', path: 'hero.money', value: 8 }, { type: 'stat', path: 'hero.health', value: -3 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'extraordinary/adult/disputed-testimony': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'extraordinary/adult/healer': [[{ type: 'stat', path: 'hero.reputation', value: 2 }, { type: 'stat', path: 'hero.attributes.intellect', value: 1 }], [], []],
+    'extraordinary/adult/shipment': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [{ type: 'material', key: 'herb', value: 2 }, { type: 'stat', path: 'hero.reputation', value: -4 }], []],
+    'extraordinary/adult/cargo': [[{ type: 'stat', path: 'hero.reputation', value: 3 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'epic/adult/plague-source': [[{ type: 'stat', path: 'hero.reputation', value: 5 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []],
+    'epic/adult/shortage': [[{ type: 'stat', path: 'hero.reputation', value: 5 }], [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }], []]
+  };
+  function gradedOutcomeNote(effects) {
+    const labels = { 'hero.money': 'เงิน', 'hero.health': 'สุขภาพ', 'hero.reputation': 'ชื่อเสียง', 'hero.attributes.intellect': 'ปัญญา', 'hero.bodyFoundation': 'รากฐานกาย', 'hero.cultivation': 'ความก้าวหน้าฝึกตน' };
+    return effects.map(effect => effect.type === 'material' ? `${MATERIAL_NAMES[effect.key] || effect.key} ${effect.value > 0 ? '+' : ''}${effect.value}` : effect.type === 'treasure' ? `ได้รับ ${effect.name}` : effect.type === 'stat' ? `${labels[effect.path] || effect.path} ${effect.value > 0 ? '+' : ''}${effect.value}` : '').filter(Boolean).join(' · ');
+  }
 
   function buildUniqueGradedEvents(s, phase) {
     const phaseKey = phase.id === 'infant' || phase.id === 'young-child' || phase.id === 'child' ? phase.id : 'adult';
@@ -4470,8 +4729,12 @@
         const power = grade.power;
         // Minor disputes or lost belongings must not cause unexplained injury.
         // Physical harm is reserved for scenes that explicitly mention danger.
-        const dangerous = /โจร|ปะทะ|ต่อสู้|โจมตี|ซุ่ม|ไล่ล่า|ผู้ไล่|ผู้คุม|บาดเจ็บ|เจ็บ|ป่วย|ไข้|พิษ|พายุ|ไฟไหม้|อันตราย|ผู้ติดตาม|ถูกจับ|ด่าน|คุกคาม|อพยพ|ศึก|แย่งชิง|เสี่ยง|ล้อม/.test(text);
-        const failure = dangerous ? [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] : [{ type: 'stat', path: 'hero.reputation', value: -1 }];
+        const dangerous = phaseKey === 'infant'
+          ? (rarity === 'extraordinary' && key === 'pursued-messenger') || (rarity === 'epic' && ['evacuation-choice', 'carrier', 'storm', 'rescue'].includes(key))
+          : phaseKey === 'young-child' ? rarity === 'epic' && ['medicine', 'bridge'].includes(key)
+          : phaseKey === 'child' ? rarity === 'epic' && ['broken-truce', 'merchant-hostage', 'witness', 'treaty', 'ransom'].includes(key)
+          : rarity === 'epic' && ['rival-convoy', 'witness', 'medicine', 'caravan'].includes(key);
+        const failure = dangerous ? [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] : [];
         const checkStat = child ? 'luck' : sceneActivity === 'social' ? 'charm' : ['study','craft'].includes(sceneActivity) ? 'intellect' : ['train','work'].includes(sceneActivity) ? 'body' : 'luck';
         const amount = Math.max(1, Math.ceil(power / 2));
         const paid = reward === 'money' && /ขาย|รับจ้าง|รับค่าตอบแทน/.test(texts[0]);
@@ -4482,13 +4745,34 @@
         const payment = cost ? [{ type: 'stat', path: 'hero.money', value: -cost }] : [];
         const success = [...payment, { type: 'stat', path: outcomePath, value: amount }, { type: 'path', key: reward === 'reputation' || reward === 'health' ? 'compassion' : 'insight', value: amount }];
         const cautious = [{ type: 'path', key: 'insight', value: 1 }, ...(selfHealing ? [{ type: 'stat', path: 'hero.health', value: 1 }] : reward === 'reputation' ? [{ type: 'stat', path: 'hero.reputation', value: 1 }] : [])];
+        let authoredOutcomes = GRADED_SCENE_OUTCOMES[`${rarity}/${phaseKey}/${key}`];
+        // Learning a training record only yields cultivation when the character has opened that path.
+        if (rarity === 'extraordinary' && phaseKey === 'adult' && key === 'training') {
+          authoredOutcomes = [[s.hero.cultivationAccess ? { type: 'stat', path: 'hero.cultivation', value: 10 } : { type: 'stat', path: 'hero.bodyFoundation', value: 3 }, { type: 'stat', path: 'hero.health', value: -2 }], [s.hero.cultivationAccess ? { type: 'stat', path: 'hero.cultivation', value: 20 } : { type: 'stat', path: 'hero.bodyFoundation', value: 5 }, { type: 'stat', path: 'hero.health', value: -6 }], []];
+        }
+        const keepsake = phaseKey === 'young-child' && ['silent-compass', 'unusual-seed', 'stone', 'bell', 'carving'].includes(key)
+          && rarity === 'extraordinary' ? authoredOutcomes?.[2]?.find(effect => effect.type === 'treasure') : null;
+        const pathFor = action => {
+          if (/ปิดปาก|ยึดหลักฐาน|เก็บห่อสมุนไพรไว้เอง|เดินจากร้าน/.test(action)) return 'freedom';
+          if (/ตรวจ|ถาม|สอบ|สังเกต|ทวน|ฟัง|อ่าน/.test(action)) return 'insight';
+          if (/รับจ้าง|รับค่าตอบแทน|ส่งข่าว|ส่งห่อ/.test(action)) return 'duty';
+          if (/ช่วย|คืน|รักษา|เตือน|ปกป้อง|ไกล่เกลี่ย|ดูแล/.test(action)) return 'compassion';
+          return 'freedom';
+        };
+        const hiddenPath = index => ({ type: 'path', key: pathFor(texts[index]), value: 1 });
+        const chosenSuccess = authoredOutcomes ? [...payment, ...authoredOutcomes[0], ...(keepsake ? [keepsake] : []), hiddenPath(0)] : success;
+        const chosenCautious = authoredOutcomes ? [...authoredOutcomes[1], ...(keepsake ? [keepsake] : []), hiddenPath(1)] : cautious;
+        const chosenThird = authoredOutcomes ? [...authoredOutcomes[2], hiddenPath(2)] : [];
+        const successDescription = authoredOutcomes ? (gradedOutcomeNote(chosenSuccess) || 'ไม่มีการเปลี่ยนแปลงค่าที่แสดงหรือไอเทม') : `${outcomeLabel} +${amount}`;
+        const secondDescription = authoredOutcomes ? (gradedOutcomeNote(chosenCautious) || 'ไม่มีการเปลี่ยนแปลงค่าที่แสดงหรือไอเทม') : (selfHealing ? 'ฟื้นสุขภาพเล็กน้อย' : reward === 'reputation' ? 'ชื่อเสียงเพิ่มเล็กน้อย' : 'รวบรวมข้อมูลก่อน');
+        const thirdDescription = authoredOutcomes ? (gradedOutcomeNote(chosenThird) || 'ไม่มีการเปลี่ยนแปลงค่าที่แสดงหรือไอเทม') : 'หลีกเลี่ยงความเสี่ยงและโอกาส';
         return {
           id: `graded-${rarity}-${phaseKey}-${key}`, rarity, activity: sceneActivity, activities: sceneActivity === 'social' ? ['social', 'free'] : [sceneActivity], title, text,
           tag: `${phase.name} · ${grade.name}`, uniqueGraded: true,
           choices: [
-            { text: texts[0], note: `${cost ? `ใช้ ${cost} ตำลึง · ` : ''}สำเร็จ: ${outcomeLabel} +${amount} · พลาด${dangerous ? `เสียสุขภาพ ${healthLoss(power)}` : 'เสียชื่อเสียง 1'}`, ...(cost ? { requires: state => state.hero.money >= cost, locked: `ต้องมี ${cost} ตำลึง` } : {}), check: { stat: checkStat, difficulty: 10 + power }, effects: success, failureEffects: [...payment, ...failure] },
-            { text: texts[1], note: selfHealing ? 'ไม่ต้องทดสอบ · ฟื้นสุขภาพเล็กน้อย' : reward === 'reputation' ? 'ไม่ต้องทดสอบ · ชื่อเสียงเพิ่มเล็กน้อย' : 'ไม่ต้องทดสอบ · รวบรวมข้อมูลก่อน', effects: cautious },
-            { text: texts[2], note: 'หลีกเลี่ยงความเสี่ยงและโอกาส', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
+            { text: texts[0], note: `สำเร็จ: ${successDescription} · พลาด${dangerous ? `เสียสุขภาพ ${healthLoss(power)}` : 'ไม่สำเร็จ'}${cost ? ` · ใช้ ${cost} ตำลึงทั้งสองกรณี` : ''}`, ...(cost ? { requires: state => state.hero.money >= cost, locked: `ต้องมี ${cost} ตำลึง` } : {}), check: { stat: checkStat, difficulty: 10 + power }, effects: chosenSuccess, failureEffects: [...payment, ...failure, ...(keepsake ? [keepsake] : [])] },
+            { text: texts[1], note: `ไม่ต้องทดสอบ · ${secondDescription}`, ...(rarity === 'extraordinary' && phaseKey === 'adult' && key === 'training' ? { requires: state => state.hero.health > 6, locked: 'ต้องมีสุขภาพมากกว่า 6 เพื่อฝึกเข้ม' } : {}), effects: chosenCautious },
+            { text: texts[2], note: thirdDescription, effects: authoredOutcomes ? chosenThird : [{ type: 'path', key: 'freedom', value: 1 }] }
           ]
         };
       });
@@ -4503,11 +4787,13 @@
         const name = kind === 'weapon' ? ({ uncommon: 'กระบี่ทางสน', rare: 'กระบี่เมฆเคลื่อน', epic: 'กระบี่ดาราซ่อนคม' }[itemGrade]) : discoveryManualName(techniqueId);
         const reward = kind === 'herb' ? { type: 'gradedMaterial', key: 'herb', grade: itemGrade, value: 1 }
           : { type: 'treasure', name, bonus: kind === 'weapon' ? { attack: ({ uncommon: 5, rare: 6, epic: 7 }[itemGrade]), agility: 1 } : {}, grade: itemGrade, category: kind === 'weapon' ? 'weapon' : 'technique_manual', subtype: kind === 'weapon' ? 'jian' : manualDef?.manualSubtype || 'attack_jian', techniqueId };
+        const discoveryActions = DISCOVERY_ACTIONS[`${rarity}/${kind}`];
+        const discoveryDanger = /พลาด|ไม่มั่นคง|หลงทาง|ไม่ปลอดภัย|พัง|สัตว์|ลาดชัน|เศษหิน|ไหลเชี่ยว|หมอก/.test(text);
         groups.push({ id: `graded-discovery-${rarity}-${kind}`, rarity, activity: 'explore', title, text, tag: `${phase.name} · ${EVENT_RARITIES[rarity].name}`, uniqueGraded: true,
           choices: [
-            { text: 'เสี่ยงเข้าไปนำสิ่งที่พบออกมา', note: 'สำเร็จจะได้รับของตามที่พบ · ล้มเหลวเสียสุขภาพ', check: { stat: 'intellect', difficulty: 10 + power }, effects: [reward], failureEffects: [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] },
-            { text: 'จดจำตำแหน่งและสำรวจจากระยะปลอดภัย', note: 'ได้ความรู้เส้นทาง แต่ไม่ได้รับของ', effects: [{ type: 'path', key: 'insight', value: power }] },
-            { text: 'ถอยออกจากพื้นที่', note: 'หลีกเลี่ยงความเสี่ยง', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
+            { text: discoveryActions[0], note: discoveryDanger ? 'สำเร็จได้รับของ · พลาดเสียสุขภาพ' : 'สำเร็จได้รับของ · พลาดยังไม่ได้ของ', check: { stat: 'intellect', difficulty: 10 + power }, effects: [reward], failureEffects: discoveryDanger ? [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] : [] },
+            { text: discoveryActions[1], note: 'ยังไม่ได้รับของ', effects: [{ type: 'path', key: 'insight', value: power }] },
+            { text: discoveryActions[2], note: 'ไม่ได้รับของ', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
           ]
         });
       });
@@ -4516,11 +4802,13 @@
         const rarity = { uncommon: 'uncommon', rare: 'extraordinary', epic: 'epic' }[technique.grade];
         const power = EVENT_RARITIES[rarity].power;
         const name = discoveryManualName(technique.id);
+        const manualActions = EXTRA_MANUAL_ACTIONS[technique.id];
+        const manualDanger = /หลังคาชำรุด|เอนอยู่|ปีน|พื้นบางส่วนยุบ|พื้นหินที่ชำรุด|หินร่วง|แตกร้าว|ทางลาดที่ฝนกัดเซาะ|เปียกฝน|กระเบื้องแตก|ลมพัดแรง/.test(technique.text);
         groups.push({ id: `graded-manual-${technique.id}`, rarity, activity: 'explore', title: technique.title, text: technique.text, tag: `${phase.name} · ${EVENT_RARITIES[rarity].name}`, uniqueGraded: true,
           choices: [
-            { text: 'เข้าไปเก็บคัมภีร์', note: 'สำเร็จจะได้รับคัมภีร์ · ล้มเหลวเสียสุขภาพ', check: { stat: 'intellect', difficulty: 10 + power }, effects: [{ type: 'treasure', name, bonus: {}, grade: technique.grade, category: 'technique_manual', subtype: def.manualSubtype, techniqueId: technique.id }], failureEffects: [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] },
-            { text: 'สำรวจจากระยะปลอดภัย', note: 'ได้ความรู้ แต่ไม่ได้รับคัมภีร์', effects: [{ type: 'path', key: 'insight', value: power }] },
-            { text: 'ถอยออกจากพื้นที่', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
+            { text: manualActions[0], note: manualDanger ? 'สำเร็จได้รับคัมภีร์ · พลาดเสียสุขภาพ' : 'สำเร็จได้รับคัมภีร์ · พลาดยังไม่ได้คัมภีร์', check: { stat: 'intellect', difficulty: 10 + power }, effects: [{ type: 'treasure', name, bonus: {}, grade: technique.grade, category: 'technique_manual', subtype: def.manualSubtype, techniqueId: technique.id }], failureEffects: manualDanger ? [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] : [] },
+            { text: manualActions[1], note: 'ยังไม่ได้รับคัมภีร์', effects: [{ type: 'path', key: 'insight', value: power }] },
+            { text: manualActions[2], note: 'ไม่ได้รับคัมภีร์', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
           ]
         });
       });
@@ -4559,22 +4847,47 @@
     }
   };
 
+  const LIBRARY_DISCOVERY_ACTIONS = {
+    'normal/weapons': ['เก็บอาวุธจากสัมภาระที่ถูกทิ้ง', 'ปล่อยอาวุธไว้กับสัมภาระ'],
+    'normal/armor': ['นำเครื่องป้องกันที่ยังใช้ได้ออกจากกองของ', 'ไม่รื้อกองสัมภาระ'],
+    'normal/jewelry': ['เปิดห่อผ้าและเก็บเครื่องประดับ', 'วางห่อผ้าเก่าไว้'],
+    'normal/cursed': ['นำวัตถุเก่าที่น่าสงสัยติดตัว', 'ไม่แตะวัตถุผิดธรรมชาติ'],
+    'normal/mounts': ['ค่อย ๆ เข้าใกล้สัตว์พาหนะพลัดหลง', 'ปล่อยสัตว์ที่ตกใจง่ายไว้'],
+    'uncommon/weapons': ['หยิบห่อหนังออกจากใต้สัมภาระ', 'ไม่รื้อห่อหนัง'],
+    'uncommon/armor': ['เปิดผ้ากันฝนเพื่อนำเกราะติดตัว', 'ปล่อยเกราะใต้ผ้ากันฝนไว้'],
+    'uncommon/jewelry': ['เปิดกล่องไม้ที่มีรอยงัดและเก็บเครื่องประดับ', 'ไม่เปิดกล่องที่มีรอยงัด'],
+    'uncommon/cursed': ['เก็บวัตถุที่มีตราอาถรรพ์', 'ทิ้งวัตถุพร้อมตราไว้'],
+    'uncommon/mounts': ['ค่อย ๆ เข้าหาพาหนะที่หลุดจากขบวน', 'ปล่อยให้มันหาทางกลับขบวน'],
+    'extraordinary/weapons': ['ค้นสัมภาระขบวนเพื่อนำอาวุธออกมา', 'ไม่รื้อซากสัมภาระ'],
+    'extraordinary/armor': ['เข้าไปนำเครื่องป้องกันจากที่ซ่อน', 'ถอยจากพื้นดินไม่มั่นคง'],
+    'extraordinary/jewelry': ['เข้าใกล้หีบแล้วนำเครื่องประดับออกมา', 'ถอยห่างจากรอยสัตว์ใกล้หีบ'],
+    'extraordinary/cursed': ['เปิดหีบผนึกเพื่อนำวัตถุต้องห้าม', 'ไม่เปิดผนึกวัตถุต้องห้าม'],
+    'extraordinary/mounts': ['พยายามปลอบและเข้าหาพาหนะหายาก', 'ไม่รบกวนสัตว์ที่อาจตื่นกลัว'],
+    'epic/weapons': ['ฝ่าทางเข้าค่ายที่เสียหายไปเอาอาวุธ', 'ไม่ผ่านทางเข้าที่อาจพัง'],
+    'epic/armor': ['พยายามเปิดหีบผนึกและหลบกลไกป้องกัน', 'ไม่เข้าใกล้หีบที่อาจมีกลไก'],
+    'epic/jewelry': ['ฝ่าหมอกไปนำเครื่องประดับตราตระกูล', 'ไม่เสี่ยงหลงทางเข้าไปในหมอก'],
+    'epic/cursed': ['เปิดห่อผนึกที่ผู้คนเคยแย่งชิง', 'ทิ้งห่ออาถรรพ์ไว้ในห้องลับ'],
+    'epic/mounts': ['เข้าไปช่วยพาหนะออกจากเส้นทางที่พัง', 'ไม่เข้าไปบนเส้นทางที่กำลังพัง']
+  };
+
   function buildLibraryDiscoveryEvents() {
     return Object.entries(LIBRARY_DISCOVERY_SCENES).flatMap(([rarity, categories]) =>
       Object.entries(categories).map(([category, [title, text]]) => {
         const grade = { normal: 'common', uncommon: 'uncommon', extraordinary: 'rare', epic: 'epic' }[rarity];
         const power = { normal: 1, uncommon: 2, extraordinary: 4, epic: 7 }[rarity];
         const cursed = category === 'cursed';
+        const actions = LIBRARY_DISCOVERY_ACTIONS[`${rarity}/${category}`];
+        const dangerous = category === 'mounts' || (rarity === 'extraordinary' && ['armor', 'jewelry'].includes(category)) || (rarity === 'epic' && ['weapons', 'armor', 'jewelry'].includes(category));
         return {
           id: `library-discovery-${rarity}-${category}`, rarity, activity: category === 'mounts' ? 'travel' : 'explore',
           minAge: 12, title, text, tag: `ค้นพบ · ${ITEM_GRADES[grade].name}`, libraryDiscovery: true,
           unlock: s => availableLibraryLoot(s, grade, category).length > 0,
           choices: [
-            { text: category === 'mounts' ? 'เข้าไปช่วยและพยายามผูกมิตร' : 'ตรวจสอบและนำสิ่งที่พบติดตัว',
-              note: `สำเร็จจะสุ่มรับ${cursed ? 'ของอาถรรพ์' : 'ไอเทม'}เกรด${ITEM_GRADES[grade].name} 1 ชิ้น${cursed ? ' · ของอาถรรพ์อาจมีผลเสีย' : ''} · ล้มเหลวเสียสุขภาพ`,
+            { text: actions[0],
+              note: `สำเร็จจะสุ่มรับ${cursed ? 'ของอาถรรพ์' : 'ไอเทม'}เกรด${ITEM_GRADES[grade].name} 1 ชิ้น${cursed ? ' · ของอาถรรพ์อาจมีผลเสีย' : ''} · ${dangerous ? 'ล้มเหลวเสียสุขภาพ' : 'ล้มเหลวยังไม่ได้ของ'}`,
               check: { stat: category === 'mounts' ? 'charm' : 'intellect', difficulty: 10 + power },
-              effects: [{ type: 'libraryLoot', grade, category }, { type: 'path', key: 'freedom', value: 1 }], failureEffects: [{ type: 'stat', path: 'hero.health', value: -power * 2 }] },
-            { text: 'ถอยออกมาและปล่อยสิ่งที่พบไว้', note: 'หลีกเลี่ยงความเสี่ยง', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
+              effects: [{ type: 'libraryLoot', grade, category }, { type: 'path', key: 'freedom', value: 1 }], failureEffects: dangerous ? [{ type: 'stat', path: 'hero.health', value: -power * 2 }] : [] },
+            { text: actions[1], note: 'หลีกเลี่ยงความเสี่ยง', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
           ]
         };
       })
@@ -4636,6 +4949,7 @@
           : annualRareNarrative(s, activity, rarity.id, theme, phase, index, ageYear);
         return {
           id, generated: true, ageYear, rarity: rarity.id, activity,
+          legendarySceneKey: legendaryScene ? `${phase.id}/${index % LEGENDARY_LIFE_SCENES[phase.id].length}` : null,
           tag: `ปีอายุ ${ageYear} · ${rarity.name}`,
           dialogueOnly,
           title: dialogueOnly ? `${phase.name}: ${theme}` : `${phase.name}: ${legendaryScene?.[0] || 'เหตุไม่คาดฝัน'}`,
@@ -4683,19 +4997,19 @@
       { text: 'แจ้งอาจารย์ทันที', effects: [{ type: 'relation', key: 'master', value: 6 }, { type: 'path', key: 'duty', value: 2 }], effect: s => { s.flags.warnedMaster = true; addLog('อาจารย์สั่งตรวจบัญชีใหม่และป้องกันไม่ให้ความสงสัยกลายเป็นการลงโทษผิดคน', true); } },
       { text: 'แบล็กเมลศิษย์คนนั้น', effects: [{ type: 'stat', path: 'hero.money', value: 12 }, { type: 'stat', path: 'hero.reputation', value: -4 }, { type: 'path', key: 'freedom', value: 2 }], effect: s => { s.flags.debtProvoked = true; addLog('เจ้าบังคับให้ศิษย์ทรยศจ่ายเงินแลกกับความเงียบ ข่าวนี้อาจย้อนกลับมาทวงราคาในภายหลัง'); } }
     ] },
-    { id: 'middle_black_market', activity: 'social', minMonth: 90, title: 'ประตูหลังตลาดมืด', text: 'คนรู้จักพาเจ้าเข้าตรอกที่ไม่มีป้าย ร้านค้าด้านในรับซื้อของจากสงครามและขายข้อมูลที่ทางการไม่ยอมรับ', choices: [
+    { id: 'middle_black_market', minAge: 12, activity: 'social', minMonth: 90, title: 'ประตูหลังตลาดมืด', text: 'คนรู้จักพาเจ้าเข้าตรอกที่ไม่มีป้าย ร้านค้าด้านในรับซื้อของจากสงครามและขายข้อมูลที่ทางการไม่ยอมรับ', choices: [
       { text: 'ขายของที่ไม่ต้องใช้', effects: [{ type: 'stat', path: 'hero.money', value: 10 }, { type: 'path', key: 'freedom', value: 1 }], effect: s => { s.flags.blackMarketKnown = true; addLog('ตลาดมืดจ่ายเงินสูงกว่าตลาดปกติ แต่ชื่อของเจ้าถูกจดลงในบัญชีลับ', true); } },
       { text: 'ซื้อข่าวเส้นทางงูดำ', requires: s => (s.hero?.money || 0) >= 8, locked: 'เงินไม่พอซื้อข่าว', effects: [{ type: 'stat', path: 'hero.money', value: -8 }, { type: 'path', key: 'insight', value: 3 }], effect: s => { s.flags.blackMarketIntel = true; s.flags.foundMap = true; addLog('ข่าวจากตลาดมืดชี้เส้นทางลำเลียงของงูดำและช่วยให้เจ้าเตรียมตัวก่อนคนอื่น', true); } },
       { text: 'แจ้งทางการและถอนตัว', effects: [{ type: 'stat', path: 'hero.reputation', value: 5 }, { type: 'path', key: 'duty', value: 2 }], effect: s => { s.flags.blackMarketReported = true; addLog('ทางการกวาดตรอกตลาดมืด แต่คนขายข่าวจำชื่อของเจ้าได้'); } }
     ] },
-    { id: 'middle_natural_disaster', activity: 'explore', minMonth: 104, title: 'ฝนหล่มถล่มหมู่บ้าน', text: 'ฝนตกต่อเนื่องจนทางน้ำเปลี่ยนทิศ บ้านชายเขาหลายหลังถูกตัดขาด และผู้คนต้องการทั้งแรงงานกับยา', choices: [
+    { id: 'middle_natural_disaster', minAge: 12, activity: 'explore', minMonth: 104, title: 'ฝนหล่มถล่มหมู่บ้าน', text: 'ฝนตกต่อเนื่องจนทางน้ำเปลี่ยนทิศ บ้านชายเขาหลายหลังถูกตัดขาด และผู้คนต้องการทั้งแรงงานกับยา', choices: [
       { text: 'ใช้แรงเปิดทางน้ำ', effects: [{ type: 'stat', path: 'hero.health', value: -8 }, { type: 'stat', path: 'hero.reputation', value: 6 }, { type: 'relation', key: 'acquaintance', value: 5 }], effect: s => { s.flags.disasterRelief = true; addLog('ทางน้ำเปิดอีกครั้ง ผู้คนจำมือที่เปื้อนโคลนของเจ้าได้ดีกว่าคำประกาศใด', true); } },
       { text: 'นำสมุนไพรไปแลกเสบียง', requires: s => (s.materials?.herb || 0) >= 2, locked: 'สมุนไพรไม่พอ', effects: [{ type: 'material', key: 'herb', value: -2 }, { type: 'stat', path: 'hero.money', value: 8 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { s.flags.disasterSupplies = true; addLog('สมุนไพรช่วยคนเจ็บและแลกเป็นเสบียงให้หมู่บ้านผ่านคืนฝนหนัก'); } },
       { text: 'จดแผนที่น้ำหลากแล้วเดินทางต่อ', effects: [{ type: 'path', key: 'insight', value: 3 }, { type: 'stat', path: 'hero.health', value: -2 }], effect: s => { s.flags.floodMap = true; addLog('แผนที่น้ำหลากทำให้เส้นทางในฤดูฝนของเจ้าปลอดภัยขึ้น'); } }
     ] },
-    { id: 'middle_regional_war', activity: 'any', minMonth: 120, unlock: s => (s.world?.modifiers?.travelRisk || 0) >= 4 || (s.world?.modifiers?.refugeePressure || 0) >= 5, title: 'สงครามลามถึงชายแดน', text: 'กองกำลังจากสองฝ่ายขยับเข้าหาเมืองชายแดน ผู้ลี้ภัยเพิ่มขึ้น และคนธรรมดาต้องเลือกว่าจะช่วยแนวหน้า แนวหลัง หรือพาตัวเองออกไป', choices: [
+    { id: 'middle_regional_war', activity: 'any', minMonth: 120, minAge: 15, unlock: s => (s.world?.modifiers?.travelRisk || 0) >= 4 || (s.world?.modifiers?.refugeePressure || 0) >= 5, title: 'สงครามลามถึงชายแดน', text: 'กองกำลังจากสองฝ่ายขยับเข้าหาเมืองชายแดน ผู้ลี้ภัยเพิ่มขึ้น และคนธรรมดาต้องเลือกว่าจะช่วยแนวหน้า แนวหลัง หรือพาตัวเองออกไป', choices: [
       { text: 'เข้าหน่วยรักษาแนวหลัง', effects: [{ type: 'stat', path: 'hero.health', value: -10 }, { type: 'stat', path: 'hero.reputation', value: 8 }, { type: 'path', key: 'duty', value: 3 }], effect: s => { s.flags.regionalWarService = true; addLog('เจ้ารับงานแนวหลังและเห็นว่าสงครามไม่ได้มีแต่คนถือดาบ', true); } },
-      { text: 'พาผู้ลี้ภัยออกจากเส้นทางศึก', effects: [{ type: 'stat', path: 'hero.money', value: -6 }, { type: 'stat', path: 'hero.reputation', value: 5 }, { type: 'path', key: 'compassion', value: 3 }], effect: s => { s.flags.regionalWarRelief = true; addLog('ขบวนผู้ลี้ภัยผ่านช่องเขาได้ก่อนกองทัพปิดถนน'); } },
+      { text: 'พาผู้ลี้ภัยออกจากเส้นทางศึก', requires: s => s.hero.money >= 6, locked: 'ต้องมีเงินอย่างน้อย 6 ตำลึง', effects: [{ type: 'stat', path: 'hero.money', value: -6 }, { type: 'stat', path: 'hero.reputation', value: 5 }, { type: 'path', key: 'compassion', value: 3 }], effect: s => { s.flags.regionalWarRelief = true; addLog('ขบวนผู้ลี้ภัยผ่านช่องเขาได้ก่อนกองทัพปิดถนน'); } },
       { text: 'รับสัญญาคุ้มกันสินค้า', effects: [{ type: 'stat', path: 'hero.money', value: 20 }, { type: 'stat', path: 'hero.reputation', value: -3 }, { type: 'path', key: 'freedom', value: 2 }], effect: s => { s.flags.regionalWarContract = true; addLog('สัญญาสงครามทำให้เจ้ามีเงินมากขึ้น แต่บางคนเรียกเจ้าว่าคนหากำไรจากความพินาศ'); } }
     ] },
     { id: 'middle_master_companion_arc', storyCharacter: 'lin-an', activity: 'social', minMonth: 96, unlock: s => (s.relations?.master || 0) >= 10 || (s.relations?.friend || 0) >= 10, title: 'คำสัญญาของอาจารย์และสหาย', text: 'อาจารย์เหวินกับเฉินหยูต่างขอให้เจ้าช่วยคนละเรื่องในคืนเดียว คนหนึ่งต้องการรักษารากฐานสำนัก อีกคนต้องการตามหาผู้สูญหายจากหมู่บ้านชายแดน', choices: [
@@ -4728,7 +5042,7 @@
     if (event.minAge != null && (Number(s.hero?.ageMonths) || 0) < event.minAge * 12) return false;
     if (event.maxAge != null && Math.floor((Number(s.hero?.ageMonths) || 0) / 12) > event.maxAge) return false;
     if (event.id === 'retainer_lesson' && !s.flags?.retainerAlive) return false;
-    if (['master_bond', 'senior_bond', 'spar', 'middle_master_companion_arc'].includes(event.id) && !s.flags?.metSect) return false;
+    if (['master_bond', 'senior_bond', 'spar', 'middle_master_companion_arc', 'middle_rival_sect', 'middle_sect_politics'].includes(event.id) && !s.flags?.metSect) return false;
     if (event.characterId && (s.mode !== 'story' || s.characterId !== event.characterId)) return false;
     return true;
   }
@@ -4761,6 +5075,7 @@
       (event.minAge == null || Math.floor((s.hero?.ageMonths || 0) / 12) >= event.minAge) &&
       (event.maxAge == null || Math.floor((s.hero?.ageMonths || 0) / 12) <= event.maxAge) &&
       !s.eventHistory.includes(event.id) &&
+      (!event.legendarySceneKey || !(s.legendarySceneHistory || []).includes(event.legendarySceneKey)) &&
       (!(event.uniqueGraded || event.libraryDiscovery) || !(s.gradedEventHistory || []).includes(event.id)) &&
       (!event.unlock || event.unlock(s)) &&
       (!event.requires || event.requires(s)) &&
@@ -6192,7 +6507,7 @@
     if (activity === 'free' && s.mode === 'story') return { ok: false, reason: 'โหมดเนื้อเรื่องยังไม่เปิดเส้นทางอิสระ' };
     const ageGates = s.mode === 'story'
       ? { work: 5, explore: 5, study: 7, social: 5, craft: 5, quest: 5, travel: 5, family: 15 }
-      : { rest: 0, family: 0, train: 2, social: 2, study: 5, explore: 5, work: 5, craft: 5, travel: 12, quest: 12, sect: 12, free: 12 };
+      : { rest: 0, family: 0, train: 5, social: 2, study: 5, explore: 5, work: 5, craft: 5, travel: 12, quest: 12, sect: 12, free: 12 };
     if (ageGates[activity] !== undefined && age < ageGates[activity]) return { ok: false, reason: `ต้องอายุ ${ageGates[activity]} ปีขึ้นไป (ปัจจุบัน ${age} ปี)` };
     if (activity === 'study' && !canUseLearningActivity(s)) return { ok: false, reason: 'ยังไม่มีสถานที่หรือผู้สอนที่เปิดทางให้เรียนรู้' };
     if (activity === 'sect') {
@@ -7412,15 +7727,15 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     route_mortal_peace_m162: {
       month: 162, route: 'mortal-peace', tag: 'ชีวิตสงบ · เงาอดีต', art: 'road',
       title: 'คนคุ้นเคยแวะเยือน',
-      text: 'ยามพลบค่ำ มีชายชราสวมงอบเดินกะโผลกกะเผลกมาเคาะประตูเรือน เมื่อเปิดออก ลุงโจว (หรือสหายเก่าในวัยเด็ก) ยืนเปียกฝนอยู่ เขาหนีสายสืบงูดำมาและต้องการที่หลบภัยชั่วคราว',
+      text: s => `ยามพลบค่ำ ${s.flags.retainerAlive ? 'ลุงโจว' : 'คนรู้จักเก่าในวัยเด็ก'}มาเคาะประตูเรือนในสภาพเปียกฝน เขาหนีสายสืบงูดำมาและต้องการที่หลบภัยชั่วคราว`,
       choices: [
         {
           text: 'เปิดประตูรับเข้าเรือน ทายาและจัดห้องพักให้อย่างอบอุ่น',
           note: 'รักษาคนสำคัญ ปกป้องผู้มีพระคุณ เพิ่มสายสัมพันธ์ลึกซึ้ง',
           effect: s => {
-            s.flags.retainerAlive = true; s.flags.retainerSheltered = true; s.paths.compassion += 3;
+            if (s.flags.retainerAlive) s.flags.retainerSheltered = true; else s.relations.friend += 3; s.paths.compassion += 3;
             s.hero.health = Math.max(1, s.hero.health - 4); s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('ลุงโจวน้ำตาซึมเมื่อเห็นเด็กที่ตนเคยอุ้ม บัดนี้มีบ้านที่มั่นคงและอบอุ่นพอจะคุ้มภัยให้เขา', true);
+            addLog(s.flags.retainerAlive ? 'ลุงโจวน้ำตาซึมเมื่อเห็นเด็กที่ตนเคยอุ้มมีบ้านที่คุ้มภัยให้เขา' : 'คนรู้จักเก่าขอบใจหลินอันที่เปิดบ้านให้พักพิง', true);
           }
         },
         {
@@ -7428,7 +7743,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
           note: 'ช่วยเหลืออย่างระมัดระวัง ไม่ดึงอันตรายเข้าสู่เรือนตนเอง',
           requires: s => s.hero.money >= 8, locked: 'ต้องมีเงิน 8 ตำลึง',
           effect: s => {
-            s.hero.money -= 8; s.flags.retainerAlive = true; s.paths.insight += 2;
+            s.hero.money -= 8; s.paths.insight += 2;
             s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
             addLog('เสบียงและเงินทองช่วยให้เขาหลบหนีต่อไปได้อย่างปลอดภัย โดยไม่ทิ้งร่องรอยมาถึงร้าน', true);
           }
@@ -7980,9 +8295,9 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         {
           text: 'ส่งทองคำและเสบียงผ่านคนรู้จักกลับไปช่วยลุงโจวเงียบ ๆ',
           note: 'ส่งความช่วยเหลือโดยไม่เปิดเผยตัว ไม่ลืมบุญคุณ',
-          requires: s => s.hero.money >= 15, locked: 'ต้องมีเงิน 15 ตำลึง',
+          requires: s => s.hero.money >= 15 && s.flags.retainerAlive, locked: 'ต้องมีเงิน 15 ตำลึงและลุงโจวยังมีชีวิต',
           effect: s => {
-            s.hero.money -= 15; s.flags.retainerAlive = true; s.paths.compassion += 3;
+            s.hero.money -= 15; s.paths.compassion += 3;
             s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
             addLog('ทองคำและเสบียงถูกส่งถึงมือลุงโจวอย่างปลอดภัยในเงามืด', true);
           }
@@ -8046,12 +8361,13 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
           }
         },
         {
-          text: 'ซื้อที่ดินสร้างคฤหาสน์และสวนโอเอซิสสำหรับตนเอง',
-          note: 'สร้างหลักประกันชีวิตที่หรูหราปลอดภัยถาวร',
+          text: 'ซื้อบ้านในโอเอซิสสำหรับตนเอง',
+          note: 'ใช้เงิน 45 ตำลึงเพื่อซื้อบ้าน พร้อมค่าดูแลรายเดือน',
+          requires: s => s.hero.money >= 45, locked: 'ต้องมีเงิน 45 ตำลึง',
           effect: s => {
-            const h = ensureHousehold(s); h.housing = 'courtyard';
+            s.hero.money -= 45; const h = ensureHousehold(s); h.housing = 'owned';
             s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('คฤหาสน์โอเอซิสสร้างเสร็จ น้ำพุเย็นชื่นใจกลางทะเลทรายเป็นของหลินอัน', true);
+            addLog('หลินอันซื้อบ้านในเมืองโอเอซิสเป็นที่พักของตน', true);
           }
         },
         {
@@ -8222,7 +8538,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
           text: 'ลอบวางเพลิงแล้วขโมยป้ายหยกออกมาในความวุ่นวาย',
           note: 'ได้ของโดยไม่เสียเงิน แต่สร้างความวุ่นวายในโลกมืด',
           effect: s => {
-            s.flags.familyToken = true; s.hero.reputation -= 10; s.hero.money += 10;
+            s.flags.familyToken = true; addTreasure(s, 'ป้ายหยกตระกูลหลินสมบูรณ์', { defense: 6 }); s.hero.reputation -= 10; s.hero.money += 10;
             s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 3;
             addLog('เพลิงไหม้เบี่ยงเบนความสนใจ หลินอันคว้าป้ายหยกหายเข้าเงามืดอย่างลอยนวล', true);
           }
@@ -8382,7 +8698,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
 
   const SOCIAL_EVENTS = [
     {
-      id: 'social_new_contact', activity: 'social', minMonth: 0, rarity: 'uncommon',
+      id: 'social_new_contact', minAge: 12, activity: 'social', minMonth: 0, rarity: 'uncommon',
       title: 'คนแปลกหน้าที่จำชื่อเจ้าได้', text: s => { const route = socialRoute(s); return `${route.log} ที่นั่นมี${route.group}คนหนึ่งจำชื่อเจ้าได้ และยื่นโอกาสให้รู้จักผู้คนมากขึ้น`; },
       choices: [
         { text: 'รับไมตรีและแลกข่าวสาร', check: { stat: 'charm', difficulty: 18 }, effects: [{ type: 'relation', key: 'acquaintance', value: 4 }, { type: 'stat', path: 'hero.reputation', value: 2 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { const social = ensureSocialState(s); social.newContacts++; social.lastTarget = socialRoute(s).key; addLog('ได้คนรู้จักใหม่จากการวางตัวอย่างเหมาะสม', true); } },
@@ -8390,7 +8706,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       ]
     },
     {
-      id: 'social_rumor', activity: 'social', minMonth: 6, rarity: 'uncommon',
+      id: 'social_rumor', minAge: 12, activity: 'social', minMonth: 6, rarity: 'uncommon',
       title: 'ข่าวลือใต้ถ้วยชา', text: s => { const route = socialRoute(s); return `ที่${route.name} ข่าวลือเรื่องศัตรู เส้นทางค้า และความเคลื่อนไหวของสำนักกำลังแพร่ไปในหมู่${route.group}`; },
       choices: [
         { text: 'ฟังอย่างมีสติและตรวจสอบต้นทาง', check: { stat: 'intellect', difficulty: 20 }, effects: [{ type: 'path', key: 'insight', value: 3 }, { type: 'stat', path: 'hero.reputation', value: 1 }, { type: 'flag', key: 'socialRumorVerified', value: true }], effect: s => { ensureSocialState(s).rumors++; addLog('เจ้าคัดข่าวลือที่ตรวจสอบแล้ว เก็บเบาะแสไว้ใช้ภายหลัง', true); } },
@@ -8398,7 +8714,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       ]
     },
     {
-      id: 'social_conflict', activity: 'social', minMonth: 12, rarity: 'extraordinary',
+      id: 'social_conflict', minAge: 12, activity: 'social', minMonth: 12, rarity: 'extraordinary',
       title: 'โต๊ะเดียวกับคนที่ไม่ลงรอย', text: 'การพบปะครั้งนี้พาเจ้าเผชิญหน้ากับคนที่เคยขัดแย้งกัน ความเงียบหนึ่งช่วงอาจกลายเป็นพันธมิตร หรือศัตรูที่จำชื่อเจ้าไปตลอดชีวิต',
       choices: [
         { text: 'ยอมลดทิฐิและเจรจา', check: { stat: 'charm', difficulty: 25 }, effects: [{ type: 'relation', key: 'enemy', value: 4 }, { type: 'relation', key: 'friend', value: 3 }, { type: 'path', key: 'compassion', value: 3 }], effect: s => { const social = ensureSocialState(s); social.reconciliations++; social.conflicts = Math.max(0, social.conflicts - 1); s.flags.socialReconciled = true; addLog('ความขัดแย้งคลี่คลาย กลายเป็นความเข้าใจที่ยังต้องพิสูจน์ต่อไป', true); } },
@@ -8406,34 +8722,34 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       ]
     },
     {
-      id: 'social_alliance', activity: 'social', minMonth: 36, rarity: 'epic',
+      id: 'social_alliance', minAge: 12, activity: 'social', minMonth: 36, rarity: 'epic',
       title: 'ข้อเสนอจากผู้มีอิทธิพล', text: s => `ผู้คนที่เจ้าสั่งสมความไว้วางใจมาพบกันที่${socialRoute(s).name} พวกเขาเสนอให้รวมกำลังเป็นพันธมิตร โดยต้องใช้ทั้งชื่อเสียง ความเข้ากันได้ และทรัพยากร`,
       conditions: s => (s.hero?.reputation || 0) >= 15 && ((s.relations?.friend || 0) + (s.relations?.companion || 0)) >= 8,
       choices: [
-        { text: 'ลงทุนทรัพยากรเพื่อสร้างพันธมิตร', check: { stat: 'charm', difficulty: 30 }, effects: [{ type: 'stat', path: 'hero.money', value: -5 }, { type: 'faction', key: 'jianghu', value: 5 }, { type: 'stat', path: 'hero.reputation', value: 5 }, { type: 'flag', key: 'alliesRecruited', value: true }], effect: s => { ensureSocialState(s).alliances++; addLog('พันธมิตรใหม่ตอบรับคำเชิญและจะช่วยเหลือเมื่อโลกเข้าสู่ภาวะวิกฤต', true); } },
+        { text: 'ลงทุนทรัพยากรเพื่อสร้างพันธมิตร', requires: s => s.hero.money >= 5, locked: 'ต้องมีเงินอย่างน้อย 5 ตำลึง', note: 'ใช้เงิน 5 ตำลึงแม้เจรจาไม่สำเร็จ', check: { stat: 'charm', difficulty: 30 }, failureEffects: [{ type: 'stat', path: 'hero.money', value: -5 }], effects: [{ type: 'stat', path: 'hero.money', value: -5 }, { type: 'faction', key: 'jianghu', value: 5 }, { type: 'stat', path: 'hero.reputation', value: 5 }, { type: 'flag', key: 'alliesRecruited', value: true }], effect: s => { ensureSocialState(s).alliances++; addLog('พันธมิตรใหม่ตอบรับคำเชิญและจะช่วยเหลือเมื่อโลกเข้าสู่ภาวะวิกฤต', true); } },
         { text: 'ปฏิเสธอย่างสุภาพ เก็บทรัพยากรไว้ก่อน', effects: [{ type: 'path', key: 'insight', value: 2 }], effect: s => addLog('เจ้ายังไม่ผูกมัดตนเองกับพันธมิตรที่อาจเรียกร้องมากเกินไป') }
       ]
     },
     {
-      id: 'social_family_visit', activity: 'social', minMonth: 6, rarity: 'uncommon',
+      id: 'social_family_visit', minAge: 12, activity: 'social', minMonth: 6, rarity: 'uncommon',
       conditions: s => (s.relations?.parents || 0) > 0 || (s.relations?.relatives || 0) > 0,
       title: 'จดหมายจากคนในสายเลือด', text: 'ญาติผู้ใหญ่ส่งข่าวผ่านตลาดมายังเจ้า พวกเขาไม่ได้ขอเงินทอง เพียงอยากรู้ว่าเจ้าจะยังนับตนเป็นคนในเรือนหรือไม่',
       choices: [
         { text: 'กลับไปเยี่ยมและรับฟังเรื่องในบ้าน', effects: [{ type: 'relation', key: 'parents', value: 3 }, { type: 'relation', key: 'relatives', value: 3 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { s.flags.familyContactRestored = true; addLog('สายเลือดที่ห่างหายกลับมามีเสียงในชีวิตของเจ้าอีกครั้ง', true); } },
-        { text: 'ส่งทรัพยากรไปแทนการกลับไปพบ', effects: [{ type: 'stat', path: 'hero.money', value: -3 }, { type: 'relation', key: 'parents', value: 1 }, { type: 'relation', key: 'relatives', value: 1 }], effect: s => { s.flags.familySupportSent = true; addLog('สิ่งของถูกส่งถึงเรือนเดิม แม้ตัวเจ้ายังกลับไปไม่ได้'); } }
+        { text: 'ส่งทรัพยากรไปแทนการกลับไปพบ', requires: s => s.hero.money >= 3, locked: 'ต้องมีเงินอย่างน้อย 3 ตำลึง', effects: [{ type: 'stat', path: 'hero.money', value: -3 }, { type: 'relation', key: 'parents', value: 1 }, { type: 'relation', key: 'relatives', value: 1 }], effect: s => { s.flags.familySupportSent = true; addLog('สิ่งของถูกส่งถึงเรือนเดิม แม้ตัวเจ้ายังกลับไปไม่ได้'); } }
       ]
     },
     {
-      id: 'social_friend_gathering', activity: 'social', minMonth: 12, rarity: 'uncommon',
+      id: 'social_friend_gathering', minAge: 12, activity: 'social', minMonth: 12, rarity: 'uncommon',
       conditions: s => (s.relations?.friend || 0) > 0 || (s.relations?.companion || 0) > 0,
       title: 'นัดพบของสหายร่วมทาง', text: 'สหายและคนที่เคยร่วมทางกับเจ้าชวนมาพบกัน พวกเขามีทั้งเรื่องที่อยากเล่าและคำถามว่าควรเดินไปทางใดต่อ',
       choices: [
-        { text: 'เปิดใจแบ่งปันเสบียงและแผนการ', effects: [{ type: 'relation', key: 'friend', value: 3 }, { type: 'relation', key: 'companion', value: 3 }, { type: 'stat', path: 'hero.money', value: -2 }], effect: s => { s.flags.friendCircleKept = true; addLog('วงสหายยังไม่แตก แม้แต่ละคนต้องเดินคนละเส้นทาง', true); } },
+        { text: 'เปิดใจแบ่งปันเสบียงและแผนการ', requires: s => s.hero.money >= 2, locked: 'ต้องมีเงินอย่างน้อย 2 ตำลึง', effects: [{ type: 'relation', key: 'friend', value: 3 }, { type: 'relation', key: 'companion', value: 3 }, { type: 'stat', path: 'hero.money', value: -2 }], effect: s => { s.flags.friendCircleKept = true; addLog('วงสหายยังไม่แตก แม้แต่ละคนต้องเดินคนละเส้นทาง', true); } },
         { text: 'ถามข่าวสารก่อน ไม่ผูกมัดตนเอง', effects: [{ type: 'relation', key: 'acquaintance', value: 2 }, { type: 'path', key: 'insight', value: 2 }], effect: s => { s.flags.friendRumorNetwork = true; addLog('เจ้าเก็บเครือข่ายข่าวของสหายไว้โดยยังไม่เปิดไพ่ทั้งหมด'); } }
       ]
     },
     {
-      id: 'social_sect_mentor', activity: 'social', minMonth: 84, rarity: 'extraordinary',
+      id: 'social_sect_mentor', minAge: 12, activity: 'social', minMonth: 84, rarity: 'extraordinary',
       conditions: s => !!s.flags?.metSect && ((s.relations?.master || 0) > 0 || (s.relations?.senior || 0) > 0),
       title: 'คำเตือนหลังศาลาสำนัก', text: 'อาจารย์และศิษย์พี่ไม่ได้เรียกเจ้าไปฝึก พวกเขาอยากรู้ว่าชื่อเสียงและความสัมพันธ์ที่เจ้าสร้างนอกสำนักจะยืนข้างสำนักในวันศึกหรือไม่',
       choices: [
@@ -8442,7 +8758,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       ]
     },
     {
-      id: 'social_subordinate_rival', activity: 'social', minMonth: 24, rarity: 'extraordinary',
+      id: 'social_subordinate_rival', minAge: 12, activity: 'social', minMonth: 24, rarity: 'extraordinary',
       conditions: s => (s.relations?.subordinate || 0) > 0 || (s.relations?.enemy || 0) < 0,
       title: 'คนใต้มือกับคู่แข่งเก่า', text: 'คนที่เคยเดินตามคำสั่งของเจ้าและคู่แข่งที่เคยขวางทางปรากฏในวงสนทนาเดียวกัน หากจัดการไม่ดี ความไม่พอใจจะกลายเป็นศัตรูถาวร',
       choices: [
@@ -9297,8 +9613,20 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     state.log = state.log.slice(0, 80);
   }
 
+  function trainingHealthWarning() {
+    return { id: 'training-health-warning', title: 'ร่างกายส่งสัญญาณเตือน', text: 'สุขภาพเหลือไม่เกิน 20 จุด เจ้ารู้สึกว่าร่างกายรับการฝึกต่อไปได้ยาก หากฝืนอาจบาดเจ็บสาหัสหรือเสียชีวิต ควรพักฟื้นก่อนหรือจะฝึกต่อ?', choices: [
+      { text: 'พักฟื้นก่อน', note: 'เปลี่ยนกิจกรรมเป็นพักผ่อนและหยุด Auto', effect: s => { s.autoMode = false; s.activity = 'rest'; s.trainingRiskAcknowledgedMonth = -1; addLog('เจ้าหยุดฝึกเพื่อพักฟื้น และปิด Auto ไว้จนกว่าจะเปิดใหม่', true); } },
+      { text: 'ฝืนฝึกต่อ', note: 'ฝึกต่อด้วยตนเอง มีความเสี่ยงเสียชีวิต · จะเตือนอีกหลังผ่านไปหนึ่งเดือน', effect: s => { s.autoMode = false; s.activity = 'train'; s.trainingRiskAcknowledgedMonth = s.month; addLog('เจ้ารับรู้ความเสี่ยงและเลือกฝึกต่อ ปิด Auto เพื่อให้ตัดสินใจเอง', true); } }
+    ] };
+  }
+  function needsTrainingHealthWarning(s) {
+    if (!activityAvailability(s, 'train').ok) return false;
+    const nextScheduled = s.autoMode ? (s.autoDoctrine === 'route' ? routeAutoDoctrine(s).schedule : ensureAutoSchedule(s))[s.month % 12] : null;
+    return (s.activity === 'train' || nextScheduled === 'train') && s.hero.health > 0 && s.hero.health <= 20 && s.trainingRiskAcknowledgedMonth !== s.month;
+  }
   function processMonth(offline = false) {
     if (!state || state.ending || state.pendingEvent) return false;
+    if (needsTrainingHealthWarning(state)) { triggerEvent('training-health-warning', trainingHealthWarning()); return false; }
     state.month++;
     state.characterMonth = state.month;
     state.hero.ageMonths++;
@@ -9445,6 +9773,14 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       }
       h.health -= roll < (.22 * profile.goal.risk) ? profile.healthCost + 1 : profile.healthCost;
       if (!hasMethod && h.cultivationAccess) addLog('ต้องติดตั้งวิชาบำเพ็ญก่อนจึงจะเพิ่มความก้าวหน้าหรือเลื่อนขั้นได้');
+      if (!hasMethod) {
+        const manual = availableTechniqueManuals(state).find(item => item.subtype === 'cultivation');
+        if (manual && state.lastCultivationManualReminder !== manual.techniqueId) {
+          state.lastCultivationManualReminder = manual.techniqueId;
+          const message = `การฝึกครั้งนี้ยังไม่เพิ่มความก้าวหน้าปราณ เจ้าจำได้ว่ามี “${manual.name}” อยู่ ลองเลือกกิจกรรมเรียนรู้เพื่อศึกษาคัมภีร์ แล้วติดตั้งวิชาบำเพ็ญที่เรียนสำเร็จ`;
+          addLog(message, true); toast(message);
+        }
+      }
       if (techniques.length) {
         addLog(hasMethod ? `ฝึก${techniques.map(t => `“${t.name}”`).join(' และ ')} ใช้ปราณ 4 ความก้าวหน้าเพิ่ม ${effectiveGain}` : `ฝึก${techniques.map(t => `“${t.name}”`).join(' และ ')} พื้นฐานยุทธ์เพิ่มขึ้น แต่ยังไม่อาจโคจรปราณ`);
       } else {
@@ -9635,6 +9971,8 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       return false;
     }
 
+    if (needsTrainingHealthWarning(state)) { triggerEvent('training-health-warning', trainingHealthWarning()); return false; }
+
     // Ambient memories stay location-neutral; the existing activity and location
     // UI supplies the current setting without inventing a home, companion or sect.
     const journalPhase = annualLifePhase(state);
@@ -9824,7 +10162,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         ? 'ป้ายหยกยืนยันคำสั่งของชายหน้ากากและบัญชีลับของหลัว เหวินจงเป็นผู้ส่งยาช่วยผู้รอดชีวิต หลัวตัดบันทึกเพื่อใส่ร้ายท่าน'
         : 'บัญชีเวรยามและใบส่งยาฉบับต้นพิสูจน์ว่าเหวินจงช่วยผู้รอดชีวิต หลัวตัดบันทึกเพื่อใส่ร้ายท่าน และชายหน้ากากเป็นผู้สั่งเผาตระกูล', true);
     }
-    if (choice.effect) choice.effect(state);
+    if (choice.effect && (!fate || fate.success)) choice.effect(state);
     recordRelationshipChanges(state, relationBefore);
     if (id === 'arrival' && index < 3) { state.flags.metSect = true; state.flags.sectDeclined = false; setStoryRoute(state, 'sect'); addRouteSkill(state, 'sectMerit', 1); markRouteTutorial(state, 'sect'); openCultivation(state, 'สำนักเมฆาครามมอบเคล็ดรวบรวมปราณพื้นฐาน'); addLog('หลินอันจึงเปิดทางจากผู้ฝึกกายเข้าสู่เส้นทางผู้บำเพ็ญ', true); }
     if (id === 'arrival' && index >= 3) { state.flags.metSect = false; state.flags.sectDeclined = true; state.hero.cultivationAccess = false; state.activity = "work"; state.hero.cultivation = 0; state.hero.qi = 0; const routeId = index === 3 ? 'mortal-peace' : index === 4 ? 'nameless-martial' : index === 5 ? 'new-land' : 'underworld'; setStoryRoute(state, routeId); addRouteSkill(state, routeId === 'mortal-peace' ? 'householdSkill' : routeId === 'nameless-martial' ? 'martialReputation' : 'travelKnowledge', 1); markRouteTutorial(state, routeId); addLog('หลินอันยังไม่เปิดทางปราณ เพราะไม่ได้รับวิชาบำเพ็ญจากสำนัก', true); }
@@ -9845,7 +10183,12 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       state.gradedEventHistory = Array.isArray(state.gradedEventHistory) ? state.gradedEventHistory : [];
       if (!state.gradedEventHistory.includes(id)) state.gradedEventHistory.push(id);
     }
-    state.eventHistory.push(id); state.pendingEvent = null;
+    state.eventHistory.push(id);
+    if (event.legendarySceneKey) {
+      state.legendarySceneHistory = Array.isArray(state.legendarySceneHistory) ? state.legendarySceneHistory : [];
+      if (!state.legendarySceneHistory.includes(event.legendarySceneKey)) state.legendarySceneHistory.push(event.legendarySceneKey);
+    }
+    state.pendingEvent = null;
     $('event-modal').hidden = true;
     if (!state.ending) { state.paused = false; saveGame(); render(); toast(outcome ? `ผลการเลือก: ${outcome}` : 'ไม่มีการเปลี่ยนแปลงค่าสถานะที่แสดง'); }
     return true;
@@ -10000,6 +10343,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     state.learnedManualTechniques = [];
     state.lifeJournalSeen = {};
     state.gradedEventHistory = [];
+    state.legendarySceneHistory = [];
     state.hero.name = state.ruleSet === 'dynasty' ? `${previous.characterId === 'lin-an' ? 'หลินอัน' : state.hero.name} รุ่นถัดไป` : 'ผู้เกิดใหม่';
     state.hero.ageMonths = 0;
     state.hero.lifespan = 60 + Math.floor(Math.random() * 31);
@@ -10182,12 +10526,12 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   function calculateEndingScore(type, extra = {}, rarity = calculateEndingRarity(type, state, extra)) {
     const combat = syncCombat(state);
     // รากที่ฝึกยากกว่าจะได้รับแต้ม Achievement ชดเชยความเสียเปรียบในการเล่น
-    const rootScoreBonus = { none: 42, human: 30, earth: 20, heaven: 12, immortal: 6, legend: 0 }[state.hero.root] || 0;
-    const choices = Object.keys(state.choices || {}).length;
+    const rootScoreBonus = { none: 12, human: 9, earth: 6, heaven: 4, immortal: 2, legend: 0 }[state.hero.root] || 0;
+    const choices = Object.keys(state.choices || {}).filter(id => id !== 'training-health-warning').length;
     const path = Math.max(...Object.values(state.paths || { compassion: 0, duty: 0, freedom: 0, insight: 0 }));
     const survival = type.startsWith('death') || type === 'sect_fall' ? 0 : 18;
-    const rarityScore = Math.min(48, Math.round(Math.log10(Math.max(1, rarity.oneIn)) * 12));
-    const journeyScore = Math.min(18, Math.round(choices * 1.35));
+    const rarityScore = Math.min(22, Math.round(Math.log10(Math.max(1, rarity.oneIn)) * 6));
+    const journeyScore = Math.min(15, Math.round(choices * .6));
     const cultivationScore = Math.min(18, Math.round(cultivationRank(state.hero) * .65));
     const combatScore = Math.min(22, Math.round(combat.totalPower / 350));
     const relationshipScore = Math.min(14, Math.round((
@@ -10262,7 +10606,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
 
   function renderEndingTimeline() {
     const source = Array.isArray(state.choiceHistory) ? state.choiceHistory : Object.entries(state.choices || {}).map(([id, c]) => ({ id, ...c }));
-    const items = source.filter(item => !isNarrativeContinuationChoice(item.text)).sort((a, b) => (a.month || 0) - (b.month || 0));
+    const items = source.filter(item => item.id !== 'training-health-warning' && !isNarrativeContinuationChoice(item.text)).sort((a, b) => (a.month || 0) - (b.month || 0));
     $('ending-timeline').innerHTML = items.length ? items.map((item, index) => {
       const event = EVENTS[item.id] || RANDOM_EVENTS.find(e => e.id === item.id) || {};
       const age = formatAge((state.characterId === 'lin-an' ? 5 * 12 : 0) + (item.month || 0));
@@ -11685,6 +12029,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   function addLogFor(data, text, highlight = false) { data.log = data.log || []; data.log.unshift({ month: data.month, text, highlight, at: Date.now() }); }
   function resolveEventById(s, id) {
     if (!id) return null;
+    if (id === 'training-health-warning') return trainingHealthWarning();
     if (String(id).startsWith('breakthrough-')) return breakthroughEvent(s);
     if (String(id).startsWith('world_')) {
       const worldEvent = WORLD_EVENTS.find(event => `world_${event.id}` === id);
