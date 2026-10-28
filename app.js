@@ -2239,10 +2239,16 @@
     const difficulty = 10 + power;
     const dangerous = !scene || /ติดตาม|ไล่ล่า|โจมตี|กลุ่มติดอาวุธ|เส้นทางอันตราย|ข่มขู่|ศึก|ปะทะ|เฝ้าเส้นทาง|ค้นหาคนรู้เรื่อง/.test(scene[1]);
     const failure = dangerous ? [{ type: 'stat', path: 'hero.health', value: -severe }] : [{ type: 'stat', path: 'hero.reputation', value: -1 }];
+    const scenario = scene?.[1] || '';
+    const evidence = /หลักฐาน|ทะเบียน|เอกสาร|บันทึก|คำสั่งปลอม|คำให้การ/.test(scenario);
+    const healing = /ป่วย|ผู้รักษา/.test(scenario);
+    const resultPath = healing ? 'hero.health' : evidence && !young ? 'hero.attributes.intellect' : 'hero.reputation';
+    const resultLabel = { 'hero.health': 'สุขภาพ', 'hero.attributes.intellect': 'ปัญญา', 'hero.reputation': 'ชื่อเสียง' }[resultPath];
+    const resultValue = healing ? 6 : evidence && !young ? 2 : 6;
     return [
-      { text: texts[0], note: `หากสำเร็จเพิ่มเมตตาและชื่อเสียง · หากพลาด${dangerous ? `เสียสุขภาพ ${severe}` : 'เสียชื่อเสียง 1'}`, check: { stat: checkStat, difficulty }, failureEffects: failure, effects: [{ type: 'path', key: 'compassion', value: power }, { type: 'stat', path: 'hero.reputation', value: power }] },
-      { text: texts[1], note: 'ตรวจสอบอย่างรอบคอบ · เพิ่มหยั่งรู้', effects: [{ type: 'path', key: 'insight', value: Math.max(1, Math.ceil(power / 2)) }] },
-      { text: texts[2], note: 'หลีกเลี่ยงความเสี่ยง · เพิ่มอิสระเล็กน้อย', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
+      { text: texts[0], note: `หากสำเร็จ ${resultLabel} +${resultValue} · หากพลาด${dangerous ? `เสียสุขภาพ ${severe}` : 'เสียชื่อเสียง 1'}`, check: { stat: checkStat, difficulty }, failureEffects: failure, effects: [{ type: 'path', key: healing ? 'compassion' : evidence ? 'insight' : 'duty', value: Math.ceil(power / 2) }, { type: 'stat', path: resultPath, value: resultValue }] },
+      { text: texts[1], note: healing ? 'ไม่ต้องทดสอบ · ฟื้นสุขภาพเล็กน้อย' : evidence && !young ? 'ไม่ต้องทดสอบ · ฝึกพิจารณาหลักฐาน' : 'ไม่ต้องทดสอบ · รวบรวมข้อมูลก่อน', effects: [{ type: 'path', key: 'insight', value: Math.max(1, Math.ceil(power / 3)) }, ...(healing ? [{ type: 'stat', path: 'hero.health', value: 2 }] : evidence && !young ? [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }] : [])] },
+      { text: texts[2], note: 'หลีกเลี่ยงความเสี่ยง', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
     ];
   }
 
@@ -4287,21 +4293,48 @@
       return UNIQUE_GRADED_SCENES[rarity][phaseKey].map(([key, title, text, reward], index) => {
         const sceneActivity = GRADED_SCENE_ACTIVITIES[rarity][phaseKey][index];
         const child = phaseKey === 'infant' || phaseKey === 'young-child';
-        const texts = child ? [`ให้ผู้ดูแลเข้าไปช่วยเรื่อง ${title}`, 'ให้ผู้ดูแลสอบถามรายละเอียดก่อน', 'ให้ผู้ดูแลพาเจ้าออกห่าง'] : [`เข้าไปช่วยจัดการเรื่อง ${title}`, 'สอบถามรายละเอียดก่อนตัดสินใจ', 'ถอนตัวจากสถานการณ์'];
+        const options = {
+          health: [
+            ['ขอให้ผู้รักษาช่วยตรวจและดูแล', 'ตรวจอาการและเตรียมสิ่งจำเป็นก่อน', 'ไม่เข้าไปรับการดูแลครั้งนี้'],
+            ['ช่วยจัดหาสิ่งที่ผู้ป่วยต้องใช้', 'ถามผู้รู้ถึงวิธีรับมือก่อน', 'ถอยออกมาและรักษาตัว']
+          ],
+          money: [
+            ['ลงมือช่วยจัดการเรื่องที่ค้างอยู่', 'ตรวจข้อตกลงหรือสิ่งของก่อน', 'ปฏิเสธการเข้าไปเกี่ยวข้อง'],
+            ['ช่วยหาทางออกให้ผู้ที่ขอความช่วยเหลือ', 'สอบถามต้นทุนและเงื่อนไขให้ชัด', 'ปล่อยให้เจ้าของเรื่องจัดการเอง']
+          ],
+          reputation: [
+            ['ยื่นมือช่วยผู้ที่กำลังเดือดร้อน', 'รับฟังคำบอกเล่าจากทุกฝ่าย', 'ไม่เข้าไปตัดสินเรื่องของผู้อื่น'],
+            ['ช่วยคลี่คลายความเข้าใจผิด', 'หาคนที่รู้เรื่องมาช่วยยืนยันก่อน', 'ถอยออกมาจากข้อขัดแย้ง']
+          ],
+          intellect: [
+            ['ตรวจสอบเบาะแสและลองหาคำตอบ', 'จดจำรายละเอียดไว้ให้ผู้รู้ตรวจ', 'วางเรื่องนี้ไว้ก่อน'],
+            ['เปรียบเทียบสิ่งที่พบกับข้อมูลที่มี', 'ถามผู้มีประสบการณ์ก่อนลงมือ', 'ไม่ติดตามเบาะแสต่อ']
+          ],
+          bodyFoundation: [
+            ['ลองทำด้วยตนเองอย่างระมัดระวัง', 'ขอคำแนะนำก่อนลอง', 'หยุดไว้และไม่ฝืนร่างกาย'],
+            ['ฝึกตามคำแนะนำที่ได้รับ', 'สังเกตท่าทางก่อนลงมือ', 'พักและกลับมาฝึกภายหลัง']
+          ]
+        };
+        const baseTexts = (options[reward] || options.intellect)[index % 2];
+        const texts = child ? baseTexts.map((text, i) => i === 2 ? 'อยู่กับผู้ดูแลและไม่เข้าไปเกี่ยวข้อง' : `ให้ผู้ดูแล${text}`) : baseTexts;
         const power = grade.power;
         // Minor disputes or lost belongings must not cause unexplained injury.
         // Physical harm is reserved for scenes that explicitly mention danger.
         const dangerous = /โจร|ปะทะ|ต่อสู้|โจมตี|ซุ่ม|ไล่ล่า|ผู้ไล่|ผู้คุม|บาดเจ็บ|เจ็บ|ป่วย|ไข้|พิษ|พายุ|ไฟไหม้|อันตราย|ผู้ติดตาม|ถูกจับ|ด่าน|คุกคาม|อพยพ|ศึก|แย่งชิง|เสี่ยง|ล้อม/.test(text);
         const failure = dangerous ? [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] : [{ type: 'stat', path: 'hero.reputation', value: -1 }];
         const checkStat = child ? 'luck' : sceneActivity === 'social' ? 'charm' : ['study','craft'].includes(sceneActivity) ? 'intellect' : ['train','work'].includes(sceneActivity) ? 'body' : 'luck';
-        const success = [{ type: 'stat', path: 'hero.reputation', value: Math.max(1, Math.ceil(power / 2)) }, { type: 'path', key: 'compassion', value: Math.max(1, Math.ceil(power / 2)) }];
-        const cautious = [{ type: 'path', key: 'insight', value: 1 }];
+        const amount = Math.max(1, Math.ceil(power / 2));
+        const paid = reward === 'money' && /ค่าจ้าง|ค่าตอบแทน|รางวัล|เสนอเงิน/.test(text);
+        const outcomePath = reward === 'health' ? 'hero.health' : paid ? 'hero.money' : reward === 'reputation' ? 'hero.reputation' : reward === 'bodyFoundation' ? 'hero.bodyFoundation' : 'hero.attributes.intellect';
+        const outcomeLabel = { 'hero.health': 'สุขภาพ', 'hero.money': 'เงิน', 'hero.reputation': 'ชื่อเสียง', 'hero.bodyFoundation': 'พื้นฐานกาย', 'hero.attributes.intellect': 'ปัญญา' }[outcomePath];
+        const success = [{ type: 'stat', path: outcomePath, value: amount }, { type: 'path', key: reward === 'reputation' || reward === 'health' ? 'compassion' : 'insight', value: amount }];
+        const cautious = [{ type: 'path', key: 'insight', value: 1 }, ...(reward === 'health' ? [{ type: 'stat', path: 'hero.health', value: 1 }] : reward === 'reputation' ? [{ type: 'stat', path: 'hero.reputation', value: 1 }] : [])];
         return {
           id: `graded-${rarity}-${phaseKey}-${key}`, rarity, activity: sceneActivity, activities: sceneActivity === 'social' ? ['social', 'free'] : [sceneActivity], title, text,
           tag: `${phase.name} · ${grade.name}`, uniqueGraded: true,
           choices: [
-            { text: texts[0], note: `สำเร็จเพิ่มเมตตาและชื่อเสียง · พลาด${dangerous ? `เสียสุขภาพ ${healthLoss(power)}` : 'เสียชื่อเสียง 1'}`, check: { stat: checkStat, difficulty: 10 + power }, effects: success, failureEffects: failure },
-            { text: texts[1], note: 'สอบถามก่อนโดยไม่เสี่ยงทดสอบ · หยั่งรู้ +1', effects: cautious },
+            { text: texts[0], note: `สำเร็จ: ${outcomeLabel} +${amount} · พลาด${dangerous ? `เสียสุขภาพ ${healthLoss(power)}` : 'เสียชื่อเสียง 1'}`, check: { stat: checkStat, difficulty: 10 + power }, effects: success, failureEffects: failure },
+            { text: texts[1], note: reward === 'health' ? 'ไม่ต้องทดสอบ · ฟื้นสุขภาพเล็กน้อย' : reward === 'reputation' ? 'ไม่ต้องทดสอบ · ชื่อเสียงเพิ่มเล็กน้อย' : 'ไม่ต้องทดสอบ · รวบรวมข้อมูลก่อน', effects: cautious },
             { text: texts[2], note: 'หลีกเลี่ยงความเสี่ยงและโอกาส', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
           ]
         };
@@ -6722,7 +6755,7 @@
         },
         {
           text: 'ซ่อนตัว สังเกตผู้คน และจำเส้นทางหลบหนีในเมือง',
-          note: 'ปูพื้นฐานการระแวดระวังและเตรียมทางรอด (เพิ่มความอิสระ)',
+          note: 'เตรียมทางรอดและระแวดระวังตัว',
           effect: s => {
             s.paths.freedom += 2;
             s.flags.escapePrepared = true;
@@ -6741,7 +6774,7 @@
       choices: [
         {
           dynamicText: s => s.flags.retainerAlive ? 'แบ่งข้าวและยาให้ลุงโจวกับเด็ก ๆ' : 'แบ่งข้าวและผ้าห่มให้เด็กเร่ร่อนที่อ่อนแอกว่า',
-          note: 'เมตตาสูง แต่เจ้าจะอ่อนแอและเสียเงินทั้งหมด',
+          note: 'ช่วยผู้อื่น แต่เจ้าจะอ่อนแอและเสียเงินทั้งหมด',
           effect: s => {
             s.hero.money = 0; s.hero.health -= 18; s.hero.reputation += 8;
             if (s.flags.retainerAlive) {
@@ -6880,7 +6913,7 @@
       month: 110, tag: 'คำสัตย์', title: 'คำถามของอาจารย์',
       dynamicText: s => adaptiveDialogue(s, 'อาจารย์เหวินพาเจ้าไปยังผาเมฆา “เมื่อภัยมาถึง สำนักมิใช่อาคาร แต่คือผู้คน เจ้ายินดีแบกชะตาของพวกเขาหรือไม่?” ลมหนาวพัดชายเสื้อของท่านพลิ้วไหว'),
       choices: [
-        { text: 'ข้าจะอยู่และปกป้องผู้คนที่นี่', note: 'ผูกชะตากับสำนัก · เพิ่มกำลังใจและความภักดี', effect: s => { s.flags.choseLoyalty = true; s.relations.master += 20; s.hero.reputation += 10; s.hero.powerBonus += 50; addLog('อาจารย์ถ่ายทอดเคล็ดรวมปราณฉบับสมบูรณ์ให้เจ้า', true); } },
+        { text: 'ข้าจะอยู่และปกป้องผู้คนที่นี่', note: 'ผูกชะตากับสำนัก · เพิ่มกำลังใจ', effect: s => { s.flags.choseLoyalty = true; s.relations.master += 20; s.hero.reputation += 10; s.hero.powerBonus += 50; addLog('อาจารย์ถ่ายทอดเคล็ดรวมปราณฉบับสมบูรณ์ให้เจ้า', true); } },
         { text: 'ข้าจะช่วยเท่าที่กำลังเอื้อ แล้วรักษาชีวิตไว้', effect: s => { s.flags.escapePrepared = true; s.relations.master += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8); addLog('อาจารย์พยักหน้า แม้แววตาจะเจือความผิดหวัง'); } },
         { text: 'ยุทธภพกว้างใหญ่ ข้าไม่ยอมตายที่นี่', effect: s => { s.flags.escapePrepared = true; s.relations.master -= 15; s.hero.money += 6; addLog('เจ้าตัดสินใจแล้วว่าจะออกจากเขาก่อนทุกอย่างสายเกินไป', true); } }
       ]
@@ -7062,7 +7095,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'ข่าวการเคลื่อนทัพเริ่มแน่ชัด ไม่มีใครทำทุกอย่างได้ทัน เจ้าต้องเลือกว่าจะฝากแรงที่เหลือไว้กับสิ่งใด',
       choices: [
         { text: 'เตรียมป้องกันประตูเขา', note: 'เพิ่มความมุ่งมั่นและกำลังแนวหน้า', effect: s => { s.flags.choseLoyalty = true; s.paths.duty += 3; s.hero.powerBonus += 30; addLog('เจ้าร่วมฝึกกับผู้ที่จะยืนรักษาประตูเขา', true); } },
-        { text: 'เตรียมช่วยคนที่สู้ไม่ได้', note: 'สร้างที่พักและเพิ่มความเมตตา', effect: s => { s.flags.shelterBuilt = true; s.paths.compassion += 3; s.relations.friend += 3; addLog('แนวหลังเตรียมรับผู้บาดเจ็บและผู้ที่ต้องอพยพ', true); } },
+        { text: 'เตรียมช่วยคนที่สู้ไม่ได้', note: 'สร้างที่พักสำหรับผู้ลี้ภัย', effect: s => { s.flags.shelterBuilt = true; s.paths.compassion += 3; s.relations.friend += 3; addLog('แนวหลังเตรียมรับผู้บาดเจ็บและผู้ที่ต้องอพยพ', true); } },
         { text: 'เตรียมเส้นทางถอยให้ยังเลือกได้', note: 'เปิดทางหลบหนีและเพิ่มความคล่องตัว', effect: s => { s.flags.escapePrepared = true; s.paths.freedom += 3; s.hero.attributes.agility = Math.min(126, (s.hero.attributes.agility || 0) + 1); addLog('เจ้าจดจำเส้นทางถอยไว้ เผื่อถึงเวลาที่ต้องเลือก', true); } }
       ]
     }
@@ -7144,7 +7177,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         },
         {
           text: 'ชวนเพื่อนบ้านลงขันร่วมหุ้น แบ่งเบาภาระและแบ่งกำไร',
-          note: 'สร้างสัมพันธ์ชุมชน เพิ่มความเมตตาและได้หุ้นส่วนช่วยงาน',
+          note: 'สร้างสัมพันธ์ชุมชนและได้หุ้นส่วนช่วยงาน',
           effect: s => {
             s.relations.friend += 8; s.paths.compassion += 2; s.flags.hasPartner = true;
             s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
@@ -7296,7 +7329,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: [
         {
           text: 'เปิดลานบ้านตั้งโรงทานและสถานพยาบาล ช่วยเหลือทุกคนเท่าที่แรงมี',
-          note: 'เมตตาสูงสุด ชุมชนยกย่องเป็นเสาหลักแห่งตลาด',
+          note: 'ชุมชนยกย่องเป็นเสาหลักแห่งตลาด',
           effect: s => {
             s.hero.health = Math.max(1, s.hero.health - 6); s.paths.compassion += 4;
             s.relations.friend += 15; s.flags.civiliansSaved = true;
@@ -7458,7 +7491,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         },
         {
           text: 'เลี้ยงสุราและนั่งฟังประสบการณ์อันโชกโชนในยุทธภพ',
-          note: 'ได้ความหยั่งรู้ รู้จุดอ่อนของค่ายกลสำนักใหญ่',
+          note: 'รู้จุดอ่อนของค่ายกลสำนักใหญ่',
           effect: s => {
             s.paths.insight += 4; s.paths.freedom += 2;
             s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 1;
@@ -7974,7 +8007,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         },
         {
           text: 'เก็บข้อมูลไว้เป็นหลักฐานเพื่อแบล็กเมลในอนาคต',
-          note: 'ได้ไพ่ตายและความหยั่งรู้สูง',
+          note: 'ได้ไพ่ตายสำหรับการเผชิญหน้าครั้งต่อไป',
           effect: s => {
             s.paths.insight += 4; s.flags.knowsTraitor = true;
             s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 1;
@@ -8388,7 +8421,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       when: s => s.activity === 'study' || (s.hero?.attributes?.intellect || 0) >= 13, title: 'บัญชีลับหลังชั้นหนังสือ',
       text: 'ระหว่างที่ผู้ใหญ่กำลังจัดหีบตำรา เจ้าพบสมุดบัญชีบาง ๆ ซ่อนอยู่หลังชั้นหนังสือ หน้ากระดาษเต็มไปด้วยชื่อคนและจำนวนเงินที่ไม่ตรงกับบัญชีของบ้าน\n\nตรงหน้าสุดท้ายมีตราประทับของคนจากเมืองชายแดน และบรรทัดหนึ่งเขียนถึงเด็กคนหนึ่งที่ควรตายไปแล้ว\n\nผู้ใหญ่รีบปิดสมุดทันทีเมื่อเห็นเจ้า แต่เจ้าจำรอยหมึกสีแดงและกลิ่นน้ำมันสนบนปกได้แล้ว',
       choices: [
-        { text: 'จำชื่อและซ่อนสมุดกลับที่เดิม', note: 'เพิ่มความหยั่งรู้และเปิดเบาะแสระยะยาว', effect: s => { s.paths.insight += 2; s.hero.attributes.intellect += 2; s.flags.hiddenLedgerClue = true; addLog('เจ้าจำชื่อในบัญชีไว้โดยไม่ถาม ผู้ใหญ่ไม่รู้ว่าความลับถูกพบเห็นแล้ว', true); } },
+        { text: 'จำชื่อและซ่อนสมุดกลับที่เดิม', note: 'ได้รับเบาะแสระยะยาว', effect: s => { s.paths.insight += 2; s.hero.attributes.intellect += 2; s.flags.hiddenLedgerClue = true; addLog('เจ้าจำชื่อในบัญชีไว้โดยไม่ถาม ผู้ใหญ่ไม่รู้ว่าความลับถูกพบเห็นแล้ว', true); } },
         { text: 'นำสมุดไปให้พ่อแม่ดู', note: 'ความปลอดภัยของครอบครัวเพิ่มขึ้น แต่ศัตรูอาจรู้ตัว', effect: s => { s.relations.parents += 5; s.hero.reputation += 1; s.flags.familyWarnedLedger = true; addLog('สมุดบัญชีถูกเผาในคืนนั้น ครอบครัวเริ่มเปลี่ยนเส้นทางเดินทางและไม่รับแขกแปลกหน้า', true); } },
         { text: 'ฉีกหน้าที่มีชื่อเด็กคนนั้นออกมา', note: 'เสี่ยงทำลายหลักฐาน แต่ได้เบาะแสไว้กับตัว', effect: s => { s.paths.freedom += 1; s.paths.insight += 1; s.hero.health -= 2; addTreasure(s, 'เศษบัญชีหมึกแดง', { intellect: 5, luck: 4 }, { grade: 'rare' }); addLog('หน้ากระดาษถูกซ่อนไว้ในเสื้อของเจ้า และกลายเป็นหลักฐานชิ้นแรกที่ไม่มีใครรู้ว่าถูกนำออกมา', true); } }
       ]
@@ -8409,7 +8442,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'ระหว่างเดินตามทางป่า เจ้าพบขลุ่ยไม้ไผ่แขวนอยู่บนกิ่งที่สูงเกินกว่าเด็กทั่วไปจะเอื้อมถึง ทว่าเมื่อเจ้าหันหลัง เสียงทำนองกลับดังขึ้นเองจากภายในป่า\n\nทำนองนั้นไม่ได้เรียกเจ้าไปข้างหน้า แต่นำทางกลับบ้านอย่างแม่นยำ แม้เส้นทางที่เดินอยู่จะไม่ใช่ทางเดิม\n\nเมื่อกลับถึงเรือน ขลุ่ยในมือกลับมีรอยสลักรูปเส้นทางที่ไม่เคยเห็นบนแผนที่ใด',
       choices: [
         { text: 'เก็บขลุ่ยไว้ใช้ยามหลงทาง', note: 'ได้ไอเทมช่วยสำรวจและเพิ่มว่องไว', effect: s => { addTreasure(s, 'ขลุ่ยนำทางป่าไผ่', { agility: 8, luck: 6, intellect: 4 }, { grade: 'epic' }); s.hero.attributes.luck += 2; addLog('ขลุ่ยนำทางป่าไผ่ส่งเสียงเบา ๆ ทุกครั้งที่เจ้าหันผิดทาง', true); } },
-        { text: 'เป่าทำนองตอบกลับไป', note: 'เสี่ยงเรียกสิ่งที่อยู่ในป่า แต่เพิ่มหยั่งรู้', effect: s => { s.paths.insight += 2; s.hero.attributes.intellect += 3; s.hero.health -= 3; s.flags.bambooPathKnown = true; addLog('เสียงจากป่าตอบกลับมาเพียงครั้งเดียว แล้วทิ้งเส้นทางลับไว้ในความทรงจำของเจ้า', true); } },
+        { text: 'เป่าทำนองตอบกลับไป', note: 'อาจได้ยินเสียงตอบกลับ แต่เสียสุขภาพ 3', effect: s => { s.paths.insight += 2; s.hero.attributes.intellect += 3; s.hero.health -= 3; s.flags.bambooPathKnown = true; addLog('เสียงจากป่าตอบกลับมาเพียงครั้งเดียว แล้วทิ้งเส้นทางลับไว้ในความทรงจำของเจ้า', true); } },
         { text: 'แขวนขลุ่ยคืนไว้บนกิ่งเดิม', note: 'ได้ Karma และหลีกเลี่ยงอันตราย', effect: s => { s.hero.karma += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 3); s.hero.reputation += 1; addLog('เมื่อขลุ่ยถูกแขวนคืน เสียงในป่าก็เงียบลง เหลือเพียงลมพัดผ่านใบไผ่', true); } }
       ]
     },
@@ -8419,7 +8452,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'ใต้ต้นสนริมทาง เจ้าพบคนเดินทางคนหนึ่งนอนกอดถุงผ้าไว้แน่น เลือดซึมผ่านชายเสื้อ แต่เขายังพยายามยิ้มให้เจ้า\n\nเขาไม่ได้ขอให้ช่วยรักษา เพียงถามว่าข้างหน้ามีหมู่บ้านหรือไม่ และขอให้เจ้ารับของชิ้นหนึ่งไว้ก่อนที่คนตามล่าจะมาถึง\n\nเสียงม้าดังมาจากทางไกล ขณะที่ถุงผ้าในมือเขาสั่นเบา ๆ ราวกับมีบางสิ่งยังมีชีวิตอยู่ข้างใน',
       choices: [
         { text: 'พาเขากลับไปหาผู้ใหญ่', note: 'เสียสุขภาพเล็กน้อย แต่ได้ของวิเศษและชื่อเสียง', effect: s => { addTreasure(s, 'เข็มกลัดผู้เดินทาง', { defense: 7, luck: 6 }, { grade: 'rare' }); s.hero.health -= 5; s.hero.reputation += 3; s.hero.karma += 2; addLog('คนเจ็บรอดถึงมือผู้ใหญ่ เขาทิ้งเข็มกลัดผู้เดินทางไว้เป็นคำขอบคุณก่อนจากไป', true); } },
-        { text: 'รับถุงผ้าแล้วชี้ทางผิดให้ผู้ตามล่า', note: 'เปิดทางลับและเพิ่มอิสระ แต่มีความเสี่ยง', effect: s => { s.flags.travelerSecret = true; s.paths.freedom += 2; s.paths.insight += 1; s.hero.health -= 4; addTreasure(s, 'ห่อผนึกของคนพเนจร', { agility: 8, intellect: 5 }, { grade: 'epic', sealed: true }); addLog('เจ้าชี้ทางผิดให้คนชุดดำ และคนเจ็บหายไปพร้อมถุงผ้าที่ไม่ยอมเปิดออก', true); } },
+        { text: 'รับถุงผ้าแล้วชี้ทางผิดให้ผู้ตามล่า', note: 'ได้ห่อผนึก แต่เสียสุขภาพ 4', effect: s => { s.flags.travelerSecret = true; s.paths.freedom += 2; s.paths.insight += 1; s.hero.health -= 4; addTreasure(s, 'ห่อผนึกของคนพเนจร', { agility: 8, intellect: 5 }, { grade: 'epic', sealed: true }); addLog('เจ้าชี้ทางผิดให้คนชุดดำ และคนเจ็บหายไปพร้อมถุงผ้าที่ไม่ยอมเปิดออก', true); } },
         { text: 'เดินผ่านไปเหมือนไม่เห็น', note: 'รักษาสุขภาพ แต่เสีย Karma', effect: s => { s.hero.karma -= 2; s.hero.attributes.luck -= 1; addLog('เมื่อเจ้าหันกลับมา คนเจ็บหายไปแล้ว เหลือเพียงรอยเลือดที่ถูกฝนชะล้าง', true); } }
       ]
     },
@@ -8440,7 +8473,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: [
         { text: 'รับคำเชิญและเดินทางไปพบผู้ส่ง', note: 'เพิ่มชื่อเสียงและเปิดโอกาสเรียนรู้', effect: s => { s.flags.sectLetterAccepted = true; s.hero.reputation += 4; s.hero.attributes.intellect += 2; s.hero.cultivation += s.hero.cultivationAccess ? 8 : 0; addTreasure(s, 'ตราผนึกคำเชิญเมฆา', { intellect: 8, spirit: 6 }, { grade: 'rare' }); addLog('เจ้ารับจดหมายและได้พบผู้ดูแลหอคัมภีร์ เขาไม่สอนวิชา แต่เปิดประตูให้เจ้าอ่านบันทึกที่คนทั่วไปไม่มีสิทธิ์เห็น', true); } },
         { text: 'นำจดหมายไปให้อาจารย์ตรวจ', note: 'เพิ่มความสัมพันธ์กับอาจารย์และลดความเสี่ยง', effect: s => { s.relations.master += 6; s.flags.sectLetterVerified = true; s.hero.attributes.spirit += 2; addLog('อาจารย์ตรวจตราผนึกอยู่นาน ก่อนบอกว่าจดหมายนี้ไม่ได้มาจากศัตรู แต่ก็ไม่ควรเชื่อทั้งหมด', true); } },
-        { text: 'เผาจดหมายทิ้ง', note: 'ปลอดภัย แต่เสียโอกาสและเพิ่มความเป็นอิสระ', effect: s => { s.paths.freedom += 2; s.hero.reputation -= 1; addLog('จดหมายกลายเป็นเถ้าในมือเจ้า เส้นทางหนึ่งปิดลงโดยไม่มีใครรู้ว่าเคยเปิดอยู่', true); } }
+        { text: 'เผาจดหมายทิ้ง', note: 'หลีกเลี่ยงความเสี่ยง แต่เสียโอกาสและชื่อเสียง 1', effect: s => { s.paths.freedom += 2; s.hero.reputation -= 1; addLog('จดหมายกลายเป็นเถ้าในมือเจ้า เส้นทางหนึ่งปิดลงโดยไม่มีใครรู้ว่าเคยเปิดอยู่', true); } }
       ]
     },
     {
@@ -8449,7 +8482,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'ป้ายไม้สีแดงถูกตอกไว้หน้าสำนักในเช้าวันฝนตก ชื่อของเจ้าถูกเขียนไว้ด้วยหมึกดำ ทั้งที่เจ้าไม่เคยรับคำท้าจากผู้ใด\n\nผู้คนมารวมตัวรอบลานประลอง บางคนต้องการเห็นเจ้าชนะ บางคนเพียงรอหัวเราะเมื่อเจ้าถอยหนี\n\nคู่แข่งไม่เผยหน้า แต่ทิ้งถ้อยคำไว้ว่า เพลงกระบี่ของเจ้ามีรอยต่อที่คนในอดีตเคยใช้ทำลายตระกูลหนึ่ง',
       choices: [
         { text: 'รับคำท้าและขึ้นลานประลอง', note: 'เสี่ยงบาดเจ็บ แต่ได้ชื่อเสียงและพลัง', effect: s => { s.flags.duelWitnessed = true; s.hero.powerBonus += 28; s.hero.reputation += 5; s.hero.health -= 6; s.relations.senior += 3; addTreasure(s, 'เหรียญผู้ผ่านลานประลอง', { attack: 8, agility: 6 }, { grade: 'rare' }); addLog('เจ้ารับคำท้าต่อหน้าฝูงชน แม้ยังไม่รู้ว่าใครส่งป้ายมา แต่ชื่อของเจ้าถูกจดจำในฐานะผู้ไม่ถอย', true); } },
-        { text: 'ตรวจสอบที่มาของคำท้าก่อน', note: 'เพิ่มหยั่งรู้และเปิดเบาะแสศัตรู', effect: s => { s.paths.insight += 3; s.flags.duelOriginKnown = true; s.hero.attributes.intellect += 2; addLog('เบาะแสบนป้ายเชื่อมไปถึงศัตรูเก่าของคนในสำนัก การประลองครั้งนี้อาจไม่ใช่เรื่องส่วนตัวของเจ้า', true); } },
+        { text: 'ตรวจสอบที่มาของคำท้าก่อน', note: 'พบเบาะแสศัตรูและเพิ่มปัญญา', effect: s => { s.paths.insight += 3; s.flags.duelOriginKnown = true; s.hero.attributes.intellect += 2; addLog('เบาะแสบนป้ายเชื่อมไปถึงศัตรูเก่าของคนในสำนัก การประลองครั้งนี้อาจไม่ใช่เรื่องส่วนตัวของเจ้า', true); } },
         { text: 'ฉีกป้ายทิ้งต่อหน้าฝูงชน', note: 'รักษาสุขภาพ แต่ชื่อเสียงเปลี่ยนไป', effect: s => { s.paths.freedom += 2; s.hero.reputation += 1; s.relations.senior -= 2; addLog('เจ้าฉีกป้ายท้าประลองต่อหน้าทุกคน บางคนเรียกมันว่าขี้ขลาด บางคนกลับเรียกมันว่าการเลือกสนามของตนเอง', true); } }
       ]
     },
@@ -8458,7 +8491,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       when: s => s.activity === 'social' || (s.relations?.friend || 0) >= 3, title: 'จดหมายจากผู้ที่จากไป',
       text: 'จดหมายฉบับหนึ่งถูกส่งมาถึงเจ้าหลังจากผู้เขียนหายไปจากเมืองนานหลายปี กระดาษมีกลิ่นดอกไม้แห้งและรอยน้ำตาที่ลบไม่ออก\n\nข้อความด้านในไม่ได้กล่าวถึงความรักหรือการจากลา แต่เตือนว่าอย่าเชื่อคนที่เอ่ยชื่อของเจ้าในงานเลี้ยงคืนนี้\n\nท้ายจดหมายมีแผนที่ครึ่งแผ่นและประโยคสั้น ๆ ว่า หากเจ้าจำข้าได้ จงอย่ามาตามหา',
       choices: [
-        { text: 'ไปงานเลี้ยงและสังเกตคนที่เอ่ยชื่อเจ้า', note: 'เพิ่มหยั่งรู้และชื่อเสียง แต่เสี่ยงมีศัตรู', effect: s => { s.flags.oldLetterFollowed = true; s.paths.insight += 3; s.hero.reputation += 3; s.relations.enemy += 1; addTreasure(s, 'แผนที่ครึ่งใบจากคนเก่า', { intellect: 8, luck: 5 }, { grade: 'rare' }); addLog('ที่งานเลี้ยงมีคนเอ่ยชื่อเจ้าจริง และเขารีบออกจากงานทันทีเมื่อสบตาเจ้า', true); } },
+        { text: 'ไปงานเลี้ยงและสังเกตคนที่เอ่ยชื่อเจ้า', note: 'ได้ชื่อเสียงและแผนที่ แต่เสี่ยงมีศัตรู', effect: s => { s.flags.oldLetterFollowed = true; s.paths.insight += 3; s.hero.reputation += 3; s.relations.enemy += 1; addTreasure(s, 'แผนที่ครึ่งใบจากคนเก่า', { intellect: 8, luck: 5 }, { grade: 'rare' }); addLog('ที่งานเลี้ยงมีคนเอ่ยชื่อเจ้าจริง และเขารีบออกจากงานทันทีเมื่อสบตาเจ้า', true); } },
         { text: 'เผาจดหมายและเก็บแผนที่ไว้', note: 'รักษาความลับและได้ไอเทมเบาะแส', effect: s => { s.flags.oldLetterBurned = true; s.paths.freedom += 2; addTreasure(s, 'เศษแผนที่ไร้นาม', { luck: 7, agility: 5 }, { grade: 'rare', sealed: true }); addLog('จดหมายถูกเผา เหลือเพียงแผนที่ครึ่งใบที่ไม่บอกว่าพาไปหาใคร', true); } },
         { text: 'เล่าเรื่องนี้ให้สหายฟัง', note: 'เพิ่มความสัมพันธ์และลดความเสี่ยงจากการรับมือคนเดียว', effect: s => { s.relations.friend += 8; s.relations.companion += 3; s.hero.attributes.charm += 2; addLog('สหายของเจ้าช่วยจำรายละเอียดในจดหมาย และสัญญาว่าจะไม่ปล่อยให้เจ้าตามรอยนี้เพียงลำพัง', true); } }
       ]
@@ -8469,7 +8502,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'เจ้าพบตราประทับสีชาดบนเอกสารหนี้ที่ไม่มีชื่อเจ้าของ แต่ทุกบรรทัดกลับระบุทรัพย์สินของเจ้าได้ถูกต้อง\n\nเจ้าหนี้ยืนยันว่าหนี้นี้สืบทอดมาจากคนที่เคยช่วยครอบครัวของเจ้า และกำหนดให้ชำระภายในเจ็ดวัน\n\nหากปฏิเสธ บ้านอาจถูกยึด หากยอมรับ เจ้าจะได้รู้ว่าความช่วยเหลือในอดีตมีราคาสูงเพียงใด',
       choices: [
         { text: 'ชำระหนี้เท่าที่มี', note: 'ใช้เงินเพื่อลดหนี้และรักษาชื่อเสียง', requires: s => (s.hero?.money || 0) >= 6, effect: s => { s.hero.money -= 6; s.household.debt = Math.max(0, (s.household.debt || 0) - 8); s.hero.reputation += 3; s.hero.karma += 2; addLog('เงินก้อนเล็กถูกวางลงบนโต๊ะ เจ้าหนี้ยอมลดตราประทับและเลื่อนกำหนดส่วนที่เหลือ', true); } },
-        { text: 'ตรวจสอบว่าใครเป็นเจ้าของหนี้ตัวจริง', note: 'เพิ่มหยั่งรู้และเปิดเบาะแสของตระกูล', effect: s => { s.flags.inheritedDebtTruth = true; s.paths.insight += 3; s.hero.attributes.intellect += 2; addTreasure(s, 'ใบรับรองหนี้เก่าของตระกูล', { intellect: 8, reputation: 5 }, { grade: 'rare', sealed: true }); addLog('เอกสารอีกชุดเผยว่าหนี้นี้ถูกขยายตัวเลขโดยมือที่สาม และตราประทับเดิมไม่ใช่ของเจ้าหนี้คนปัจจุบัน', true); } },
+        { text: 'ตรวจสอบว่าใครเป็นเจ้าของหนี้ตัวจริง', note: 'พบเบาะแสของตระกูลและเพิ่มปัญญา', effect: s => { s.flags.inheritedDebtTruth = true; s.paths.insight += 3; s.hero.attributes.intellect += 2; addTreasure(s, 'ใบรับรองหนี้เก่าของตระกูล', { intellect: 8, reputation: 5 }, { grade: 'rare', sealed: true }); addLog('เอกสารอีกชุดเผยว่าหนี้นี้ถูกขยายตัวเลขโดยมือที่สาม และตราประทับเดิมไม่ใช่ของเจ้าหนี้คนปัจจุบัน', true); } },
         { text: 'ฉีกเอกสารต่อหน้าเจ้าหนี้', note: 'รักษาเงิน แต่เพิ่มศัตรูและความเสี่ยง', effect: s => { s.relations.enemy += 4; s.hero.reputation -= 3; s.hero.karma -= 1; s.flags.debtProvoked = true; addLog('เอกสารถูกฉีกเป็นชิ้น เจ้าหนี้ไม่พูดอะไร เพียงส่งคนติดตามเจ้าออกจากตรอก', true); } }
       ]
     },
@@ -8489,7 +8522,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'กองคาราวานจากด่านตะวันตกเสนอสัญญาให้เจ้านำสินค้าไปส่งยังเมืองที่ไม่มีชื่ออยู่บนแผนที่ทั่วไป\n\nค่าตอบแทนสูงกว่าค่าจ้างหลายเท่า แต่ผู้คุมขบวนไม่ยอมบอกว่าสินค้าในหีบคืออะไร และกำชับว่าห้ามเปิดแม้ได้ยินเสียงจากด้านใน\n\nเส้นทางนี้อาจสร้างชื่อให้เจ้า หรือทำให้คนทั้งด่านจำชื่อของเจ้าในฐานะผู้ทรยศ',
       choices: [
         { text: 'รับสัญญาและคุมขบวนไปจนสุดทาง', note: 'ได้เงินและชื่อเสียง แต่เสี่ยงสุขภาพ', effect: s => { s.hero.money += 18; s.hero.reputation += 4; s.hero.health -= 8; s.paths.freedom += 2; addTreasure(s, 'ตราคาราวานตะวันตก', { agility: 10, luck: 6 }, { grade: 'rare' }); addLog('คาราวานถึงด่านปลายทางโดยไม่เปิดหีบ เจ้ากลับมาพร้อมเงินก้อนใหญ่และตราที่เปิดทางให้เดินทางไกลขึ้น', true); } },
-        { text: 'ขอตรวจสินค้าและเงื่อนไขก่อนออกเดินทาง', note: 'เพิ่มหยั่งรู้และลดความเสี่ยงของสัญญา', effect: s => { s.paths.insight += 3; s.hero.attributes.intellect += 2; s.flags.caravanContractRead = true; s.hero.reputation += 1; addLog('เจ้าพบว่าหีบมีของต้องห้ามปะปนอยู่ จึงต่อรองสัญญาใหม่ก่อนยอมเดินทาง', true); } },
+        { text: 'ขอตรวจสินค้าและเงื่อนไขก่อนออกเดินทาง', note: 'ตรวจเงื่อนไขสัญญาและเพิ่มปัญญา', effect: s => { s.paths.insight += 3; s.hero.attributes.intellect += 2; s.flags.caravanContractRead = true; s.hero.reputation += 1; addLog('เจ้าพบว่าหีบมีของต้องห้ามปะปนอยู่ จึงต่อรองสัญญาใหม่ก่อนยอมเดินทาง', true); } },
         { text: 'ปฏิเสธและแจ้งทางการ', note: 'ได้ Karma แต่สร้างศัตรูกับคนในคาราวาน', effect: s => { s.hero.karma += 3; s.hero.reputation += 2; s.relations.enemy += 2; addLog('ทางการยึดคาราวานไว้ตรวจสอบ แต่คนคุมขบวนจำหน้าของเจ้าได้และไม่คิดให้อภัย', true); } }
       ]
     },
@@ -8510,7 +8543,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: [
         { text: 'เขียนความผิดพลาดของตนลงไปตามจริง', note: 'เพิ่ม Legacy และความสัมพันธ์กับครอบครัว', effect: s => { s.family.legacyScore += 8; s.family.bond += 5; s.relations.parents += 1; s.hero.karma += 2; addLog('เจ้าจารึกทั้งชัยชนะและความผิดพลาดลงในม้วนคัมภีร์ ทายาทจะไม่ต้องเรียนรู้จากคำโกหกของคนรุ่นก่อน', true); } },
         { text: 'เขียนเฉพาะสิ่งที่ทำให้ตระกูลภาคภูมิใจ', note: 'ชื่อเสียงเพิ่ม แต่ความจริงบางส่วนถูกปิดบัง', effect: s => { s.family.legacyScore += 5; s.hero.reputation += 5; s.flags.legacyBeautified = true; addTreasure(s, 'ตราหมึกบันทึกตระกูล', { charm: 8, reputation: 8 }, { grade: 'rare' }); addLog('ม้วนคัมภีร์เล่าเรื่องที่งดงามที่สุดของตระกูล ส่วนความจริงที่หนักกว่านั้นถูกเก็บไว้ในใจของเจ้า', true); } },
-        { text: 'เผาม้วนคัมภีร์และให้ทายาทเริ่มใหม่', note: 'เพิ่มอิสระ แต่ลด Legacy ของตระกูล', effect: s => { s.family.legacyScore = Math.max(0, s.family.legacyScore - 3); s.paths.freedom += 3; s.hero.karma -= 1; addLog('เปลวไฟลบชื่อของคนรุ่นก่อนออกจากกระดาษ เหลือเพียงโอกาสให้ผู้สืบทอดเขียนเส้นทางของตนเอง', true); } }
+        { text: 'เผาม้วนคัมภีร์และให้ทายาทเริ่มใหม่', note: 'ให้ทายาทเริ่มใหม่ แต่ลดชื่อเสียงสืบทอดของตระกูล', effect: s => { s.family.legacyScore = Math.max(0, s.family.legacyScore - 3); s.paths.freedom += 3; s.hero.karma -= 1; addLog('เปลวไฟลบชื่อของคนรุ่นก่อนออกจากกระดาษ เหลือเพียงโอกาสให้ผู้สืบทอดเขียนเส้นทางของตนเอง', true); } }
       ]
     },
     {
@@ -8540,7 +8573,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: [
         { text: 'เขียนเรื่องราวทั้งหมดตามจริง', note: 'เพิ่ม Legacy และชื่อเสียงตระกูล', effect: s => { s.family.legacyScore += 10; s.hero.reputation += 4; s.hero.karma += 2; addLog('หน้าสุดท้ายถูกเติมด้วยเรื่องจริง ทั้งชัยชนะ ความสูญเสีย และสิ่งที่เจ้าปรารถนาให้คนรุ่นหลังไม่ทำซ้ำ', true); } },
         { text: 'เขียนคำสอนสั้น ๆ ไว้เพียงหนึ่งประโยค', note: 'ได้ไอเทมพงศาวดารและเพิ่มจิตใจ', effect: s => { s.family.legacyScore += 6; s.hero.attributes.spirit += 4; addTreasure(s, 'พู่กันพงศาวดารปลายชีวิต', { spirit: 10, charm: 6 }, { grade: 'epic' }); addLog('เจ้าวางพู่กันหลังเขียนประโยคเดียว แต่คนในเรือนกลับจดจำมันได้แม่นกว่าพงศาวดารทั้งเล่ม', true); } },
-        { text: 'ปล่อยให้หน้าว่างอยู่เช่นนั้น', note: 'เพิ่มอิสระและลดแรงกดดันของผู้สืบทอด', effect: s => { s.paths.freedom += 3; s.family.legacyScore += 1; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 5); addLog('หน้าสุดท้ายยังคงว่าง ผู้สืบทอดจึงมีสิทธิ์เขียนคำตอบของตนเองโดยไม่ต้องเดินตามเงาของเจ้า', true); } }
+        { text: 'ปล่อยให้หน้าว่างอยู่เช่นนั้น', note: 'ให้ผู้สืบทอดเลือกอนาคตของตน', effect: s => { s.paths.freedom += 3; s.family.legacyScore += 1; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 5); addLog('หน้าสุดท้ายยังคงว่าง ผู้สืบทอดจึงมีสิทธิ์เขียนคำตอบของตนเองโดยไม่ต้องเดินตามเงาของเจ้า', true); } }
       ]
     },
     {
@@ -8549,7 +8582,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'ในงานรวมญาติปีนี้ มีที่นั่งหนึ่งตัวถูกเว้นไว้ให้คนที่ไม่มีวันกลับมา ทุกคนรู้ว่าควรเก็บมันไว้ แต่ไม่มีใครรู้ว่าควรพูดถึงเจ้าของที่นั่งหรือไม่\n\nเมื่อแสงจันทร์ตกกระทบโต๊ะ ถ้วยชาที่วางอยู่ตรงนั้นกลับมีไอน้ำลอยขึ้น ทั้งที่ไม่มีใครรินชา\n\nคนในเรือนหันมามองเจ้า เพราะรู้ว่าคำพูดสุดท้ายเกี่ยวกับที่นั่งนี้ควรเป็นของผู้ที่ผ่านชีวิตมานานที่สุด',
       choices: [
         { text: 'เล่าเรื่องของผู้จากไปให้คนรุ่นหลังฟัง', note: 'เพิ่มความสัมพันธ์และ Legacy', effect: s => { s.family.legacyScore += 6; s.relations.relatives += 5; s.hero.karma += 2; addLog('ชื่อของผู้จากไปถูกเรียกอีกครั้งในเรือน ไม่ใช่เพื่อรั้งเขาไว้ แต่เพื่อไม่ให้ชีวิตของเขาหายไปจากความทรงจำ', true); } },
-        { text: 'เก็บถ้วยชาไว้เป็นของระลึก', note: 'ได้ไอเทมจิตใจระดับ Epic และเพิ่มความหยั่งรู้', effect: s => { addTreasure(s, 'ถ้วยชาของผู้ล่วงลับ', { spirit: 12, intellect: 7, defense: 5 }, { grade: 'epic' }); s.paths.insight += 2; addLog('ถ้วยชาถูกเก็บไว้ในหอความทรงจำ ไอน้ำหายไปแล้ว แต่กลิ่นชาคืนเดิมยังคงอยู่', true); } },
+        { text: 'เก็บถ้วยชาไว้เป็นของระลึก', note: 'ได้รับถ้วยชาของผู้ล่วงลับ', effect: s => { addTreasure(s, 'ถ้วยชาของผู้ล่วงลับ', { spirit: 12, intellect: 7, defense: 5 }, { grade: 'epic' }); s.paths.insight += 2; addLog('ถ้วยชาถูกเก็บไว้ในหอความทรงจำ ไอน้ำหายไปแล้ว แต่กลิ่นชาคืนเดิมยังคงอยู่', true); } },
         { text: 'ยกที่นั่งนั้นให้ผู้มาใหม่', note: 'เพิ่ม Karma และเปิดทางให้ครอบครัวเดินต่อ', effect: s => { s.hero.karma += 4; s.family.bond += 4; s.hero.reputation += 2; addLog('ที่นั่งว่างถูกมอบให้เด็กคนหนึ่งในเรือน ค่ำคืนนี้จึงไม่ใช่เพียงการไว้อาลัย แต่เป็นการยอมให้ชีวิตเดินหน้าต่อ', true); } }
       ]
     }
@@ -9520,6 +9553,19 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     updateWorldCopy(); saveGame(); render(); return true;
   }
 
+  function visibleChoiceNote(note) {
+    return String(note || '')
+      .replace(/ต้องมีความหยั่งรู้\s*\d+\s*หรือศิษย์พี่ไว้วางใจ/g, 'ต้องมีประสบการณ์สืบข่าวหรือศิษย์พี่ไว้วางใจ')
+      .replace(/ความหยั่งรู้หรือความสัมพันธ์มีผล/g, 'ประสบการณ์สืบข่าวหรือความสัมพันธ์มีผล')
+      .replace(/หรือแนวทางอิสระอย่างน้อย\s*\d+/g, 'หรือมีประสบการณ์เอาตัวรอด')
+      .replace(/แนวทาง(?:จากการเลือก)?:\s*(?:(?:เมตตา|ภักดี|อิสระ|หยั่งรู้)\s*[+-]\d+\s*[,·]?\s*)+/g, '')
+      .replace(/(?:เพิ่ม|ได้|สูงสุด|สูง|ความ|แนวทาง)(?:ความ)?(?:เมตตา|ภักดี|อิสระ|หยั่งรู้)(?:\s*[+-]\d+|เล็กน้อย|อย่างน้อย\s*\d+)?/g, '')
+      .replace(/(?:เมตตา|ภักดี|อิสระ|หยั่งรู้)\s*[+-]\d+/g, '')
+      .replace(/(?:เมตตา|ภักดี|อิสระ|หยั่งรู้)(?:สูงสุด|สูง)/g, '')
+      .replace(/^\s*(?:และ|แต่)\s*/, '')
+      .replace(/(?:^|\s*[·,]\s*)\s*(?=\s*[·,]|$)/g, '').trim();
+  }
+
   function triggerEvent(id, event) {
     if (event && !eventScopeAllowed(state, event, id)) {
       state.pendingEvent = null; state.paused = false;
@@ -9555,8 +9601,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     event.choices.forEach((choice, i) => {
       const available = isChoiceAvailable(choice, state);
       const btn = document.createElement('button'); btn.className = 'choice-btn'; btn.disabled = !available; if (btn.setAttribute) btn.setAttribute('aria-label', `${i + 1}. ${choice.text || 'ตัวเลือกเหตุการณ์'}`);
-      const pathNotes = choicePathNotes(state, id, choice, i);
-      const note = available ? [choice.note, choice.check ? `ทดสอบ: ${checkLabel(choice.check)}` : '', ...pathNotes].filter(Boolean).join(' · ') : (choice.locked || 'ยังทำไม่ได้');
+      const note = available ? [visibleChoiceNote(choice.note), choice.check ? `ทดสอบ: ${checkLabel(choice.check)}` : ''].filter(Boolean).join(' · ') : visibleChoiceNote(choice.locked || 'ยังทำไม่ได้');
       const text = typeof choice.dynamicText === 'function' ? choice.dynamicText(state) : choice.text;
       btn.innerHTML = `<span class="choice-index">${i + 1}</span><span>${text}</span>${note ? `<small>${note}</small>` : ''}`;
       btn.onclick = () => chooseEvent(id, event, choice, i, text);
@@ -9596,7 +9641,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     };
     return [...new Set([...Object.keys(before), ...Object.keys(after)])].flatMap(path => {
       const delta = (after[path] || 0) - (before[path] || 0);
-      if (Math.abs(delta) < 0.000001) return [];
+      if (path.startsWith('paths.') || Math.abs(delta) < 0.000001) return [];
       const key = path.split('.').pop();
       const label = labels[path] || (path.startsWith('gradedMaterials.') ? `${MATERIAL_NAMES[path.split('.')[1]] || path.split('.')[1]} ${ITEM_GRADES[key]?.name || key}` : path.startsWith('relations.') ? `ความสัมพันธ์ ${key}` : path.startsWith('materials.') ? `วัตถุดิบ ${key}` : `ฝ่าย ${key}`);
       const amount = Number(delta.toFixed(2));
@@ -9633,6 +9678,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     if (!state.ending && !state.continuation) resolveCultivationProgress(state);
     updateFactionReputation(state);
     syncCombat(state);
+    state.hero.health = clamp(state.hero.health, 0, state.hero.maxHealth);
     if (state.hero.health <= 0 && !state.ending && !state.continuation) {
       if ((state.hero?.ageMonths || 0) < 84) endGame('death_early', { cause: `บาดแผลจากเหตุการณ์ “${event.title}” รุนแรงเกินกว่าเด็กจะทนได้` });
       else endGame('death', { cause: `บาดแผลจากเหตุการณ์ “${event.title}” รุนแรงเกินกว่าจะรอด` });
@@ -10223,7 +10269,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       : characterStory || state.mode === 'free' ? e.story : `${e.story}\n\n${rootEndingNarrative(type)}`;
     const storyEchoes = state.mode === 'story' ? `\n\nร่องรอยจากการตัดสินใจ:\n• ${echoes.join('\n• ')}` : '';
     $('ending-story').textContent = `${storyLead}${storyEchoes}\n\nแนวทางที่เด่นที่สุดของชีวิตนี้คือ “${pathNames[dominant[0]]}” (${dominant[1]}) จากการตัดสินใจสำคัญ ${Object.keys(state.choices || {}).length} ครั้ง${extra.battleScore ? ` · กำลังรบรวมวันศึก ${extra.battleScore.toLocaleString()}` : ''}${simulationText}`;
-    $('ending-stats').innerHTML = `<div><small>อายุ</small><b>${formatAge(state.hero.ageMonths)}</b></div><div><small>ขั้นบำเพ็ญ</small><b>${realmName(state.hero)}</b></div><div><small>รากวิญญาณ</small><b>${state.hero.rootKnown ? (ROOTS[state.hero.root]?.name || 'ไม่ทราบ') : 'ยังไม่เปิดเผย'}</b></div><div><small>พลังรวม</small><b>${state.hero.power.toLocaleString()}</b></div><div><small>โจมตี / ป้องกัน</small><b>${combat.attack} / ${combat.defense}</b></div><div><small>กาย / ว่องไว</small><b>${combat.body} / ${combat.agility}</b></div><div><small>ชื่อเสียง</small><b>${state.hero.reputation}</b></div><div><small>แนวทางเด่น</small><b>${pathNames[dominant[0]]}</b></div>`;
+    $('ending-stats').innerHTML = `<div><small>อายุ</small><b>${formatAge(state.hero.ageMonths)}</b></div><div><small>ขั้นบำเพ็ญ</small><b>${realmName(state.hero)}</b></div><div><small>รากวิญญาณ</small><b>${state.hero.rootKnown ? (ROOTS[state.hero.root]?.name || 'ไม่ทราบ') : 'ยังไม่เปิดเผย'}</b></div><div><small>พลังรวม</small><b>${state.hero.power.toLocaleString()}</b></div><div><small>โจมตี / ป้องกัน</small><b>${combat.attack} / ${combat.defense}</b></div><div><small>กาย / ว่องไว</small><b>${combat.body} / ${combat.agility}</b></div><div><small>ชื่อเสียง</small><b>${state.hero.reputation}</b></div><div><small>แนวทางเด่น</small><b>${pathNames[dominant[0]]}</b></div>${Object.entries(pathNames).map(([key, label]) => `<div><small>${label}</small><b>${state.paths[key] || 0}</b></div>`).join('')}`;
     const lineage = state.lineageState;
     const simulationReward = extra.simulationResult?.rewards;
     const signature = state.lifeSummary?.deathSignature ? (DEATH_SIGNATURES[state.lifeSummary.deathSignature] || state.lifeSummary.deathSignature) : 'ยังไม่เกิดลายเซ็น';
@@ -10713,7 +10759,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     renderLog(); renderRelations(); renderQuests(); renderTechniques(); renderCrafting(); renderHousehold(); renderFamily(); renderLegacy();
   }
 
-  function renderLog() { const list = $('life-log'); list.innerHTML = ''; state.log.slice(0, 8).forEach(l => { const d = document.createElement('div'); d.className = `log-entry${l.highlight ? ' highlight' : ''}`; d.innerHTML = `<time>เดือน ${l.month}</time><div><strong>${l.highlight ? 'จุดเปลี่ยน' : 'กิจวัตร'}</strong><p>${l.text}</p></div>`; list.appendChild(d); }); if (!state.log.length) list.innerHTML = '<p class="empty">บันทึกยังว่างเปล่า — เลือกกิจกรรมแล้วปล่อยเวลาเดิน</p>'; }
+  function renderLog() { const list = $('life-log'); list.innerHTML = ''; state.log.slice(0, 8).forEach(l => { const d = document.createElement('div'); d.className = `log-entry${l.highlight ? ' highlight' : ''}`; const text = String(l.text || '').replace(/(?:เมตตา|ภักดี|อิสระ|หยั่งรู้)\s*[+-]\d+\s*[·,]?\s*/g, '').replace(/[·,]\s*$/, '').trim(); d.innerHTML = `<time>เดือน ${l.month}</time><div><strong>${l.highlight ? 'จุดเปลี่ยน' : 'กิจวัตร'}</strong><p>${esc(text)}</p></div>`; list.appendChild(d); }); if (!state.log.length) list.innerHTML = '<p class="empty">บันทึกยังว่างเปล่า — เลือกกิจกรรมแล้วปล่อยเวลาเดิน</p>'; }
   function currentLocation() {
     if (state.activity === 'rest') return restRoute(state).location;
     if (state.activity === 'travel') {

@@ -507,6 +507,7 @@ html,body{max-width:100%;overflow-x:hidden}
 }
 
 .technique-description{margin:5px 0;color:#50483c;font-size:.76rem;line-height:1.55;overflow-wrap:anywhere}
+.destiny-title[hidden], .destiny-tracks[hidden] { display: none !important; }
 
 /* Keep the game controls and event choices reachable on narrow screens. */
 @media (max-width: 760px) {
