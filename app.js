@@ -131,7 +131,7 @@
       { text: 'อ้อมเขาและรักษาขบวน', requires: s => s.hero.money >= 4, locked: 'ต้องมีเงินอย่างน้อย 4 ตำลึงสำหรับการอ้อมทาง', effects: [{ type: 'stat', path: 'hero.health', value: -5 }, { type: 'stat', path: 'hero.money', value: -4 }], effect: s => extendTravel(s, 1, 'พายุปิดช่องเขา') },
       { text: 'เสี่ยงฝ่าช่องเขา', check: { stat: 'luck', difficulty: 25 }, effects: [{ type: 'path', key: 'freedom', value: 4 }], failureEffects: [{ type: 'stat', path: 'hero.health', value: -18 }] }
     ] },
-    { id: 'travel_wayfarer', activity: 'travel', rarity: 'normal', tag: 'ผู้เดินทาง', title: 'ผู้เดินทางร่วมทาง', text: 'คนแปลกหน้าขอร่วมขบวนและแลกข่าวสารจากปลายทาง', unlock: s => !!s.travel?.active, choices: [{ text: 'แบ่งเสบียงและฟังข่าว', effects: [{ type: 'relation', key: 'acquaintance', value: 2 }, { type: 'path', key: 'insight', value: 2 }] }] },
+    { id: 'travel_wayfarer', activity: 'travel', rarity: 'normal', tag: 'ผู้เดินทาง', title: 'ผู้เดินทางร่วมทาง', text: 'คนแปลกหน้าขอร่วมขบวนและแลกข่าวสารจากปลายทาง', unlock: s => !!s.travel?.active, choices: [{ text: 'รับฟังข่าวสารระหว่างร่วมทาง', effects: [{ type: 'relation', key: 'acquaintance', value: 2 }, { type: 'path', key: 'insight', value: 2 }] }] },
     { id: 'travel_secret', activity: 'travel', rarity: 'epic', tag: 'โอกาสลับ', title: 'ตราประทับใต้หลักหิน', text: 'แผนที่เก่าชี้ทางลับที่อาจย่นระยะทางและเปิดเรื่องราวใหม่', unlock: s => !!s.travel?.active && (s.flags?.foundMap || s.hero?.talent === 'keen'), choices: [{ text: 'จดจำเส้นทางไว้', effects: [{ type: 'flag', key: 'secretRouteKnown', value: true }, { type: 'path', key: 'insight', value: 4 }, { type: 'stat', path: 'hero.attributes.luck', value: 1 }] }] }
   ];
   const LOCATION_DEFS = {
@@ -310,14 +310,14 @@
   const CRAFT_EVENTS = [
     { id: 'craft_lost_formula', minAge: 12, activity: 'craft', rarity: 'uncommon', minMonth: 12, title: 'สูตรที่หายไป', text: 'ระหว่างจัดชั้นตำรา เจ้าพบเศษสูตรเก่าที่อาจต่อยอดความรู้ได้ แต่ต้องแลกกับเวลาตามหาส่วนที่ขาด', choices: [
       { text: 'รื้อค้นจนพบเค้าสูตร', effects: [{ type: 'craftKnowledge', key: 'alchemy', value: 1 }, { type: 'path', key: 'insight', value: 1 }], effect: s => addLog('เจ้าต่อเศษสูตรที่หายไปกลับมาได้ ความรู้ปรุงยาเพิ่มขึ้น', true) },
-      { text: 'เก็บไว้เป็นเบาะแสแล้วกลับไปทำงาน', effects: [{ type: 'stat', path: 'hero.money', value: 2 }], effect: s => addLog('เจ้าขายข่าวเรื่องสูตรให้คนรู้จักแทน') }
+      { text: 'ขายข่าวเรื่องสูตรให้คนรู้จัก', effects: [{ type: 'stat', path: 'hero.money', value: 2 }], effect: s => addLog('เจ้าขายข่าวเรื่องสูตรให้คนรู้จักแทน') }
     ] },
     { id: 'craft_spoiled_materials', minAge: 12, activity: 'craft', rarity: 'uncommon', minMonth: 6, unlock: s => (s.materials?.herb || 0) >= 1, title: 'วัตถุดิบเริ่มเสีย', text: 'ความชื้นทำให้วัตถุดิบชุดหนึ่งเสื่อมสภาพ เจ้าต้องตัดสินใจว่าจะคัดทิ้งหรือเสี่ยงใช้ต่อ', choices: [
       { text: 'คัดทิ้งและรักษาเตาให้ปลอดภัย', effects: [{ type: 'material', key: 'herb', value: -1 }, { type: 'stat', path: 'hero.health', value: 2 }], effect: s => addLog('เจ้าคัดวัตถุดิบเสียออกจากคลังอย่างระมัดระวัง') },
       { text: 'เสี่ยงใช้วัตถุดิบต่อ', effects: [{ type: 'material', key: 'herb', value: -1 }, { type: 'stat', path: 'hero.health', value: -5 }, { type: 'craftKnowledge', key: 'alchemy', value: 1 }], effect: s => addLog('กลิ่นพิษทำให้เจ้าบาดเจ็บ แต่ได้บทเรียนราคาแพง', true) }
     ] },
     { id: 'craft_special_customer', minAge: 12, activity: 'craft', rarity: 'rare', minMonth: 24, title: 'ลูกค้าพิเศษหน้าร้าน', text: 'ผู้เดินทางปิดบังตัวตนมาขอของสนับสนุน เขาจ่ายดี แต่การรับงานอาจทำให้ความสัมพันธ์บางสายเปลี่ยนไป', choices: [
-      { text: 'รับงานและรักษาคำสั่งซื้อ', requires: s => canCraft(s, RECIPES.find(r => r.id === 'support_kit')), locked: 'ต้องมีวัตถุดิบและความรู้สำหรับชุดสนับสนุน', effects: [{ type: 'money', value: 6 }, { type: 'craftKnowledge', key: 'support', value: 1 }, { type: 'relationship', key: 'acquaintance', value: 2 }], effect: s => addLog('ลูกค้าพิเศษจ่ายเงินตรงเวลาและฝากช่องทางติดต่อไว้', true) },
+      { text: 'ทำชุดสนับสนุนและส่งให้ลูกค้า', requires: s => canCraft(s, RECIPES.find(r => r.id === 'support_kit')), locked: 'ต้องมีวัตถุดิบและความรู้สำหรับชุดสนับสนุน', note: 'ใช้วัตถุดิบและเงินตามต้นทุนสูตร รับค่าจ้าง 6 ตำลึง', effects: [{ type: 'money', value: 6 }, { type: 'craftKnowledge', key: 'support', value: 1 }, { type: 'relation', key: 'acquaintance', value: 2 }], effect: s => { const cost = effectiveCraftCost(s, RECIPES.find(r => r.id === 'support_kit')); Object.entries(cost).forEach(([key, amount]) => { if (key === 'money') s.hero.money -= amount; else s.materials[key] -= amount; }); s.lastCraftMonth = s.month; addLog('เจ้าทำชุดสนับสนุนส่งให้ลูกค้า ผู้ว่าจ้างจ่ายเงินและฝากช่องทางติดต่อไว้', true); } },
       { text: 'ปฏิเสธเพื่อไม่เสี่ยง', effects: [{ type: 'path', key: 'freedom', value: 1 }], effect: s => addLog('เจ้าไม่รับงานที่ไม่รู้ที่มา') }
     ] }
   ];
@@ -5004,7 +5004,7 @@
     ] },
     { id: 'middle_natural_disaster', minAge: 12, activity: 'explore', minMonth: 104, title: 'ฝนหล่มถล่มหมู่บ้าน', text: 'ฝนตกต่อเนื่องจนทางน้ำเปลี่ยนทิศ บ้านชายเขาหลายหลังถูกตัดขาด และผู้คนต้องการทั้งแรงงานกับยา', choices: [
       { text: 'ใช้แรงเปิดทางน้ำ', effects: [{ type: 'stat', path: 'hero.health', value: -8 }, { type: 'stat', path: 'hero.reputation', value: 6 }, { type: 'relation', key: 'acquaintance', value: 5 }], effect: s => { s.flags.disasterRelief = true; addLog('ทางน้ำเปิดอีกครั้ง ผู้คนจำมือที่เปื้อนโคลนของเจ้าได้ดีกว่าคำประกาศใด', true); } },
-      { text: 'นำสมุนไพรไปแลกเสบียง', requires: s => (s.materials?.herb || 0) >= 2, locked: 'สมุนไพรไม่พอ', effects: [{ type: 'material', key: 'herb', value: -2 }, { type: 'stat', path: 'hero.money', value: 8 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { s.flags.disasterSupplies = true; addLog('สมุนไพรช่วยคนเจ็บและแลกเป็นเสบียงให้หมู่บ้านผ่านคืนฝนหนัก'); } },
+      { text: 'ขายสมุนไพรให้ผู้ดูแลเสบียง', requires: s => (s.materials?.herb || 0) >= 2, locked: 'สมุนไพรไม่พอ', effects: [{ type: 'material', key: 'herb', value: -2 }, { type: 'stat', path: 'hero.money', value: 8 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { s.flags.disasterSupplies = true; addLog('ผู้ดูแลเสบียงรับซื้อสมุนไพรเพื่อนำไปรักษาคนเจ็บ'); } },
       { text: 'จดแผนที่น้ำหลากแล้วเดินทางต่อ', effects: [{ type: 'path', key: 'insight', value: 3 }, { type: 'stat', path: 'hero.health', value: -2 }], effect: s => { s.flags.floodMap = true; addLog('แผนที่น้ำหลากทำให้เส้นทางในฤดูฝนของเจ้าปลอดภัยขึ้น'); } }
     ] },
     { id: 'middle_regional_war', activity: 'any', minMonth: 120, minAge: 15, unlock: s => (s.world?.modifiers?.travelRisk || 0) >= 4 || (s.world?.modifiers?.refugeePressure || 0) >= 5, title: 'สงครามลามถึงชายแดน', text: 'กองกำลังจากสองฝ่ายขยับเข้าหาเมืองชายแดน ผู้ลี้ภัยเพิ่มขึ้น และคนธรรมดาต้องเลือกว่าจะช่วยแนวหน้า แนวหลัง หรือพาตัวเองออกไป', choices: [
@@ -5787,6 +5787,8 @@
   };
 
   function normalizeItemGrade(item = {}) {
+    if (typeof item === 'string') item = { name: item, bonus: {} };
+    else if (!item || typeof item !== 'object') item = {};
     if (SPECIAL_ARMOR_DESCRIPTIONS[item.name]) { item.description = SPECIAL_ARMOR_DESCRIPTIONS[item.name]; item.category = 'armor'; item.subtype = 'body'; }
     if (LEGACY_DISCOVERY_WEAPON_NAMES[item.name]) item.name = LEGACY_DISCOVERY_WEAPON_NAMES[item.name];
     const special = SPECIAL_WEAPON_DETAILS[item.name];
@@ -6150,11 +6152,11 @@
   function trainingItemBonus(s) {
     const totals = { cultivationRate: 0, masteryRate: 0, breakthroughBonus: 0, riskReduction: 0, healthCost: 0, gradeRate: 1 };
     activeTreasures(s).forEach(item => {
-      normalizeItemGrade(item);
-      const bonus = itemBonus(item);
+      const normalized = normalizeItemGrade(item);
+      const bonus = itemBonus(normalized);
       Object.keys(totals).filter(key => key !== 'gradeRate').forEach(key => { totals[key] += Number(bonus[key] || 0); });
       if (bonus.training || bonus.cultivationRate || bonus.masteryRate) {
-        totals.gradeRate *= ({ common: 1, uncommon: 1.03, rare: 1.06, epic: 1.1, legendary: 1.15 }[item.grade] || 1);
+        totals.gradeRate *= ({ common: 1, uncommon: 1.03, rare: 1.06, epic: 1.1, legendary: 1.15 }[normalized.grade] || 1);
       }
     });
     return totals;
@@ -7165,7 +7167,7 @@
       choices: [
         { text: 'คลานฝ่าควันไปหาลุงโจว คนรับใช้เก่าแก่', note: 'เปิดเส้นทางคนรับใช้ผู้ภักดี ลุงโจวจะร่วมเดินทางด้วย', effect: s => { s.flags.loyalRetainer = true; s.flags.retainerAlive = true; s.hero.health -= 14; s.relations.master += 2; addLog('ลุงโจวอุ้มเจ้าฝ่ากำแพงหลังเรือน เขาสาบานจะรักษาทายาทคนสุดท้ายด้วยชีวิต', true); } },
         { text: 'ลอดช่องระบายน้ำ หนีออกไปเพียงลำพัง', note: 'เปิดเส้นทางเด็กเร่ร่อน (จะไม่ได้เดินทางกับลุงโจว)', effect: s => { s.flags.loneWanderer = true; s.flags.retainerAlive = false; s.flags.escapePrepared = true; s.hero.health -= 8; s.hero.money += 2; addLog('เด็กห้าขวบเดินออกจากเมืองที่กำลังไหม้โดยไม่มีใครจับมือ', true); } },
-        { text: 'ซ่อนตัวดูหน้าผู้สั่งฆ่าให้ชัด', note: 'อันตรายมาก แต่จำตรางูดำและเสียงหัวหน้าคนร้ายได้ (ลุงโจวพลัดหลง)', effect: s => { s.flags.houseEnemyKnown = true; s.flags.familyToken = true; s.flags.retainerAlive = false; s.hero.health -= 24; s.paths.insight += 1; s.treasures.push('ป้ายหยกตระกูลหลิน'); addLog('เจ้าจำเสียงของชายหน้ากากและกำป้ายหยกของมารดาไว้จนเลือดซึมมือ', true); } }
+        { text: 'ซ่อนตัวดูหน้าผู้สั่งฆ่าให้ชัด', note: 'อันตรายมาก แต่จำตรางูดำและเสียงหัวหน้าคนร้ายได้ (ลุงโจวพลัดหลง)', effect: s => { s.flags.houseEnemyKnown = true; s.flags.familyToken = true; s.flags.retainerAlive = false; s.hero.health -= 24; s.paths.insight += 1; addTreasure(s, 'ป้ายหยกตระกูลหลิน', {}); addLog('เจ้าจำเสียงของชายหน้ากากและกำป้ายหยกของมารดาไว้จนเลือดซึมมือ', true); } }
       ]
     },
     firstRoad: {
@@ -7572,12 +7574,10 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   function addHerb(s, name, qty = 1) {
     ensureInventory(s);
     s.materials.herb = (s.materials.herb || 0) + qty;
-    if (name) addTreasure(s, name, { health: 5 });
   }
   function addMaterial(s, name, qty = 1) {
     ensureInventory(s);
     s.materials.iron = (s.materials.iron || 0) + qty;
-    if (name) addTreasure(s, name, { body: 1 });
   }
 
   const ALTERNATE_ROUTE_EVENTS = {
@@ -7594,19 +7594,19 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
           note: 'ปูทางสายหมอยา: ได้สมุนไพร ทักษะปรุงยา และสุขภาพฟื้นฟู',
           effect: s => {
             s.paths.compassion += 2; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 10);
-            s.hero.money += 4; addHerb(s, 'หญ้าหยกขาว', 3); s.flags.mortalPeaceRole = 'healer';
+            s.hero.money += 4; addHerb(s, null, 3); ensureCraftingState(s).knowledge.alchemy += 1; s.flags.mortalPeaceRole = 'healer';
             ensureHousehold(s).householdSkill = (ensureHousehold(s).householdSkill || 0) + 2;
             addLog('หลินอันเรียนรู้การดมกลิ่นและคัดสมุนไพรในร้านยา หมอเฒ่าชมความจำของเจ้า', true);
           }
         },
         {
-          text: 'ช่วยงานไม้และซ่อมแซมเครื่องมือในโรงช่าง',
+          text: 'ช่วยซ่อมเครื่องมือและคัดแร่เหล็กในโรงช่าง',
           note: 'ปูทางสายช่างฝีมือ: ได้วัสดุช่าง ทักษะช่าง และร่างกายแข็งแรง',
           effect: s => {
             s.hero.combat = s.hero.combat || {}; s.hero.combat.body = (s.hero.combat.body || 0) + 1;
-            s.hero.money += 5; addMaterial(s, 'ไม้เนื้อแข็ง', 2); s.flags.mortalPeaceRole = 'artisan';
+            s.hero.money += 5; addMaterial(s, null, 2); ensureCraftingState(s).knowledge.smithing += 1; s.flags.mortalPeaceRole = 'artisan';
             ensureHousehold(s).householdSkill = (ensureHousehold(s).householdSkill || 0) + 2;
-            addLog('หลินอันช่วยไสไม้และตัดต่อลิ่มไม้ กล้ามเนื้อเริ่มพัฒนาและได้ค่าแรงสุจริต', true);
+            addLog('หลินอันช่วยซ่อมเครื่องมือและคัดแร่เหล็ก เรียนรู้งานช่างและได้ค่าแรงสุจริต', true);
           }
         },
         {
@@ -7623,22 +7623,24 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     route_mortal_peace_m108: {
       month: 108, route: 'mortal-peace', tag: 'ชีวิตสงบ · สัญญาตั้งตัว', art: 'road',
       title: 'สัญญาเช่าห้องแถวไม้',
-      text: 'สองปีแห่งความมุมานะ ห้องแถวไม้เก่าท้ายตลาดว่างลง เจ้าของยินดีปล่อยเซ้งต่อราคา 15 ตำลึง นี่คือโอกาสมีหน้าร้านและชายคาเป็นของตนเอง',
+      text: 'สองปีแห่งความมุมานะ ห้องแถวไม้เก่าท้ายตลาดว่างลง เจ้าของยินดีให้เซ้งสิทธิ์เช่าราคา 15 ตำลึง นี่คือโอกาสมีหน้าร้านและที่พัก',
       choices: [
         {
           text: 'ยอมกู้เงินเล็กน้อยเพื่อเซ้งห้องแถวเปิดร้านของตนเอง',
-          note: 'มีหน้าร้านถาวร เพิ่มรายได้ทุกเดือน แต่มีหนี้ 8 ตำลึง',
+          note: 'จ่าย 7 ตำลึง กู้ 8 ตำลึง และมีค่าเช่ารายเดือน',
+          requires: s => s.hero.money >= 7, locked: 'ต้องมีเงิน 7 ตำลึงเพื่อร่วมจ่ายค่าเซ้ง',
           effect: s => {
-            const h = ensureHousehold(s); h.housing = 'cottage'; h.debt = (h.debt || 0) + 8;
-            s.hero.money += 5; s.flags.hasShop = true; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
+            const h = ensureHousehold(s); h.housing = 'rented'; h.debt = (h.debt || 0) + 8;
+            s.hero.money -= 7; s.flags.hasShop = true; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
             addLog('ป้ายชื่อร้านเล็ก ๆ ถูกแขวนขึ้นใต้ชายคา แม้มีหนี้สินแต่มีหลังคาคุ้มหัวตนเอง', true);
           }
         },
         {
           text: 'เช่าห้องแถวรายเดือนธรรมดา ไม่ยอมมีหนี้สินผูกมัด',
-          note: 'ปลอดภัย ไร้ภาระหนี้ เก็บออมเงินอย่างค่อยเป็นค่อยไป',
+          note: 'จ่าย 3 ตำลึงและมีค่าเช่ารายเดือน โดยไม่ก่อหนี้เพิ่ม',
+          requires: s => s.hero.money >= 3, locked: 'ต้องมีเงิน 3 ตำลึง',
           effect: s => {
-            s.hero.money = Math.max(0, s.hero.money - 3); s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 5);
+            ensureHousehold(s).housing = 'rented'; s.hero.money -= 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 5);
             s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 1;
             addLog('หลินอันเลือกเช่าแบบสบายใจ ไร้หนี้สินกวนใจในยามหลับ', true);
           }
@@ -7647,7 +7649,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
           text: 'ชวนเพื่อนบ้านลงขันร่วมหุ้น แบ่งเบาภาระและแบ่งกำไร',
           note: 'สร้างสัมพันธ์ชุมชนและได้หุ้นส่วนช่วยงาน',
           effect: s => {
-            s.relations.friend += 8; s.paths.compassion += 2; s.flags.hasPartner = true;
+            s.relations.friend += 8; s.paths.compassion += 2; s.flags.hasPartner = true; s.flags.hasShop = true;
             s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
             addLog('เพื่อนบ้านตอบรับคำชวน ร่วมกันเปิดร้านและเป็นหูเป็นตาให้กัน', true);
           }
@@ -7661,27 +7663,27 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: [
         {
           text: 'ต้มยาสมุนไพรแจกจ่ายผู้ยากไร้หน้าเรือน',
-          note: 'ใช้สมุนไพรและเงิน แต่ชาวบ้านทั้งตลาดรักใคร่และคอยคุ้มครองร้าน',
-          requires: s => (s.consumables && s.consumables.length > 0) || s.hero.money >= 5,
-          locked: 'ต้องมียาในย่ามหรือเงิน 5 ตำลึง',
+          note: 'ใช้เงิน 5 ตำลึงจัดหายาและช่วยเหลือชาวบ้าน',
+          requires: s => s.hero.money >= 5,
+          locked: 'ต้องมีเงิน 5 ตำลึงเพื่อจัดหายา',
           effect: s => {
-            if (s.hero.money >= 5) s.hero.money -= 5;
+            s.hero.money -= 5;
             s.hero.reputation += 15; s.paths.compassion += 4; s.relations.friend += 12;
             s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 3; s.flags.belovedCitizen = true;
-            addLog('ชาวบ้านที่หายป่วยพากันมาโค้งคำนับหน้าร้าน ความดีนี้ถูกจดจำทั่วตลาด', true);
+            addLog(s.flags.hasShop ? 'ชาวบ้านที่ได้รับยามาขอบคุณหน้าร้าน ความช่วยเหลือนี้ถูกจดจำทั่วตลาด' : 'ชาวบ้านที่ได้รับยามาขอบคุณ ความช่วยเหลือนี้ถูกจดจำทั่วตลาด', true);
           }
         },
         {
-          text: 'ขายยาและของใช้ในราคาทุน ไม่ฉวยโอกาสค้ากำไรเกินควร',
-          note: 'รักษาสมดุลเรือน ช่วยเหลือสังคมตามกำลัง',
+          text: 'รับจ้างช่วยพ่อค้าขายยาและของใช้ในราคาทุน',
+          note: 'ช่วยขายของให้พ่อค้า ได้ค่าจ้าง 6 ตำลึงและชื่อเสียง',
           effect: s => {
             s.hero.money += 6; s.hero.reputation += 6; s.paths.compassion += 1;
             s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('ร้านของหลินอันกลายเป็นที่พึ่งยามยาก ผู้คนเชื่อถือในความสุจริต', true);
+            addLog('หลินอันช่วยพ่อค้าจัดของในราคาทุนและได้รับค่าจ้าง ผู้คนจดจำความสุจริตนี้', true);
           }
         },
         {
-          text: 'ปิดประตูร้าน ดูแลสุขภาพตนเองและคนในบ้านให้รอดพ้น',
+          text: 'อยู่ที่พักและดูแลสุขภาพตนเอง',
           note: 'ปลอดภัยสูงสุด สุขภาพแข็งแรงสมบูรณ์',
           effect: s => {
             s.hero.health = s.hero.maxHealth; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 1;
@@ -7693,13 +7695,13 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     route_mortal_peace_m144: {
       month: 144, route: 'mortal-peace', tag: 'ชีวิตสงบ · ซ่อมแซมเรือน', art: 'road',
       title: 'ลมฝนกระหน่ำหลังคา',
-      text: 'พายุฤดูฝนพัดกระเบื้องหลังคาปลิวไปครึ่งแถบ น้ำฝนรั่วซึมลงห้องเก็บของ หากไม่ซ่อมแซมก่อนลมหนาว ข้าวของและเครื่องมือจะเสียหาย',
+      text: s => ensureHousehold(s).housing === 'shelter' ? 'พายุฤดูฝนพัดหลังคาที่พักชั่วคราวจนเสียหาย น้ำฝนเริ่มซึมถึงข้าวของ หากไม่ซ่อมก่อนลมหนาวอุปกรณ์อาจเสียหาย' : 'พายุฤดูฝนพัดกระเบื้องหลังคาปลิวไปครึ่งแถบ น้ำฝนรั่วซึมลงห้องเก็บของ หากไม่ซ่อมแซมก่อนลมหนาว ข้าวของและเครื่องมือจะเสียหาย',
       choices: [
         {
           text: 'ลงแรงปีนซ่อมแซมหลังคาเองและช่วยบ้านข้างเคียง',
-          note: 'อัปเกรดเรือนพักให้มั่นคง เสียแรงกายแต่ได้บ้านที่ดีขึ้น',
+          note: 'ช่วยซ่อมหลังคา เสียสุขภาพ 6 จุดและสัมพันธ์เพื่อนบ้านดีขึ้น',
           effect: s => {
-            const h = ensureHousehold(s); h.housing = 'cottage'; s.hero.health = Math.max(1, s.hero.health - 6);
+            s.hero.health = Math.max(1, s.hero.health - 6);
             s.relations.friend += 6; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
             addLog('หลังคาใหม่ถูกมุงด้วยกระเบื้องหนาแน่น ฝนหยุดรั่วและเรือนอบอุ่นขึ้น', true);
           }
@@ -7709,7 +7711,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
           note: 'เสียเงิน 6 ตำลึง ได้งานเรียบร้อยสมบูรณ์โดยไม่เจ็บตัว',
           requires: s => s.hero.money >= 6, locked: 'ต้องมีเงิน 6 ตำลึง',
           effect: s => {
-            s.hero.money -= 6; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 4);
+            s.hero.money -= 6;
             s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
             addLog('ช่างฝีมือซ่อมแซมคานและหลังคาอย่างแน่นหนา บ้านปลอดภัยไร้กังวล', true);
           }
@@ -7718,7 +7720,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
           text: 'นำผ้าใบและฟางมาคลุมกันฝนชั่วคราว',
           note: 'ประหยัดเงิน แต่บ้านยังมีความเสี่ยงในฤดูหนาว',
           effect: s => {
-            s.hero.money += 2; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 1;
+            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 1;
             addLog('ผ้าใบช่วยกันฝนได้ชั่วคราว หลินอันเก็บเงินไว้ใช้ยามจำเป็น');
           }
         }
@@ -7764,20 +7766,21 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'ข่าวความขัดแย้งระหว่างสำนักเมฆาครามกับพรรคงูดำเริ่มตึงเครียด กองคาราวานชะลอตัว ข้าวสารและสมุนไพรในตลาดเริ่มขาดแคลน',
       choices: [
         {
-          text: 'สต็อกเสบียงและยาสมุนไพรไว้สำหรับชาวบ้านในชุมชน',
-          note: 'เตรียมความพร้อมแนวหลัง ป้องกันความอดอยากของเพื่อนบ้าน',
+          text: 'ซื้อสมุนไพรเก็บไว้สำหรับชาวบ้านในชุมชน',
+          note: 'ใช้เงิน 6 ตำลึง ซื้อสมุนไพรทั่วไป 5 ชิ้น',
+          requires: s => s.hero.money >= 6, locked: 'ต้องมีเงิน 6 ตำลึง',
           effect: s => {
-            s.hero.money = Math.max(0, s.hero.money - 6); addHerb(s, 'หญ้าหยกขาว', 5);
-            s.flags.shelterBuilt = true; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('คลังเก็บของของร้านเต็มไปด้วยข้าวสารและยารักษาโรค ชุมชนอุ่นใจเมื่อมีเจ้า', true);
+            s.hero.money -= 6; addHerb(s, null, 5);
+            s.flags.medicineReserve = true; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
+            addLog('หลินอันเก็บสมุนไพรเตรียมไว้ให้คนในชุมชน', true);
           }
         },
         {
-          text: 'ปรับเปลี่ยนการค้า จัดหาสินค้าจำเป็นมาขายตามปกติ',
-          note: 'รักษาสภาพคล่องทางการเงิน กิจการมั่นคง',
+          text: 'รับจ้างช่วยจัดหาสินค้าจำเป็นให้ตลาด',
+          note: 'รับค่าจ้าง 10 ตำลึงจากการช่วยจัดหาของ',
           effect: s => {
             s.hero.money += 10; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('ร้านค้าดำเนินไปได้ด้วยดี มีเงินหมุนเวียนพร้อมรับมือทุกสถานการณ์', true);
+            addLog('หลินอันช่วยจัดหาสินค้าให้ตลาดและได้รับค่าจ้าง', true);
           }
         },
         {
@@ -7796,17 +7799,18 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'หกเดือนก่อนศึกใหญ่ ผู้อพยพจากหมู่บ้านเชิงเขาหนีตายลงมาที่ตลาด เด็กและคนชราไร้ที่พักพิง นั่งกอดเข่าหนาวสั่นอยู่ตามชายคา',
       choices: [
         {
-          text: 'เปิดลานบ้านตั้งโรงทานและสถานพยาบาล ช่วยเหลือทุกคนเท่าที่แรงมี',
+          text: 'ช่วยตั้งโรงทานในลานชุมชนและดูแลผู้ลี้ภัย',
           note: 'ชุมชนยกย่องเป็นเสาหลักแห่งตลาด',
           effect: s => {
             s.hero.health = Math.max(1, s.hero.health - 6); s.paths.compassion += 4;
             s.relations.friend += 15; s.flags.civiliansSaved = true;
             s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 3;
-            addLog('ลานบ้านของหลินอันกลายเป็นที่พึ่งของผู้ลี้ภัย กลิ่นโจ๊กอุ่นและยาช่วยชีวิตคนนับร้อย', true);
+            addLog('โรงทานในลานชุมชนกลายเป็นที่พึ่งของผู้ลี้ภัย หลินอันช่วยเท่าที่กำลังมี', true);
           }
         },
         {
           text: 'จัดจ้างผู้อพยพที่แข็งแรงมาช่วยงานในร้านและจ่ายค่าแรงเป็นอาหาร',
+          requires: s => !!s.flags.hasShop, locked: 'ต้องมีร้านที่เปิดไว้ก่อน',
           note: 'สร้างงานอย่างยั่งยืน ช่วยเหลือเกื้อกูลกันอย่างมีศักดิ์ศรี',
           effect: s => {
             s.hero.money += 8; s.relations.friend += 8; s.flags.civiliansSaved = true;
@@ -7815,7 +7819,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
           }
         },
         {
-          text: 'รักษาความปลอดภัยของร้าน ปิดประตูดูแลเฉพาะคนในครอบครัว',
+          text: 'กลับที่พักและรักษาความปลอดภัยของตนเอง',
           note: 'เน้นความปลอดภัยของครอบครัวตนเอง ไร้ความเสี่ยง',
           effect: s => {
             s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 6);
@@ -7828,18 +7832,18 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     route_mortal_peace_m216: {
       month: 216, route: 'mortal-peace', tag: 'ชีวิตสงบ · บทสรุป', art: 'road',
       title: 'รุ่งอรุณหลังสงคราม — ชีวิตใต้ชายคา',
-      text: 'ควันไฟบนยอดเขาเมฆาครามมอดดับลง สงครามยุติแล้ว ชุมชนและร้านค้าที่หลินอันสร้างมากับมือยังคงตั้งตระหง่าน แสงตะเกียงในเรือนส่องสว่างอย่างอบอุ่น',
+      text: s => s.flags.hasShop ? 'ควันไฟบนยอดเขาเมฆาครามมอดดับลง สงครามยุติแล้ว หลินอันมองตลาดและร้านที่ร่วมสร้างขึ้นผ่านคืนอันยาวนาน' : 'ควันไฟบนยอดเขาเมฆาครามมอดดับลง สงครามยุติแล้ว หลินอันกลับมามองผู้คนในตลาดที่พยายามเริ่มต้นชีวิตอีกครั้ง',
       choices: [
         {
-          text: 'ขยายกิจการและสถานพยาบาล ฟื้นฟูชุมชนและอยู่ร่วมกับครอบครัว',
+          text: 'ช่วยฟื้นฟูชุมชนหลังสงคราม',
           note: 'บทสรุปชีวิตสงบสุขที่สมบูรณ์แบบ',
           effect: s => {
             const h = ensureHousehold(s);
-            const isAffluent = s.hero.money >= 20 || h.housing === 'cottage' || h.housing === 'courtyard';
+            const isAffluent = s.hero.money >= 20 || h.housing === 'owned' || h.housing === 'estate';
             if (isAffluent && s.hero.health >= 20) {
-              endGame('quiet_roof', { cause: 'หลินอันสร้างบ้าน ร้านค้า และชุมชนที่อบอุ่นจนรอดพ้นไฟสงครามได้อย่างสมบูรณ์' });
+              endGame('quiet_roof', { cause: s.flags.hasShop ? 'หลินอันรักษาร้านและช่วยชุมชนผ่านไฟสงคราม' : 'หลินอันช่วยชุมชนตั้งหลักและผ่านไฟสงคราม' });
             } else {
-              endGame('war_shadow_survivor', { cause: 'แม้มีบาดแผลจากสงคราม แต่ร้านและชายคาของหลินอันยังคงมีคนกลับมาได้เสมอ' });
+              endGame('war_shadow_survivor', { cause: s.flags.hasShop ? 'แม้มีบาดแผลจากสงคราม ร้านและชายคาของหลินอันยังคงมีคนกลับมาได้' : 'แม้มีบาดแผลจากสงคราม หลินอันยังคงอยู่ช่วยผู้คนในชุมชน' });
             }
           }
         },
@@ -7847,11 +7851,12 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
           text: 'เก็บออมทรัพย์สิน ใช้ชีวิตเรียบง่ายสงบสุขกับคนที่รัก',
           note: 'บทสรุปชีวิตธรรมดาที่เปี่ยมสุข',
           effect: s => {
-            endGame('quiet_roof', { cause: 'หลินอันเลือกความสุขที่แท้จริงในบ้านเล็ก ๆ ไม่แสวงหาความยิ่งใหญ่ในยุทธภพ' });
+            endGame('quiet_roof', { cause: 'หลินอันเลือกใช้ชีวิตเรียบง่าย ไม่แสวงหาความยิ่งใหญ่ในยุทธภพ' });
           }
         },
         {
           text: 'มอบร้านให้ลูกศิษย์ดูแลต่อ แล้วออกเดินทางท่องเที่ยวตามใจปรารถนา',
+          requires: s => !!s.flags.hasShop, locked: 'ต้องมีร้านที่เปิดไว้ก่อน',
           note: 'บทสรุปกึ่งเกษียณและมีอิสรภาพ',
           effect: s => {
             endGame('quiet_roof', { cause: 'หลินอันวางมือจากงาน ส่งต่อร้านให้คนรุ่นหลัง แล้วใช้ชีวิตบั้นปลายอย่างสงบ' });
@@ -7906,7 +7911,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: [
         {
           text: 'ชักดาบพุ่งเข้าชาร์จหัวหน้าโจรด้วยพลังกายล้วน ๆ',
-          note: 'ทดสอบกายา: ชนะโจร ชื่อเสียงยุทธภพพุ่งสูง',
+          note: 'โจรพ่ายแพ้ ได้ชื่อเสียง พลังรบ และเงินรางวัล',
           effect: s => {
             s.hero.reputation += 8; s.hero.powerBonus += 30; s.hero.money += 6;
             s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
@@ -7915,7 +7920,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         },
         {
           text: 'ใช้ความคล่องตัวล่อโจรแยกกลุ่มแล้วจัดการทีละคน',
-          note: 'ทดสอบว่องไว: ปลอดภัย ไม่บาดเจ็บ ได้เงินรางวัลพิเศษ',
+          note: 'แยกจัดการโจร ได้เงินรางวัลและพลังรบ',
           effect: s => {
             s.hero.money += 10; s.paths.insight += 2; s.hero.powerBonus += 25;
             s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
@@ -7950,7 +7955,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         },
         {
           text: 'ขอประลองแลกเปลี่ยนกระบวนท่าด้วยความเคารพ',
-          note: 'ทดสอบฝีมือ: ได้ทั้งชื่อเสียงและเคล็ดวิชา',
+          note: 'ประลองแลกเปลี่ยน ได้ชื่อเสียงและพลังรบ',
           effect: s => {
             s.hero.reputation += 6; s.hero.powerBonus += 50; s.paths.insight += 2;
             s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
@@ -7959,7 +7964,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         },
         {
           text: 'เลี้ยงสุราและนั่งฟังประสบการณ์อันโชกโชนในยุทธภพ',
-          note: 'รู้จุดอ่อนของค่ายกลสำนักใหญ่',
+          note: 'ได้ฟังประสบการณ์และมุมมองของจอมยุทธ์ชรา',
           effect: s => {
             s.paths.insight += 4; s.paths.freedom += 2;
             s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 1;
@@ -8039,11 +8044,11 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     route_nameless_martial_m180: {
       month: 180, route: 'nameless-martial', tag: 'นักยุทธ์ไร้นาม · มิตรสหาย', art: 'road',
       title: 'คำชวนจากสำนักเมฆาคราม',
-      text: 'ศิษย์พี่เซี่ยหลันลงเขามาพบหลินอัน เธอจำฝีมือดาบของเขาได้และชวนให้กลับขึ้นสำนักเพื่อช่วยรับศึกใหญ่ที่ใกล้เข้ามา',
+      text: 'ศิษย์เซี่ยหลันลงเขามาพบหลินอันหลังได้ยินเรื่องฝีมือจากผู้เดินทาง เธอชวนเขาช่วยผู้คนรับศึกใหญ่ที่ใกล้เข้ามา',
       choices: [
         {
           text: 'ปฏิเสธฐานะศิษย์ แต่สัญญาจะช่วยป้องกันชาวบ้านเชิงเขา',
-          note: 'รักษาจุดยืนอิสระ มิตรภาพกับเซี่ยหลันยังคงเดิม',
+          note: 'รักษาจุดยืนอิสระและสร้างความสัมพันธ์กับเซี่ยหลัน',
           effect: s => {
             s.relations.senior += 12; s.paths.duty += 3; s.paths.freedom += 2;
             s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
@@ -8061,6 +8066,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         },
         {
           text: 'เตือนเธอให้ระวังคนทรยศในสำนัก แต่ไม่ขอเข้าร่วมศึกใด ๆ',
+          requires: s => !!(s.flags.knowsTraitor || s.flags.houseEnemyKnown), locked: 'ต้องมีเบาะแสเกี่ยวกับคนทรยศก่อน',
           note: 'มอบเบาะแสสำคัญ รักษาระยะห่างเพื่ออิสรภาพ',
           effect: s => {
             s.flags.knowsTraitor = true; s.paths.insight += 3; s.paths.freedom += 3;
@@ -8077,7 +8083,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: [
         {
           text: 'ปักดาบลงดิน ยืนขวางช่องแคบสกัดทหารศัตรู',
-          note: 'ทดสอบพลังกายและวิชายุทธ์: สกัดทัพงูดำ ช่วยชาวบ้านสำเร็จ',
+          note: 'สกัดทัพงูดำ ช่วยชาวบ้าน และได้ชื่อเสียงกับพลังรบ',
           effect: s => {
             s.hero.powerBonus += 100; s.hero.reputation += 18; s.flags.civiliansSaved = true;
             s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 3;
@@ -8107,7 +8113,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     route_nameless_martial_m216: {
       month: 216, route: 'nameless-martial', tag: 'นักยุทธ์ไร้นาม · บทสรุป', art: 'road',
       title: 'เพลงดาบใต้จันทรา — บทสรุปของนักยุทธ์ไร้นาม',
-      text: 'ศึกบนเขาเมฆาครามจบลงแล้ว เสียงระฆังเงียบหาย แต่ชื่อของ "นักยุทธ์ไร้นาม" ผู้พิทักษ์ชาวบ้านเชิงเขากลายเป็นตำนานเล่าขานในโรงน้ำชาและตลาด',
+      text: 'ศึกบนเขาเมฆาครามจบลงแล้ว เสียงระฆังเงียบหาย ผู้คนตามโรงน้ำชาและตลาดเล่าเรื่องนักยุทธ์ไร้นามผู้เคยผ่านเชิงเขา',
       choices: [
         {
           text: 'สะพายดาบออกเดินทางท่องยุทธภพ ช่วยเหลือผู้ยากไร้ต่อไป',
@@ -8710,7 +8716,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       title: 'ข่าวลือใต้ถ้วยชา', text: s => { const route = socialRoute(s); return `ที่${route.name} ข่าวลือเรื่องศัตรู เส้นทางค้า และความเคลื่อนไหวของสำนักกำลังแพร่ไปในหมู่${route.group}`; },
       choices: [
         { text: 'ฟังอย่างมีสติและตรวจสอบต้นทาง', check: { stat: 'intellect', difficulty: 20 }, effects: [{ type: 'path', key: 'insight', value: 3 }, { type: 'stat', path: 'hero.reputation', value: 1 }, { type: 'flag', key: 'socialRumorVerified', value: true }], effect: s => { ensureSocialState(s).rumors++; addLog('เจ้าคัดข่าวลือที่ตรวจสอบแล้ว เก็บเบาะแสไว้ใช้ภายหลัง', true); } },
-        { text: 'เล่าต่อเพื่อซื้อความนิยม', effects: [{ type: 'stat', path: 'hero.reputation', value: 3 }, { type: 'stat', path: 'hero.karma', value: -1 }], effect: s => { ensureSocialState(s).rumors++; addLog('ข่าวลือแพร่เร็วขึ้น ชื่อเสียงเพิ่มแต่ความน่าเชื่อถือลดลง'); } }
+        { text: 'เล่าต่อเพื่อซื้อความนิยม', effects: [{ type: 'stat', path: 'hero.reputation', value: 3 }, { type: 'stat', path: 'hero.karma', value: -1 }], effect: s => { ensureSocialState(s).rumors++; addLog('ข่าวลือแพร่เร็วขึ้น ชื่อเสียงเพิ่มขึ้น แต่การแพร่ข่าวที่ยังไม่ยืนยันส่งผลต่อกรรม'); } }
       ]
     },
     {
@@ -9213,10 +9219,10 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   const EXPLORATION_EVENTS = [
     {
       id: 'explore_waystone_news', activity: 'explore', explorationTier: 'normal', rarity: 'normal', minMonth: 0,
-      title: 'หลักหินบอกทาง', text: s => `ระหว่างสำรวจ${explorationRoute(s).name} เจ้าพบหลักหินเก่าที่คนเดินทางใช้ฝากข่าว`,
+      title: 'หลักหินบอกทาง', text: s => `ระหว่างสำรวจ${explorationRoute(s).name} เจ้าพบหลักหินเก่าที่คนเดินทางใช้ฝากข่าว และมีคนเดินทางกำลังอ่านข่าวอยู่`,
       choices: [
         { text: 'จดแผนที่และถามข่าวจากคนเดินทาง', effects: [{ type: 'path', key: 'insight', value: 2 }, { type: 'stat', path: 'hero.reputation', value: 1 }], effect: s => { ensureExplorationState(s).news.push('หลักหินชี้ทางไปหุบเขาเถ้าถ่าน'); addLog('ข่าวจากหลักหินถูกบันทึกเป็นความรู้สำหรับการสำรวจครั้งต่อไป', true); } },
-        { text: 'ทำเครื่องหมายไว้แล้วเก็บสมุนไพรกลับ', effects: [{ type: 'material', key: 'herb', value: 2 }, { type: 'stat', path: 'hero.health', value: 2 }], effect: s => addLog('เจ้ากลับจากทางป่าโดยไม่เสี่ยงเกินจำเป็น') }
+        { text: 'ทำเครื่องหมายไว้แล้วเก็บสมุนไพรกลับ', effects: [{ type: 'material', key: 'herb', value: 2 }], effect: s => addLog('เจ้ากลับจากทางป่าโดยไม่เสี่ยงเกินจำเป็น') }
       ]
     },
     {
@@ -9225,25 +9231,25 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       unlock: s => explorationRoute(s).tier !== 'safe' || s.paths?.insight >= 4,
       choices: [
         { text: 'พากลับไปหาคนของเขา', effects: [{ type: 'relation', key: 'companion', value: 8 }, { type: 'stat', path: 'hero.health', value: -8 }, { type: 'stat', path: 'hero.reputation', value: 5 }], effect: s => { s.flags.helpedScout = true; ensureExplorationState(s).news.push('กองลาดตระเวนพบการเคลื่อนกำลังของงูดำ'); addLog('ผู้ลาดตระเวนรอดชีวิตและสัญญาจะตอบแทนด้วยข่าวสาร', true); } },
-        { text: 'เอาม้วนข่าวแล้วแยกตัว', effects: [{ type: 'path', key: 'freedom', value: 2 }, { type: 'stat', path: 'hero.money', value: 6 }, { type: 'stat', path: 'hero.reputation', value: -2 }], effect: s => { s.flags.scoutScroll = true; addLog('เจ้าชิงม้วนข่าวมาได้ แต่ทิ้งคนเจ็บไว้เบื้องหลัง'); } }
+        { text: 'ชิงม้วนข่าวและเงินจากคนเจ็บแล้วแยกตัว', effects: [{ type: 'path', key: 'freedom', value: 2 }, { type: 'stat', path: 'hero.money', value: 6 }, { type: 'stat', path: 'hero.reputation', value: -2 }], effect: s => { s.flags.scoutScroll = true; addLog('เจ้าชิงม้วนข่าวและเงินมาได้ แต่ทิ้งคนเจ็บไว้เบื้องหลัง'); } }
       ]
     },
     {
       id: 'explore_hidden_archive', activity: 'explore', explorationTier: 'extraordinary', rarity: 'extraordinary', minMonth: 36,
-      title: 'หอจารึกใต้บ่อน้ำ', text: 'ทางลับเปิดสู่หอจารึกที่เก็บชื่อผู้เดินทางและเส้นทางของสำนักเก่า',
+      title: 'หอจารึกใต้บ่อน้ำ', text: 'ทางลับเปิดสู่หอจารึกที่เก็บชื่อผู้เดินทาง เส้นทางของสำนักเก่า และหินปราณสองเม็ด',
       unlock: s => getAvailableExplorationAreas(s).some(area => area.tier === 'secret') && ((s.paths?.insight || 0) >= 6 || s.hero?.talent === 'keen'),
       choices: [
-        { text: 'คัดลอกแผนที่และวิชารอดชีวิต', effects: [{ type: 'path', key: 'insight', value: 5 }, { type: 'material', key: 'spiritStone', value: 2 }], effect: s => { s.flags.ancientArchive = true; s.flags.foundMap = true; addTreasure(s, 'แผ่นจารึกเส้นทางโบราณ', { agility: 3, training: 4 }); addLog('แผ่นจารึกทำให้เส้นทางลับหลายสายปรากฏขึ้น', true); } },
+        { text: 'นำแผ่นจารึกเส้นทางและหินปราณกลับไป', effects: [{ type: 'path', key: 'insight', value: 5 }, { type: 'material', key: 'spiritStone', value: 2 }], effect: s => { s.flags.ancientArchive = true; s.flags.foundMap = true; addTreasure(s, 'แผ่นจารึกเส้นทางโบราณ', { agility: 3, training: 4 }); addLog('แผ่นจารึกทำให้เส้นทางลับหลายสายปรากฏขึ้น', true); } },
         { text: 'นำหลักฐานไปมอบให้สำนัก', requires: s => s.flags.metSect, locked: 'ต้องมีความสัมพันธ์กับสำนัก', effects: [{ type: 'faction', key: 'sect', value: 5 }, { type: 'stat', path: 'hero.reputation', value: 8 }, { type: 'relation', key: 'master', value: 5 }], effect: s => { s.flags.archivesToSect = true; addLog('สำนักรับรองความน่าเชื่อถือของเจ้าและเปิดเส้นทางข่าวสาร', true); } }
       ]
     },
     {
       id: 'explore_serpent_cache', activity: 'explore', explorationTier: 'main', rarity: 'epic', minMonth: 72,
-      title: 'คลังลับใต้เงางู', text: 'ในอุโมงค์งูดำ เจ้าพบคลังเสบียงและบัญชีรายชื่อคนที่ส่งข่าวให้ศัตรู',
+      title: 'คลังลับใต้เงางู', text: 'ในอุโมงค์งูดำ เจ้าพบคลังเสบียง เงิน และบัญชีรายชื่อคนที่ส่งข่าวให้ศัตรู',
       unlock: s => s.mode === 'story' && s.flags.serpentTunnelFound === true,
       choices: [
         { text: 'นำบัญชีกลับไปเปิดโปง', effects: [{ type: 'flag', key: 'knowsTraitor', value: true }, { type: 'stat', path: 'hero.reputation', value: 12 }, { type: 'relation', key: 'master', value: 8 }, { type: 'faction', key: 'sect', value: 6 }], effect: s => { s.flags.houseEnemyKnown = true; addLog('บัญชีคลังลับกลายเป็นหลักฐานชิ้นสำคัญของสำนัก', true); } },
-        { text: 'ทำลายคลังแล้วเก็บเสบียงไว้ใช้เอง', effects: [{ type: 'stat', path: 'hero.money', value: 24 }, { type: 'stat', path: 'hero.reputation', value: -5 }, { type: 'path', key: 'freedom', value: 4 }], effect: s => { s.flags.escapePrepared = true; addLog('คลังลับถูกทำลาย เหลือเพียงเสบียงที่เจ้าขนออกมาได้'); } }
+        { text: 'ทำลายคลังแล้วเก็บเงินกับเสบียงไว้ใช้เอง', effects: [{ type: 'stat', path: 'hero.money', value: 24 }, { type: 'stat', path: 'hero.reputation', value: -5 }, { type: 'path', key: 'freedom', value: 4 }], effect: s => { s.flags.escapePrepared = true; addLog('คลังลับถูกทำลาย เหลือเพียงเสบียงที่เจ้าขนออกมาได้'); } }
       ]
     }
   ];
