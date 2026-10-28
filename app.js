@@ -10,10 +10,11 @@
   const VERSION = 10;
   const MAX_MONTHS = 216;
   const $ = (id) => document.getElementById(id);
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
   function getRarityWeight(event, s = {}) {
-    const rarity = EVENT_RARITIES[event.rarity];
+    const rarity = EVENT_RARITIES[event.rarity === 'rare' ? 'extraordinary' : event.rarity];
     let weight = rarity?.weight || 1;
     if (s.hero?.talent === 'lucky' && event.rarity && event.rarity !== 'normal') weight *= 1.8;
     if ((s.hero?.attributes?.luck || 0) >= 15 && event.rarity && event.rarity !== 'normal') weight *= 1.12;
@@ -1627,7 +1628,7 @@
   ];
 
   function agePhase(ageYear) { return AGE_PHASES.find(phase => ageYear <= phase.max) || AGE_PHASES[AGE_PHASES.length - 1]; }
-  function rarityLabel(rarity) { return EVENT_RARITIES[rarity]?.name || EVENT_RARITIES.normal.name; }
+  function rarityLabel(rarity) { return EVENT_RARITIES[rarity === 'rare' ? 'extraordinary' : rarity]?.name || EVENT_RARITIES.normal.name; }
   function annualLifePhase(s) {
     ensureLifespanState(s);
     const ageMonths = Math.max(0, Number(s.hero?.ageMonths || 0));
@@ -2180,7 +2181,47 @@
     return 'ลางประหลาดปรากฏขึ้นเหนือเรือน เงาศักดิ์สิทธิ์เปลี่ยนรูปร่างไปมาอยู่ท่ามกลางหมู่เมฆ บางครู่คล้ายมังกร บางครู่คล้ายหงส์ และบางครู่กลายเป็นสิ่งมีชีวิตที่ไม่เคยมีชื่ออยู่ในตำราใดของโลกมนุษย์';
   }
 
-  function annualRareChoices(s, activity, rarity, power, seed, frame, index, ageYear) {
+  // Each legendary scene keeps its title, situation and choices together. This
+  // avoids combining a mundane activity title with an unrelated rare story.
+  const LEGENDARY_LIFE_SCENES = {
+    infant: [
+      ['สัญญาจากผู้มาเยือน', 'ผู้เดินทางผู้มีชื่อเสียงขอรับเจ้าซึ่งยังเป็นทารกไปดูแล โดยเสนอความช่วยเหลือแก่ครอบครัว แต่ไม่ยอมบอกจุดหมาย ผู้ดูแลต้องตัดสินใจ', 'ให้ผู้ดูแลต่อรองและขอรู้จุดหมาย', 'ให้ผู้ดูแลขอเวลาตรวจสอบตัวตน', 'ให้ผู้ดูแลปฏิเสธและพาเจ้ากลับ'],
+      ['ผู้หนีภัยพร้อมตราผนึก', 'ผู้บาดเจ็บนำตราผนึกของสำนักใหญ่เข้ามาขอความช่วยเหลือในเรือนที่เจ้าพัก คนติดตามกำลังค้นหาตรานั้น', 'ให้ผู้ดูแลช่วยผู้บาดเจ็บหลบหนี', 'ให้ผู้ดูแลขอความช่วยเหลือจากเพื่อนบ้าน', 'ให้ผู้ดูแลพาเจ้าออกห่าง'],
+      ['ลางเหนือเรือน', 'แสงประหลาดปรากฏเหนือเรือนที่เจ้าพัก ผู้รู้สองคนขอตรวจเจ้าซึ่งยังเป็นทารก แต่ผู้ดูแลไม่รู้เจตนาของทั้งคู่', 'ให้ผู้ดูแลเชิญผู้รู้คนหนึ่งเข้าตรวจ', 'ให้ผู้ดูแลสอบถามประวัติผู้รู้ก่อน', 'ให้ผู้ดูแลปฏิเสธการตรวจ']
+    ],
+    'young-child': [
+      ['เด็กที่หายไปจากขบวน', 'เด็กคนหนึ่งวิ่งมาขอความช่วยเหลือจากเจ้ากับผู้ดูแล ขบวนที่ตามหาอ้างว่าเด็กเป็นทายาทที่หายตัว แต่เด็กกลับกลัวคนเหล่านั้น', 'ขอให้ผู้ดูแลช่วยเด็กหลบผู้ติดตาม', 'ขอให้ผู้ดูแลสอบถามทั้งสองฝ่าย', 'กลับไปอยู่ในที่ปลอดภัยกับผู้ดูแล'],
+      ['คำขอจากผู้รักษา', 'ผู้รักษาคนหนึ่งขอให้เจ้าพาไปยังแหล่งน้ำที่เด็กหลายคนล้มป่วย ผู้ดูแลเตือนว่าบริเวณนั้นอาจไม่ปลอดภัย', 'พาผู้รักษาไปพร้อมผู้ดูแล', 'อธิบายทางให้ผู้รักษาแทนการไปเอง', 'อยู่กับผู้ดูแลและไม่เข้าใกล้พื้นที่'],
+      ['ห่อของที่มีผู้แย่งชิง', 'เจ้าพบห่อของที่สองฝ่ายตามหา ผู้ดูแลสังเกตว่าการส่งให้ฝ่ายใดโดยไม่สอบถามอาจทำให้ผู้บริสุทธิ์เดือดร้อน', 'ให้ผู้ดูแลนำห่อไปคืนต่อหน้าทั้งสองฝ่าย', 'ให้ผู้ดูแลตรวจหาหลักฐานเจ้าของ', 'ทิ้งห่อไว้และถอยออกมา']
+    ],
+    child: [
+      ['หลักฐานก่อนศึก', 'เจ้าพบคำสั่งปลอมที่อาจทำให้คนสองกลุ่มปะทะกัน ผู้ที่ส่งคำสั่งเริ่มตามหาหลักฐานชิ้นนี้', 'นำหลักฐานไปเตือนทั้งสองฝ่าย', 'ขอให้ผู้ใหญ่ที่ไว้ใจช่วยตรวจหลักฐาน', 'ซ่อนตัวและไม่เข้าไปเกี่ยวข้อง'],
+      ['ผู้รอดชีวิตจากการล่า', 'ผู้รอดชีวิตจากการไล่ล่าขอให้เจ้าส่งข่าวถึงครอบครัว ผู้ไล่ล่ากำลังเฝ้าเส้นทางหลัก', 'ฝ่าทางอ้อมไปส่งข่าวด้วยตนเอง', 'ขอความช่วยเหลือจากคนในชุมชน', 'หลีกเลี่ยงเส้นทางและรักษาตัว'],
+      ['คำเตือนที่ถูกปิดผนึก', 'เจ้าพบคำเตือนเรื่องภัยที่อาจกระทบทั้งหมู่บ้าน แต่ตราที่ปิดผนึกเป็นของผู้มีอำนาจซึ่งอาจไม่พอใจหากเปิดเผย', 'นำคำเตือนไปแจ้งชาวบ้าน', 'ให้ผู้รู้ตรวจตราและข้อความก่อน', 'วางเรื่องนี้ไว้และกลับบ้าน']
+    ],
+    youth: [
+      ['ข้อเสนอจากสองฝ่าย', 'ทั้งสองฝ่ายที่กำลังขัดแย้งขอให้เจ้าเป็นพยานในข้อพิพาท คำให้การอาจปกป้องผู้บริสุทธิ์แต่ก็ทำให้เจ้ามีศัตรู', 'ให้การต่อหน้าทั้งสองฝ่าย', 'รวบรวมหลักฐานก่อนตอบรับ', 'ปฏิเสธการเป็นพยาน'],
+      ['ขบวนในคืนปิดทาง', 'ขบวนผู้ลี้ภัยติดอยู่ระหว่างกลุ่มติดอาวุธและเส้นทางอันตราย พวกเขาขอให้เจ้าช่วยหาทางออก', 'เข้าไปช่วยเปิดทางให้ขบวน', 'ขอคนในพื้นที่ช่วยหาทางปลอดภัย', 'ถอยออกจากพื้นที่'],
+      ['คำสอนที่มีเจ้าของตามหา', 'ผู้บาดเจ็บฝากบันทึกวิชาไว้กับเจ้าและขอให้ส่งคืนแก่ศิษย์ ขณะเดียวกันมีคนติดตามมาขอเอกสารฉบับเดียวกัน', 'ออกตามหาศิษย์เพื่อส่งคืนบันทึก', 'ตรวจสอบตัวตนของผู้มาขอก่อน', 'ไม่รับบันทึกไว้']
+    ],
+    builder: [
+      ['สัญญาแบ่งอำนาจ', 'สองกลุ่มเสนอให้เจ้ารับรองข้อตกลงที่อาจยุติความขัดแย้ง แต่เงื่อนไขบางข้อส่งผลต่อชาวบ้านซึ่งไม่มีตัวแทนร่วมเจรจา', 'ขอแก้ข้อตกลงต่อหน้าทั้งสองฝ่าย', 'ตรวจเงื่อนไขและรับฟังชาวบ้านก่อน', 'ปฏิเสธการรับรอง'],
+      ['เสบียงที่หายไป', 'บัญชีเสบียงชี้ว่าของที่ควรถึงผู้เดือดร้อนถูกเบี่ยงทาง ผู้รับผิดชอบมีอำนาจและกำลังค้นหาคนรู้เรื่อง', 'เปิดเผยบัญชีต่อผู้เกี่ยวข้อง', 'เก็บสำเนาและตรวจสอบกับผู้ส่ง', 'ไม่เข้าไปเกี่ยวข้อง'],
+      ['คนกลางที่ถูกตามล่า', 'คนกลางในการเจรจาขอที่พักชั่วคราว คนที่ไล่ตามกล่าวหาว่าเขาทรยศ แต่ยังไม่มีผู้ใดแสดงหลักฐาน', 'ช่วยคนกลางหลบออกจากพื้นที่', 'ขอหลักฐานจากทั้งสองฝ่าย', 'ปฏิเสธและรักษาระยะห่าง']
+    ],
+    middle: [
+      ['หนี้บุญคุณในยามศึก', 'ผู้เคยช่วยเจ้าขอให้เป็นพยานเพื่อหยุดการสู้รบ แต่หลักฐานที่นำมาอาจทำให้คนใกล้ชิดอีกฝ่ายเดือดร้อน', 'นำหลักฐานออกเจรจาต่อหน้าทุกฝ่าย', 'ตรวจหลักฐานและหาทางคุ้มครองพยาน', 'ไม่รับปากเข้าร่วม'],
+      ['บันทึกผู้สูญหาย', 'ทะเบียนที่พบเผยชื่อผู้สูญหายจากหลายชุมชน ผู้ถือทะเบียนเดิมถูกข่มขู่ไม่ให้พูด', 'นำทะเบียนไปเปิดเผยและขอให้ช่วยค้นหา', 'ตรวจชื่อและรักษาความปลอดภัยของพยาน', 'ส่งคืนทะเบียนและไม่เกี่ยวข้อง'],
+      ['คำตัดสินของคนรุ่นก่อน', 'เอกสารเก่าอาจล้างข้อกล่าวหาที่ทำให้คนกลุ่มหนึ่งต้องพลัดถิ่น แต่ผู้เกี่ยวข้องในอดีตยังมีอิทธิพล', 'เปิดเอกสารต่อหน้าผู้ได้รับผลกระทบ', 'ตรวจที่มาของเอกสารก่อน', 'เก็บเอกสารไว้และไม่ตัดสิน']
+    ],
+    elder: [
+      ['พยานคนสุดท้าย', 'ผู้รอดชีวิตจากเหตุการณ์เก่าขอให้เจ้าช่วยรักษาคำให้การไว้ ก่อนที่หลักฐานและผู้รู้เรื่องจะสูญหาย', 'นำคำให้การไปมอบแก่ผู้เกี่ยวข้อง', 'ตรวจบันทึกร่วมกับพยานก่อน', 'ปฏิเสธและปล่อยให้พยานตัดสินใจเอง'],
+      ['คำขอจากคนรุ่นใหม่', 'คนรุ่นใหม่ขอให้เจ้าเป็นคนกลางระหว่างสองชุมชนที่เกือบปะทะกันเพราะข้อพิพาทเรื่องทางน้ำ', 'เดินทางไปไกล่เกลี่ยด้วยตนเอง', 'ขอข้อมูลจากทั้งสองชุมชนก่อน', 'ปฏิเสธบทบาทคนกลาง'],
+      ['บันทึกที่อาจเปลี่ยนคดี', 'บันทึกเก่าที่เพิ่งพบมีข้อมูลซึ่งอาจช่วยผู้ถูกกล่าวหา ผู้มีอำนาจบางคนไม่ต้องการให้มีการตรวจสอบอีก', 'ส่งบันทึกให้ผู้ตรวจคดี', 'ตรวจที่มาและทำสำเนาก่อนตัดสินใจ', 'เก็บบันทึกไว้']
+    ]
+  };
+
+  function annualRareChoices(s, activity, rarity, power, seed, frame, index, ageYear, scene) {
     const phase = annualLifePhase(s);
     const choiceVariants = [
       ['เข้าไปเผชิญเหตุการณ์', 'ตรวจสอบให้แน่ใจก่อนตัดสินใจ', 'ถอยออกมาและปล่อยเรื่องนี้ไว้'],
@@ -2188,13 +2229,20 @@
       ['คว้าโอกาสและลงมือทันที', 'ค่อย ๆ สืบหาความจริง', 'ออกห่างจากเหตุการณ์'],
       ['ยอมเสี่ยงเพื่อค้นหาคำตอบ', 'สังเกตสถานการณ์จากที่ปลอดภัย', 'ปล่อยให้ผู้อื่นจัดการ']
     ];
-    const texts = phase.id === 'infant' ? ['ให้ผู้ดูแลเข้าไปเผชิญเหตุการณ์', 'ให้ผู้ดูแลตรวจสอบอย่างระมัดระวัง', 'ให้ผู้ดูแลพาเจ้าออกห่าง'] : phase.id === 'young-child' ? ['เข้าไปเผชิญเหตุการณ์พร้อมผู้ดูแล', 'ขอให้ผู้ใหญ่ช่วยตรวจสอบก่อน', 'ถอยออกมาและปล่อยเรื่องนี้ไว้'] : choiceVariants[(index + ageYear) % choiceVariants.length];
-    const checkStat = activity === 'train' ? 'spirit' : activity === 'work' ? 'charm' : activity === 'explore' ? 'intellect' : 'body';
-    const severe = rarity === 'legendary' ? power * 3 : power * 2;
+    const texts = scene ? scene.slice(2, 5) : phase.id === 'infant' ? ['ให้ผู้ดูแลเข้าไปเผชิญเหตุการณ์', 'ให้ผู้ดูแลตรวจสอบอย่างระมัดระวัง', 'ให้ผู้ดูแลพาเจ้าออกห่าง'] : phase.id === 'young-child' ? ['เข้าไปเผชิญเหตุการณ์พร้อมผู้ดูแล', 'ขอให้ผู้ใหญ่ช่วยตรวจสอบก่อน', 'ถอยออกมาและปล่อยเรื่องนี้ไว้'] : choiceVariants[(index + ageYear) % choiceVariants.length];
+    // A caregiver acts for very young children; use circumstance (luck), not
+    // the baby's own training or conversational skill, for the outcome.
+    const checkStat = phase.id === 'infant' || phase.id === 'young-child' ? 'luck' : scene ? (/เจรจา|ไกล่เกลี่ย|ต่อรอง|เป็นพยาน/.test(scene[1]) ? 'charm' : 'intellect') : activity === 'train' ? 'spirit' : activity === 'work' ? 'charm' : activity === 'explore' ? 'intellect' : 'body';
+    const young = phase.id === 'infant' || phase.id === 'young-child';
+    const child = phase.id === 'child';
+    const severe = Math.min(rarity === 'legendary' ? power * 2 : power, young ? 6 : child ? 10 : 24);
+    const difficulty = 10 + power;
+    const dangerous = !scene || /ติดตาม|ไล่ล่า|โจมตี|กลุ่มติดอาวุธ|เส้นทางอันตราย|ข่มขู่|ศึก|ปะทะ|เฝ้าเส้นทาง|ค้นหาคนรู้เรื่อง/.test(scene[1]);
+    const failure = dangerous ? [{ type: 'stat', path: 'hero.health', value: -severe }] : [{ type: 'stat', path: 'hero.reputation', value: -1 }];
     return [
-      { text: texts[0], note: 'เสี่ยงสูง แต่มีโอกาสเปลี่ยนเส้นทางของชีวิต', check: { stat: checkStat, difficulty: 18 + power * 4 }, failureEffects: [{ type: 'stat', path: 'hero.health', value: -severe }, { type: 'stat', path: 'hero.karma', value: -1 }], effects: [{ type: 'path', key: seed.path, value: seed.gain * power }, { type: 'stat', path: frame.stat, value: power * (seed.gain + 1) }, { type: 'stat', path: 'hero.reputation', value: power }] },
-      { text: texts[1], note: 'ปลอดภัยกว่า แต่ต้องแลกด้วยเวลา เงิน หรือสุขภาพ', effects: [{ type: 'path', key: frame.path, value: power }, { type: 'stat', path: 'hero.money', value: activity === 'work' ? power : -Math.max(0, power - 1) }, { type: 'stat', path: 'hero.health', value: activity === 'rest' ? power : -Math.max(1, power - 1) }] },
-      { text: texts[2], note: rarity === 'legendary' ? 'เพิกเฉยต่อโอกาสที่อาจไม่กลับมาอีก' : 'หลีกเลี่ยงความเสี่ยงและรักษาสถานะเดิม', effects: [{ type: 'stat', path: 'hero.health', value: Math.max(1, Math.floor(power / 2)) }] }
+      { text: texts[0], note: `หากสำเร็จเพิ่มเมตตาและชื่อเสียง · หากพลาด${dangerous ? `เสียสุขภาพ ${severe}` : 'เสียชื่อเสียง 1'}`, check: { stat: checkStat, difficulty }, failureEffects: failure, effects: [{ type: 'path', key: 'compassion', value: power }, { type: 'stat', path: 'hero.reputation', value: power }] },
+      { text: texts[1], note: 'ตรวจสอบอย่างรอบคอบ · เพิ่มหยั่งรู้', effects: [{ type: 'path', key: 'insight', value: Math.max(1, Math.ceil(power / 2)) }] },
+      { text: texts[2], note: 'หลีกเลี่ยงความเสี่ยง · เพิ่มอิสระเล็กน้อย', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
     ];
   }
 
@@ -4230,6 +4278,7 @@
 
   function buildUniqueGradedEvents(s, phase) {
     const phaseKey = phase.id === 'infant' || phase.id === 'young-child' || phase.id === 'child' ? phase.id : 'adult';
+    const healthLoss = power => Math.min(power * 2, phaseKey === 'infant' || phaseKey === 'young-child' ? 6 : phaseKey === 'child' ? 10 : 24);
     const activity = ACTIVITY_EVENT_FRAMES[s.activity] ? s.activity : 'free';
     const frame = ACTIVITY_EVENT_FRAMES[activity];
     const statPaths = { health: 'hero.health', money: 'hero.money', reputation: 'hero.reputation', intellect: 'hero.attributes.intellect', bodyFoundation: 'hero.bodyFoundation' };
@@ -4238,19 +4287,21 @@
       return UNIQUE_GRADED_SCENES[rarity][phaseKey].map(([key, title, text, reward], index) => {
         const sceneActivity = GRADED_SCENE_ACTIVITIES[rarity][phaseKey][index];
         const child = phaseKey === 'infant' || phaseKey === 'young-child';
-        const texts = child ? ['ให้ผู้ดูแลลงมือจัดการ', 'ให้ผู้ดูแลตรวจสอบอย่างรอบคอบ', 'ให้ผู้ดูแลพาเจ้าออกห่าง'] : ['ลงมือจัดการด้วยตนเอง', 'ตรวจสอบอย่างรอบคอบก่อนตัดสินใจ', 'ถอนตัวจากสถานการณ์'];
+        const texts = child ? [`ให้ผู้ดูแลเข้าไปช่วยเรื่อง ${title}`, 'ให้ผู้ดูแลสอบถามรายละเอียดก่อน', 'ให้ผู้ดูแลพาเจ้าออกห่าง'] : [`เข้าไปช่วยจัดการเรื่อง ${title}`, 'สอบถามรายละเอียดก่อนตัดสินใจ', 'ถอนตัวจากสถานการณ์'];
         const power = grade.power;
-        const socialRisk = ['social', 'study'].includes(sceneActivity);
-        const failure = socialRisk ? [{ type: 'stat', path: 'hero.reputation', value: -power }] : sceneActivity === 'work' || sceneActivity === 'craft' ? [{ type: 'money', value: -power }] : [{ type: 'stat', path: 'hero.health', value: -power * 2 }];
-        const checkStat = sceneActivity === 'social' ? 'charm' : ['study','craft'].includes(sceneActivity) ? 'intellect' : ['train','work'].includes(sceneActivity) ? 'body' : 'luck';
-        const success = [{ type: 'stat', path: statPaths[reward], value: power * 2 }, { type: 'path', key: frame.path, value: power }];
-        const cautious = [{ type: 'stat', path: statPaths[reward], value: power }, { type: 'path', key: 'insight', value: 1 }];
+        // Minor disputes or lost belongings must not cause unexplained injury.
+        // Physical harm is reserved for scenes that explicitly mention danger.
+        const dangerous = /โจร|ปะทะ|ต่อสู้|โจมตี|ซุ่ม|ไล่ล่า|ผู้ไล่|ผู้คุม|บาดเจ็บ|เจ็บ|ป่วย|ไข้|พิษ|พายุ|ไฟไหม้|อันตราย|ผู้ติดตาม|ถูกจับ|ด่าน|คุกคาม|อพยพ|ศึก|แย่งชิง|เสี่ยง|ล้อม/.test(text);
+        const failure = dangerous ? [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] : [{ type: 'stat', path: 'hero.reputation', value: -1 }];
+        const checkStat = child ? 'luck' : sceneActivity === 'social' ? 'charm' : ['study','craft'].includes(sceneActivity) ? 'intellect' : ['train','work'].includes(sceneActivity) ? 'body' : 'luck';
+        const success = [{ type: 'stat', path: 'hero.reputation', value: Math.max(1, Math.ceil(power / 2)) }, { type: 'path', key: 'compassion', value: Math.max(1, Math.ceil(power / 2)) }];
+        const cautious = [{ type: 'path', key: 'insight', value: 1 }];
         return {
           id: `graded-${rarity}-${phaseKey}-${key}`, rarity, activity: sceneActivity, activities: sceneActivity === 'social' ? ['social', 'free'] : [sceneActivity], title, text,
           tag: `${phase.name} · ${grade.name}`, uniqueGraded: true,
           choices: [
-            { text: texts[0], note: `เสี่ยงเพื่อผลตอบแทนระดับ${grade.name}`, check: { stat: checkStat, difficulty: 18 + power * 2 }, effects: success, failureEffects: failure },
-            { text: texts[1], note: 'ได้ผลน้อยกว่าโดยไม่เสี่ยงทดสอบ', effects: cautious },
+            { text: texts[0], note: `สำเร็จเพิ่มเมตตาและชื่อเสียง · พลาด${dangerous ? `เสียสุขภาพ ${healthLoss(power)}` : 'เสียชื่อเสียง 1'}`, check: { stat: checkStat, difficulty: 10 + power }, effects: success, failureEffects: failure },
+            { text: texts[1], note: 'สอบถามก่อนโดยไม่เสี่ยงทดสอบ · หยั่งรู้ +1', effects: cautious },
             { text: texts[2], note: 'หลีกเลี่ยงความเสี่ยงและโอกาส', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
           ]
         };
@@ -4268,7 +4319,7 @@
           : { type: 'treasure', name, bonus: kind === 'weapon' ? { attack: ({ uncommon: 5, rare: 6, epic: 7 }[itemGrade]), agility: 1 } : {}, grade: itemGrade, category: kind === 'weapon' ? 'weapon' : 'technique_manual', subtype: kind === 'weapon' ? 'jian' : manualDef?.manualSubtype || 'attack_jian', techniqueId };
         groups.push({ id: `graded-discovery-${rarity}-${kind}`, rarity, activity: 'explore', title, text, tag: `${phase.name} · ${EVENT_RARITIES[rarity].name}`, uniqueGraded: true,
           choices: [
-            { text: 'เสี่ยงเข้าไปนำสิ่งที่พบออกมา', note: 'สำเร็จจะได้รับของตามที่พบ · ล้มเหลวเสียสุขภาพ', check: { stat: 'intellect', difficulty: 18 + power * 2 }, effects: [reward], failureEffects: [{ type: 'stat', path: 'hero.health', value: -power * 2 }] },
+            { text: 'เสี่ยงเข้าไปนำสิ่งที่พบออกมา', note: 'สำเร็จจะได้รับของตามที่พบ · ล้มเหลวเสียสุขภาพ', check: { stat: 'intellect', difficulty: 10 + power }, effects: [reward], failureEffects: [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] },
             { text: 'จดจำตำแหน่งและสำรวจจากระยะปลอดภัย', note: 'ได้ความรู้เส้นทาง แต่ไม่ได้รับของ', effects: [{ type: 'path', key: 'insight', value: power }] },
             { text: 'ถอยออกจากพื้นที่', note: 'หลีกเลี่ยงความเสี่ยง', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
           ]
@@ -4281,7 +4332,7 @@
         const name = discoveryManualName(technique.id);
         groups.push({ id: `graded-manual-${technique.id}`, rarity, activity: 'explore', title: technique.title, text: technique.text, tag: `${phase.name} · ${EVENT_RARITIES[rarity].name}`, uniqueGraded: true,
           choices: [
-            { text: 'เข้าไปเก็บคัมภีร์', note: 'สำเร็จจะได้รับคัมภีร์ · ล้มเหลวเสียสุขภาพ', check: { stat: 'intellect', difficulty: 18 + power * 2 }, effects: [{ type: 'treasure', name, bonus: {}, grade: technique.grade, category: 'technique_manual', subtype: def.manualSubtype, techniqueId: technique.id }], failureEffects: [{ type: 'stat', path: 'hero.health', value: -power * 2 }] },
+            { text: 'เข้าไปเก็บคัมภีร์', note: 'สำเร็จจะได้รับคัมภีร์ · ล้มเหลวเสียสุขภาพ', check: { stat: 'intellect', difficulty: 10 + power }, effects: [{ type: 'treasure', name, bonus: {}, grade: technique.grade, category: 'technique_manual', subtype: def.manualSubtype, techniqueId: technique.id }], failureEffects: [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] },
             { text: 'สำรวจจากระยะปลอดภัย', note: 'ได้ความรู้ แต่ไม่ได้รับคัมภีร์', effects: [{ type: 'path', key: 'insight', value: power }] },
             { text: 'ถอยออกจากพื้นที่', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
           ]
@@ -4314,11 +4365,11 @@
       mounts: ['พาหนะสายพันธุ์หายาก', 'เจ้าพบพาหนะสายพันธุ์หายากที่พลัดหลงอยู่ระหว่างทาง การเข้าใกล้อาจทำให้มันตื่นกลัว']
     },
     epic: {
-      weapons: ['อาวุธในซากค่าย', 'ในซากค่ายเก่ามีอาวุธมหากาพย์หลงเหลืออยู่ แต่ทางเข้าอาจพังลงมา'],
-      armor: ['เกราะในหีบผนึก', 'เจ้าพบหีบที่บรรจุเครื่องป้องกันมหากาพย์อยู่ในบริเวณซึ่งมีร่องรอยอันตราย'],
-      jewelry: ['เครื่องประดับหลังม่านหมอก', 'เจ้าพบเครื่องประดับมหากาพย์ในที่ซ่อนซึ่งหมอกบดบังทางกลับ'],
-      cursed: ['ห่อผนึกต้องห้าม', 'ห่อผนึกที่เจ้าพบซ่อนวัตถุอาถรรพ์มหากาพย์ พลังของมันอาจแลกด้วยผลเสีย'],
-      mounts: ['พาหนะฝ่าเขตอันตราย', 'สัตว์พาหนะมหากาพย์ติดอยู่ใกล้เส้นทางอันตราย หากช่วยมันออกมาอาจยอมร่วมทาง']
+      weapons: ['อาวุธแห่งค่ายที่สาบสูญ', 'ซากค่ายที่เคยเป็นสมรภูมิใหญ่ซ่อนอาวุธซึ่งมีตราของผู้บัญชาการ ทางเข้าที่เสียหายอาจพังลงได้ทุกเมื่อ'],
+      armor: ['เกราะในหีบผนึก', 'หีบผนึกในซากป้อมเก็บเกราะฝีมือช่างผู้มีชื่อเสียง ร่องรอยโดยรอบบ่งบอกว่ามีกลไกป้องกัน'],
+      jewelry: ['หีบหลังม่านหมอก', 'ในที่ซ่อนซึ่งถูกหมอกปิดล้อม เจ้าพบเครื่องประดับมีตราตระกูลเก่า หากเข้าไปอาจหาทางกลับลำบาก'],
+      cursed: ['ห่อผนึกต้องห้าม', 'ห่อผนึกจากห้องลับซ่อนวัตถุอาถรรพ์ซึ่งผู้คนเคยแย่งชิง พลังของมันอาจแลกด้วยผลเสีย'],
+      mounts: ['พาหนะฝ่าเขตอันตราย', 'สัตว์พาหนะหายากติดอยู่ใกล้เส้นทางที่กำลังพังทลาย หากช่วยมันออกมาอาจยอมร่วมทาง']
     }
   };
 
@@ -4335,7 +4386,7 @@
           choices: [
             { text: category === 'mounts' ? 'เข้าไปช่วยและพยายามผูกมิตร' : 'ตรวจสอบและนำสิ่งที่พบติดตัว',
               note: `สำเร็จจะสุ่มรับ${cursed ? 'ของอาถรรพ์' : 'ไอเทม'}เกรด${ITEM_GRADES[grade].name} 1 ชิ้น${cursed ? ' · ของอาถรรพ์อาจมีผลเสีย' : ''} · ล้มเหลวเสียสุขภาพ`,
-              check: { stat: category === 'mounts' ? 'charm' : 'intellect', difficulty: 17 + power * 2 },
+              check: { stat: category === 'mounts' ? 'charm' : 'intellect', difficulty: 10 + power },
               effects: [{ type: 'libraryLoot', grade, category }, { type: 'path', key: 'freedom', value: 1 }], failureEffects: [{ type: 'stat', path: 'hero.health', value: -power * 2 }] },
             { text: 'ถอยออกมาและปล่อยสิ่งที่พบไว้', note: 'หลีกเลี่ยงความเสี่ยง', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
           ]
@@ -4377,6 +4428,7 @@
         const power = rarity.power;
         const id = `annual-${ageYear}-${rarity.id}-${activity}-${index + 1}`;
         const dialogueOnly = rarity.id === 'normal';
+        const legendaryScene = rarity.id === 'legendary' ? LEGENDARY_LIFE_SCENES[phase.id][index % LEGENDARY_LIFE_SCENES[phase.id].length] : null;
         const proseTemplates = dialogueOnly ? [
           `${context.name} เจ้าพบ “${theme}” ${context.hint} รายละเอียดเล็กน้อยของโลกยังคงเคลื่อนไหว โดยไม่มีชะตาใดบังคับให้ต้องเลือก`,
           `ในช่วงหนึ่งของชีวิต ${context.name} เจ้าสังเกตเห็น “${theme}”${context.hint ? ` ${context.hint}` : ''} แล้วปล่อยให้วันเวลาผ่านไปอย่างเงียบงัน`,
@@ -4400,9 +4452,9 @@
           id, generated: true, ageYear, rarity: rarity.id, activity,
           tag: `ปีอายุ ${ageYear} · ${rarity.name}`,
           dialogueOnly,
-          title: dialogueOnly ? `${phase.name}: ${theme}` : `${phase.name}: ${theme}`,
-          text: prose,
-          choices: dialogueOnly ? [{ text: 'อ่านต่อ', note: 'บทสนทนาและบรรยากาศ ไม่มีผลต่อค่าสถานะ' }] : annualRareChoices(s, activity, rarity.id, power, seed, frame, index, ageYear),
+          title: dialogueOnly ? `${phase.name}: ${theme}` : `${phase.name}: ${legendaryScene?.[0] || 'เหตุไม่คาดฝัน'}`,
+          text: legendaryScene ? legendaryScene[1] : prose,
+          choices: dialogueOnly ? [{ text: 'อ่านต่อ', note: 'บทสนทนาและบรรยากาศ ไม่มีผลต่อค่าสถานะ' }] : annualRareChoices(s, activity, rarity.id, power, seed, frame, index, ageYear, legendaryScene),
           /* choices: dialogueOnly ? [{ text: 'อ่านต่อ', note: 'บทสนทนาและบรรยากาศ ไม่มีผลต่อค่าสถานะ' }] : [
             {
               text: 'รับโอกาสและเดินเข้าไปเผชิญหน้า',
@@ -4511,6 +4563,10 @@
     const questEvents = s.activity === 'quest' ? QUEST_EVENTS : [];
     return [...RANDOM_EVENTS, ...MIDDLE_GAME_EVENTS, ...DEBT_EVENTS, ...restEvents, ...learningEvents, ...explorationEvents, ...craftEvents, ...socialEvents, ...OFFICIAL_EVENTS, ...familyEvents, ...travelEvents, ...freeLifeEvents, ...questEvents, ...characterEvents, ...annualEvents, ...infantLegendaryEvents, ...infantEpicEvents].filter(event =>
       eventScopeAllowed(s, event) &&
+      // Adult-oriented legacy events can otherwise ask a baby to flee, trade,
+      // listen to rumours or care for a spouse. Young children use the authored
+      // age-specific pools and the dedicated infant events instead.
+      !(s.mode === 'free' && (s.hero?.ageMonths || 0) < 60 && !event.generated && !event.uniqueGraded && !INFANT_LEGENDARY_EVENTS.includes(event) && !INFANT_EPIC_EVENTS.includes(event)) &&
       (event.activities ? event.activities.includes(s.activity) : event.activity === s.activity || event.activity === 'any') &&
       event.month == null &&
       (!event.generated || event.ageYear === Math.floor((s.hero?.ageMonths || 0) / 12)) &&
@@ -8219,8 +8275,8 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: [
         { text: 'พ่นน้ำลายใส่เขา', note: 'ชายชราหัวเราะและทิ้งของวิเศษไว้ข้างเปล', effect: s => { ensureRelationshipState(s); s.flags.mysteriousSwordsmanMet = true; s.relations.mysteriousSwordsman = 50; s.relationshipState.mysteriousSwordsman.lastTouched = s.month; addTreasure(s, 'แผ่นหยกฟังเสียงกระบี่', { attack: 18, agility: 8, training: 14 }, { grade: 'legendary' }); addLog('ชายชราหัวเราะเมื่อถูกเจ้าพ่นน้ำลายใส่ เขาทิ้งแผ่นหยกฟังเสียงกระบี่ไว้ข้างเปล และความสัมพันธ์กับชายแก่ขี่กระบี่เริ่มต้นที่ 50/100', true); } },
         { text: 'ฉี่รดแขนเสื้อของชายชรา', note: 'เขาตกใจเล็กน้อย แต่ทิ้งยันต์คุ้มครองไว้ให้', effect: s => { ensureRelationshipState(s); s.flags.mysteriousSwordsmanMet = true; s.relations.mysteriousSwordsman = 50; s.relationshipState.mysteriousSwordsman.lastTouched = s.month; addTreasure(s, 'ยันต์คุ้มครองผู้ไร้เดียงสา', { defense: 16, body: 10, luck: 12 }, { grade: 'epic' }); addLog('ชายชราถอนหายใจหลังถูกเจ้าฉี่รด แต่ยังทิ้งยันต์คุ้มครองผู้ไร้เดียงสาไว้ให้ ความสัมพันธ์เริ่มต้นที่ 50/100', true); } },
-        { text: 'เอื้อมมือคว้าปลายกระบี่', note: 'กระบี่สั่นสะเทือนและทิ้งเส้นทางวิชาลับไว้', effect: s => { ensureRelationshipState(s); s.flags.mysteriousSwordsmanMet = true; s.flags.swordsmanSecretHint = true; s.relations.mysteriousSwordsman = 50; s.relationshipState.mysteriousSwordsman.lastTouched = s.month; addTreasure(s, 'เส้นไหมกระบี่เมฆา', { attack: 20, defense: 12, agility: 10 }, { grade: 'legendary' }); addLog('ปลายนิ้วของเจ้าสัมผัสคมกระบี่ ชายชราทิ้งเส้นไหมกระบี่เมฆาและคำชี้แนะลับไว้ ความสัมพันธ์เริ่มต้นที่ 50/100', true); } },
-        { text: 'ร้องไห้จนหลับไป', note: 'ชายชราไม่ทิ้งของไว้ แต่จะจดจำเจ้าและอาจกลับมาอีกครั้ง', effect: s => { ensureRelationshipState(s); s.flags.mysteriousSwordsmanMet = true; s.flags.swordsmanMayReturn = true; s.relations.mysteriousSwordsman = 50; s.relationshipState.mysteriousSwordsman.lastTouched = s.month; addLog('ชายชรายิ้มบาง ๆ ก่อนหายไปพร้อมกลิ่นสนจาง ๆ เขาจดจำเจ้าไว้ และความสัมพันธ์เริ่มต้นที่ 50/100', true); } }
+        { text: 'เอื้อมมือคว้าปลายกระบี่', note: 'ได้รับเส้นไหมกระบี่และบันทึกความสัมพันธ์กับชายชรา', effect: s => { ensureRelationshipState(s); s.flags.mysteriousSwordsmanMet = true; s.flags.swordsmanSecretHint = true; s.relations.mysteriousSwordsman = 50; s.relationshipState.mysteriousSwordsman.lastTouched = s.month; addTreasure(s, 'เส้นไหมกระบี่เมฆา', { attack: 20, defense: 12, agility: 10 }, { grade: 'legendary' }); addLog('ปลายนิ้วของเจ้าสัมผัสคมกระบี่ ชายชราทิ้งเส้นไหมกระบี่เมฆาและคำชี้แนะลับไว้ ความสัมพันธ์เริ่มต้นที่ 50/100', true); } },
+        { text: 'ร้องไห้จนหลับไป', note: 'ไม่ได้รับของ แต่บันทึกความสัมพันธ์กับชายชรา', effect: s => { ensureRelationshipState(s); s.flags.mysteriousSwordsmanMet = true; s.flags.swordsmanMayReturn = true; s.relations.mysteriousSwordsman = 50; s.relationshipState.mysteriousSwordsman.lastTouched = s.month; addLog('ชายชรายิ้มบาง ๆ ก่อนหายไปพร้อมกลิ่นสนจาง ๆ เขาจดจำเจ้าไว้ และความสัมพันธ์เริ่มต้นที่ 50/100', true); } }
       ]
     },
     {
@@ -8229,10 +8285,10 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       tag: 'ตำนาน · วัยทารก', art: 'bell-house', title: 'ระฆังจากเรือนที่ไม่มีผู้คน',
       text: 'ในคืนหนึ่ง เสียงระฆังดังขึ้นจากท้ายหมู่บ้าน ทั้งที่บริเวณนั้นไม่มีวัด ไม่มีศาลเจ้า และไม่มีผู้ใดอาศัยอยู่มานานหลายสิบปี ผู้ใหญ่ในเรือนตื่นขึ้นพร้อมกัน แต่ไม่มีใครกล้าออกไปดู มีเพียงเจ้าที่ยังคงหลับอยู่ในเปล ราวกับเสียงนั้นกำลังเรียกหาเจ้าเพียงผู้เดียว\n\nเมื่อเสียงระฆังดังเป็นครั้งที่สาม เงาร่างสีขาวปรากฏอยู่ข้างหน้าต่าง นางมีรูปร่างคล้ายหญิงชรา ทว่าใบหน้ากลับเลือนรางราวกับถูกหมอกบดบัง นางวางกล่องไม้เก่าแก่ไว้ใต้หน้าต่าง แล้วกล่าวด้วยเสียงที่ไม่มีใครได้ยิน\n\n“ของสิ่งนี้เป็นของผู้ที่ยังไม่เคยก่อหนี้กับโลก”',
       choices: [
-        { text: 'ให้ผู้ดูแลเปิดกล่องแทนเจ้า', note: 'ได้รับของวิเศษระดับตำนาน และเริ่มต้นหนี้บุญคุณกับผู้มาเยือน', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellDebt = true; s.relations.bellMatron = 30; s.relationshipState.bellMatron.lastTouched = s.month; addTreasure(s, 'ระฆังคืนหนี้', { luck: 16, spirit: 12, defense: 10 }, { grade: 'legendary' }); s.hero.karma += 2; addLog('ผู้ดูแลเปิดกล่องและพบระฆังคืนหนี้ ของวิเศษระดับตำนาน ความสัมพันธ์กับหญิงชราแห่งเรือนระฆังเริ่มต้นที่ 30/100', true); } },
-        { text: 'เก็บกล่องไว้โดยไม่เปิด', note: 'ได้รับของวิเศษปริศนา ซึ่งจะเปิดเผยความลับเมื่อมีความรู้เพียงพอ', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellBoxSealed = true; s.relations.bellMatron = 20; s.relationshipState.bellMatron.lastTouched = s.month; addTreasure(s, 'กล่องเรือนนิรันดร์', { luck: 12, intellect: 12, defense: 8 }, { grade: 'legendary', sealed: true }); addLog('ครอบครัวเก็บกล่องเรือนนิรันดร์ไว้โดยไม่เปิด หญิงชราแห่งเรือนระฆังจดจำการตัดสินใจนี้ ความสัมพันธ์เริ่มต้นที่ 20/100', true); } },
-        { text: 'นำกล่องไปคืนยังเรือนร้าง', note: 'ไม่ได้รับของทันที แต่เปิดเส้นทางหญิงชราแห่งเรือนระฆัง', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellMatronAwakened = true; s.relations.bellMatron = 40; s.relationshipState.bellMatron.lastTouched = s.month; s.hero.karma += 5; s.hero.reputation += 1; addLog('ครอบครัวนำกล่องกลับคืนเรือนร้าง เสียงระฆังเงียบลง และหญิงชราแห่งเรือนระฆังเริ่มจดจำชื่อของเจ้า ความสัมพันธ์ 40/100', true); } },
-        { text: 'ปล่อยให้กล่องถูกเผาไปพร้อมกับเครื่องเซ่น', note: 'ได้เถ้าระฆังไร้เสียง ซึ่งป้องกันหนี้กรรมครั้งหนึ่ง', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellAshWard = true; s.relations.bellMatron = 5; s.relationshipState.bellMatron.lastTouched = s.month; addTreasure(s, 'เถ้าระฆังไร้เสียง', { karma: 10, luck: 8, defense: 8 }, { grade: 'epic', singleUse: true }); s.hero.karma += 1; addLog('กล่องไม้กลายเป็นเถ้าระฆังไร้เสียง ปกป้องเจ้าได้หนึ่งครั้ง แต่หญิงชราแห่งเรือนระฆังไม่พอใจ ความสัมพันธ์เหลือ 5/100', true); } }
+        { text: 'ให้ผู้ดูแลเปิดกล่องแทนเจ้า', note: 'ได้รับระฆังระดับตำนานและบันทึกความสัมพันธ์กับผู้มาเยือน', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellDebt = true; s.relations.bellMatron = 30; s.relationshipState.bellMatron.lastTouched = s.month; addTreasure(s, 'ระฆังคืนหนี้', { luck: 16, spirit: 12, defense: 10 }, { grade: 'legendary' }); s.hero.karma += 2; addLog('ผู้ดูแลเปิดกล่องและพบระฆังคืนหนี้ ของวิเศษระดับตำนาน ความสัมพันธ์กับหญิงชราแห่งเรือนระฆังเริ่มต้นที่ 30/100', true); } },
+        { text: 'เก็บกล่องไว้โดยไม่เปิด', note: 'ได้รับกล่องปริศนาที่ยังปิดผนึก', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellBoxSealed = true; s.relations.bellMatron = 20; s.relationshipState.bellMatron.lastTouched = s.month; addTreasure(s, 'กล่องเรือนนิรันดร์', { luck: 12, intellect: 12, defense: 8 }, { grade: 'legendary', sealed: true }); addLog('ครอบครัวเก็บกล่องเรือนนิรันดร์ไว้โดยไม่เปิด หญิงชราแห่งเรือนระฆังจดจำการตัดสินใจนี้ ความสัมพันธ์เริ่มต้นที่ 20/100', true); } },
+        { text: 'นำกล่องไปคืนยังเรือนร้าง', note: 'ไม่ได้รับของ เพิ่มกรรมและความสัมพันธ์กับหญิงชรา', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellMatronAwakened = true; s.relations.bellMatron = 40; s.relationshipState.bellMatron.lastTouched = s.month; s.hero.karma += 5; s.hero.reputation += 1; addLog('ครอบครัวนำกล่องกลับคืนเรือนร้าง เสียงระฆังเงียบลง และหญิงชราแห่งเรือนระฆังเริ่มจดจำชื่อของเจ้า ความสัมพันธ์ 40/100', true); } },
+        { text: 'ปล่อยให้กล่องถูกเผาไปพร้อมกับเครื่องเซ่น', note: 'ได้รับเถ้าระฆังไร้เสียงและบันทึกความสัมพันธ์กับหญิงชรา', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellAshWard = true; s.relations.bellMatron = 5; s.relationshipState.bellMatron.lastTouched = s.month; addTreasure(s, 'เถ้าระฆังไร้เสียง', { karma: 10, luck: 8, defense: 8 }, { grade: 'epic', singleUse: true }); s.hero.karma += 1; addLog('กล่องไม้กลายเป็นเถ้าระฆังไร้เสียง หญิงชราแห่งเรือนระฆังไม่พอใจ ความสัมพันธ์เหลือ 5/100', true); } }
       ]
     }
   ];
@@ -8245,7 +8301,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'ในคืนที่ลมหนาวพัดลอดหน้าต่าง ผู้ดูแลพบหยกชิ้นหนึ่งซ่อนอยู่ใต้หมอนของเจ้า ทั้งที่ไม่มีใครนำมันเข้ามา\n\nหยกนั้นอุ่นราวกับเพิ่งถูกถือไว้ในมือ และมีแสงสีเขียวจาง ๆ ไหลอยู่ภายในเนื้อหยก เมื่อเจ้ากำมือรอบมัน อาการไข้ก็ลดลง ราวกับมีใครบางคนฝากคำอวยพรไว้กับเด็กที่ยังพูดไม่ได้',
       choices: [
         { text: 'ให้ผู้ดูแลวางหยกไว้ข้างตัวเจ้า', note: 'รับการคุ้มครองจากหยกและฟื้นสุขภาพ', effect: s => { s.flags.infantWarmJade = true; addTreasure(s, 'หยกอุ่นคุ้มชีพ', { defense: 8, body: 6, luck: 4 }, { grade: 'epic' }); s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 12); addLog('ผู้ดูแลวางหยกอุ่นไว้ข้างตัวเจ้า อาการไข้ลดลงและหยกคุ้มชีพกลายเป็นของวิเศษประจำตัว', true); } },
-        { text: 'ให้ผู้ดูแลนำหยกไปให้หมอตรวจ', note: 'ได้ความรู้และเปิดทางให้พบผู้เชี่ยวชาญในภายหลัง', effect: s => { s.flags.infantWarmJade = true; s.flags.jadeExamined = true; s.hero.attributes.intellect += 2; s.hero.attributes.spirit += 2; s.hero.reputation += 1; addTreasure(s, 'เศษหยกเขียวจากห้องตรวจ', { intellect: 6, spirit: 5 }, { grade: 'rare' }); addLog('หมอไม่อาจบอกที่มาของหยก แต่บันทึกเส้นแสงภายในมันไว้ ทำให้ครอบครัวรู้จักผู้เชี่ยวชาญคนหนึ่ง', true); } },
+        { text: 'ให้ผู้ดูแลนำหยกไปให้หมอตรวจ', note: 'ได้ความรู้และเศษหยกจากห้องตรวจ', effect: s => { s.flags.infantWarmJade = true; s.flags.jadeExamined = true; s.hero.attributes.intellect += 2; s.hero.attributes.spirit += 2; s.hero.reputation += 1; addTreasure(s, 'เศษหยกเขียวจากห้องตรวจ', { intellect: 6, spirit: 5 }, { grade: 'rare' }); addLog('หมอไม่อาจบอกที่มาของหยก แต่บันทึกเส้นแสงภายในมันไว้ ทำให้ครอบครัวรู้จักผู้เชี่ยวชาญคนหนึ่ง', true); } },
         { text: 'ฝังหยกไว้ใต้ต้นไม้หน้าบ้าน', note: 'ไม่รับของวิเศษ แต่ฝากความอุ่นไว้กับผืนดิน', effect: s => { s.flags.infantWarmJade = true; s.hero.karma += 2; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 5); s.materials.herb += 1; addLog('หยกถูกฝังใต้ต้นไม้และทำให้ดินรอบรากอุ่นขึ้น สมุนไพรต้นแรกจึงงอกขึ้นในเช้าวันต่อมา', true); } }
       ]
     },
@@ -8267,7 +8323,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'ฝนตกหนักจนหลังคาสั่นสะเทือน ทว่าเสียงหัวเราะของเจ้ากลับดังขึ้นท่ามกลางเสียงฟ้าร้อง ราวกับได้ยินเรื่องสนุกจากผู้ที่ไม่มีใครมองเห็น\n\nเงาเล็ก ๆ เคลื่อนผ่านผนังห้องสามครั้ง ก่อนหยุดลงข้างเปลและวางกระดิ่งแก้วไว้บนพื้น เมื่อกระดิ่งดังขึ้น ฝนทั้งหมู่บ้านก็หยุดลงชั่วขณะ และความเงียบที่ตามมาทำให้ผู้ใหญ่ไม่มีใครกล้าหลับต่อ',
       choices: [
         { text: 'แขวนกระดิ่งไว้เหนือเปล', note: 'ได้ของวิเศษที่ช่วยเสริมโชคและจิตใจ', effect: s => { s.flags.infantRainLaugh = true; addTreasure(s, 'กระดิ่งฝนใส', { luck: 10, spirit: 6, defense: 5 }, { grade: 'epic' }); s.hero.attributes.luck += 3; addLog('กระดิ่งฝนใสถูกแขวนไว้เหนือเปล เสียงของมันทำให้ฝนไม่เคยตกหนักจนเจ้าหลับไม่ลงอีก', true); } },
-        { text: 'ให้ผู้ดูแลนำกระดิ่งไปเก็บในหีบ', note: 'เก็บความลับไว้ แต่ลดโอกาสที่สิ่งลึกลับจะกลับมา', effect: s => { s.flags.infantRainLaugh = true; s.flags.rainBellStored = true; s.hero.attributes.spirit += 2; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 6); addLog('กระดิ่งถูกเก็บในหีบเก่า เสียงหัวเราะที่ไม่มีที่มาหายไป แต่ความสงบก็กลับคืนสู่เรือน', true); } },
+        { text: 'ให้ผู้ดูแลนำกระดิ่งไปเก็บในหีบ', note: 'เก็บกระดิ่งไว้ เพิ่มจิตใจและฟื้นสุขภาพ', effect: s => { s.flags.infantRainLaugh = true; s.flags.rainBellStored = true; s.hero.attributes.spirit += 2; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 6); addLog('กระดิ่งถูกเก็บในหีบเก่า เสียงหัวเราะที่ไม่มีที่มาหายไป แต่ความสงบก็กลับคืนสู่เรือน', true); } },
         { text: 'หัวเราะตอบเสียงที่อยู่นอกหน้าต่าง', note: 'เสี่ยงต่อสิ่งที่มองไม่เห็น แต่ได้ Karma และหยั่งรู้เพิ่ม', effect: s => { s.flags.infantRainLaugh = true; s.flags.heardRainVisitor = true; s.hero.karma += 3; s.hero.attributes.intellect += 2; s.hero.attributes.spirit += 3; addLog('เสียงหัวเราะของเจ้าตอบกลับไปยังความมืด เงานั้นจึงเลือนหายพร้อมทิ้งความรู้สึกว่ามีใครจดจำเจ้าไว้', true); } }
       ]
     },
@@ -8277,9 +8333,9 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       tag: 'มหากาพย์ · วัยทารก', art: 'star-forge', title: 'เศษดาวจากเตาหลอม',
       text: 'ช่างตีเหล็กพบโลหะสีดำชิ้นหนึ่งตกอยู่กลางลานบ้าน หลังจากดาวตกพาดผ่านท้องฟ้าเมื่อคืนก่อน\n\nแม้ถูกโยนลงในเตาหลอมหลายครั้ง มันกลับไม่ละลาย แต่กลับส่งเสียงคล้ายเด็กหัวเราะทุกครั้งที่เจ้าอยู่ใกล้\n\nช่างจึงเก็บมันไว้ให้ครอบครัว พร้อมกล่าวว่าโลหะชิ้นนี้อาจกลายเป็นอาวุธหรือเครื่องรางของเจ้าในวันที่เติบโตพอ',
       choices: [
-        { text: 'ฝากช่างตีเหล็กเก็บรักษาไว้', note: 'ได้เศษโลหะหายากสำหรับคราฟต์ในอนาคต', effect: s => { s.flags.infantStarFragment = true; s.materials.iron += 3; s.materials.spiritStone += 1; addTreasure(s, 'เศษเหล็กจากฟ้า', { attack: 10, defense: 8 }, { grade: 'epic', craftingMaterial: true }); s.hero.attributes.body += 2; addLog('ช่างตีเหล็กเก็บเศษเหล็กจากฟ้าไว้ให้เจ้า โลหะนี้ยังรอวันที่จะถูกตีขึ้นเป็นของคู่กาย', true); } },
+        { text: 'ฝากช่างตีเหล็กเก็บรักษาไว้', note: 'ได้เหล็ก หินปราณ และเศษเหล็กจากฟ้า', effect: s => { s.flags.infantStarFragment = true; s.materials.iron += 3; s.materials.spiritStone += 1; addTreasure(s, 'เศษเหล็กจากฟ้า', { attack: 10, defense: 8 }, { grade: 'epic', craftingMaterial: true }); s.hero.attributes.body += 2; addLog('ช่างตีเหล็กเก็บเศษเหล็กจากฟ้าไว้ให้เจ้า โลหะนี้ยังรอวันที่จะถูกตีขึ้นเป็นของคู่กาย', true); } },
         { text: 'ให้ช่างขึ้นรูปเป็นของเล่นชิ้นเล็ก', note: 'ได้ของวิเศษที่ช่วยเพิ่มกายและความกล้า', effect: s => { s.flags.infantStarFragment = true; addTreasure(s, 'ลูกข่างเหล็กจากดาว', { body: 8, luck: 5, defense: 6 }, { grade: 'epic' }); s.hero.attributes.body += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8); addLog('เศษดาวถูกตีเป็นลูกข่างเหล็ก แม้หมุนช้า แต่ไม่เคยล้มลงแม้ถูกผลักด้วยแรงใด', true); } },
-        { text: 'นำโลหะไปคืนจุดที่ดาวตก', note: 'เสียไอเทม แต่ได้ Karma และเบาะแสของสถานที่ลับ', effect: s => { s.flags.infantStarFragment = true; s.flags.starfallSiteKnown = true; s.hero.karma += 4; s.hero.attributes.intellect += 2; s.hero.reputation += 1; addLog('ครอบครัวนำเศษดาวกลับไปยังจุดที่มันตกลงมา ดินตรงนั้นยังอุ่น และมีรอยแร่ประหลาดซ่อนอยู่ใต้ดิน', true); } }
+        { text: 'นำโลหะไปคืนจุดที่ดาวตก', note: 'นำเศษดาวกลับไป เพิ่มกรรม ปัญญา และชื่อเสียง', effect: s => { s.flags.infantStarFragment = true; s.flags.starfallSiteKnown = true; s.hero.karma += 4; s.hero.attributes.intellect += 2; s.hero.reputation += 1; addLog('ครอบครัวนำเศษดาวกลับไปยังจุดที่มันตกลงมา ดินตรงนั้นยังอุ่น และมีรอยแร่ประหลาดซ่อนอยู่ใต้ดิน', true); } }
       ]
     },
     {
@@ -8290,7 +8346,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: [
         { text: 'ดื่มยาที่ผู้ดูแลปรุงต่อจนหมด', note: 'เสี่ยงกับยาที่ไม่สมบูรณ์ แต่เพิ่มสุขภาพสูงสุด', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 10); s.hero.maxHealth += 5; s.hero.attributes.body += 3; addTreasure(s, 'เม็ดยาเกล็ดหิมะ', { body: 8, health: 5 }, { grade: 'rare', consumable: true }); addLog('ยาสามัญที่รวมกันอย่างสิ้นหวังช่วยให้เจ้ารอด และร่างกายจดจำคืนไข้หิมะไว้เป็นภูมิคุ้มกัน', true); } },
         { text: 'หยุดยาและใช้ความอบอุ่นของครอบครัวรักษาเจ้า', note: 'ปลอดภัยกว่า และเพิ่มความผูกพันกับครอบครัว', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 6); s.relations.parents += 5; s.relations.relatives += 2; s.hero.attributes.spirit += 2; addLog('อ้อมแขนของครอบครัวช่วยพาเจอผ่านคืนหิมะ ความทรงจำเรื่องการถูกปกป้องฝังแน่นอยู่ในจิตใจ', true); } },
-        { text: 'เก็บหยดแสงสีทองไว้ในขวดหยก', note: 'ได้ไอเทมพิเศษ แต่การฟื้นตัวของเจ้าช้าลง', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.max(1, s.hero.health - 4); addTreasure(s, 'หยดแสงจากไข้หิมะ', { spirit: 10, luck: 6, defense: 6 }, { grade: 'epic', sealed: true }); s.hero.attributes.spirit += 4; addLog('หยดแสงสีทองถูกเก็บในขวดหยก กลายเป็นของวิเศษที่ยังเต้นเบา ๆ เมื่อเจ้าหลับ', true); } }
+        { text: 'เก็บหยดแสงสีทองไว้ในขวดหยก', note: 'ได้ไอเทมพิเศษและปรับค่าสถานะตามผลที่แสดง', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.max(1, s.hero.health - 4); addTreasure(s, 'หยดแสงจากไข้หิมะ', { spirit: 10, luck: 6, defense: 6 }, { grade: 'epic', sealed: true }); s.hero.attributes.spirit += 4; addLog('หยดแสงสีทองถูกเก็บในขวดหยก กลายเป็นของวิเศษที่ยังเต้นเบา ๆ เมื่อเจ้าหลับ', true); } }
       ]
     },
     {
@@ -8301,7 +8357,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: [
         { text: 'เก็บน้ำในอ่างไว้ในขวด', note: 'ได้ของวิเศษที่ช่วยเสริมการพักฟื้นและจิตใจ', effect: s => { s.flags.infantMoonShadow = true; addTreasure(s, 'น้ำค้างเงาจันทร์', { spirit: 8, restHealth: 6, luck: 6 }, { grade: 'epic', sealed: true }); s.hero.attributes.spirit += 2; addLog('น้ำในอ่างถูกเก็บไว้ในขวดหยก ประกายจันทร์ยังคงลอยอยู่ข้างในจนถึงรุ่งเช้า', true); } },
         { text: 'ปล่อยให้น้ำไหลกลับลงดิน', note: 'ไม่ได้รับไอเทม แต่เพิ่ม Karma และสุขภาพ', effect: s => { s.flags.infantMoonShadow = true; s.hero.karma += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 7); s.hero.attributes.luck += 2; addLog('ครอบครัวปล่อยเงาจันทร์กลับคืนสู่ผืนดิน น้ำค้างสีเงินจึงเกาะตามใบไม้ทั่วเรือน', true); } },
-        { text: 'ยื่นมือแตะประกายบนผิวน้ำอีกครั้ง', note: 'เสี่ยงต่อพลังที่ไม่เข้าใจ แต่เพิ่มความหยั่งรู้และได้ไอเทม', effect: s => { s.flags.infantMoonShadow = true; s.flags.moonShadowTouched = true; s.hero.attributes.intellect += 3; s.hero.attributes.spirit += 3; addTreasure(s, 'ประกายจันทร์ติดนิ้ว', { intellect: 8, spirit: 8, luck: 5 }, { grade: 'rare' }); addLog('ประกายจันทร์แตะปลายนิ้วของเจ้าอีกครั้ง ก่อนซึมเข้าไปในผิวหนังและทิ้งความเย็นไว้ในชีพจร', true); } }
+        { text: 'ยื่นมือแตะประกายบนผิวน้ำอีกครั้ง', note: 'เพิ่มปัญญา จิตใจ และได้รับประกายจันทร์ติดนิ้ว', effect: s => { s.flags.infantMoonShadow = true; s.flags.moonShadowTouched = true; s.hero.attributes.intellect += 3; s.hero.attributes.spirit += 3; addTreasure(s, 'ประกายจันทร์ติดนิ้ว', { intellect: 8, spirit: 8, luck: 5 }, { grade: 'rare' }); addLog('ประกายจันทร์แตะปลายนิ้วของเจ้าอีกครั้ง ก่อนซึมเข้าไปในผิวหนังและทิ้งความเย็นไว้ในชีพจร', true); } }
       ]
     }
   ];
@@ -9479,7 +9535,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       return false;
     }
     state.pendingEvent = id; state.paused = true; render();
-    const eventRarity = event.rarity ? EVENT_RARITIES[event.rarity] : null;
+    const eventRarity = event.rarity ? EVENT_RARITIES[event.rarity === 'rare' ? 'extraordinary' : event.rarity] : null;
     const eventTag = $('event-tag');
     if (eventTag) {
       eventTag.textContent = event.rarity ? `${rarityLabel(event.rarity)} · ${event.tag || 'เหตุการณ์ระหว่างทาง'}` : (event.tag || 'เหตุการณ์ระหว่างทาง');
@@ -10077,7 +10133,9 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       death_early: {
         seal: '塵', title: 'เถ้าถ่านที่ไร้ชื่อ',
         quote: '“ในโลกยุทธภพอันกว้างใหญ่ มีเด็กกี่หมื่นคนที่ตายข้างทางก่อนจะได้ยินเสียงระฆังสำนัก”',
-        story: `ร่างของเด็กน้อยหยุดหายใจในตรอกมืด ${extra.cause ? `เพราะ ${extra.cause}` : 'ก่อนจะได้เติบโตเป็นผู้ฝึกตน'} สายเลือดตระกูลหลินดับสูญอย่างเงียบงันโดยไม่มีผู้ใดจดจำ ไม่มีใครรู้ว่าเขาเคยมีชื่อ หรือเคยมีป้ายหยกของตระกูลใหญ่ในอดีต ชะตานี้จบลงก่อนที่เรื่องราวยุทธภพจะเริ่มต้นเสียด้วยซ้ำ`
+        story: state.mode === 'story' && state.characterId === 'lin-an'
+          ? `ร่างของเด็กน้อยหยุดหายใจ ${extra.cause ? `เพราะ ${extra.cause}` : 'ก่อนจะได้เติบโตเป็นผู้ฝึกตน'} สายเลือดตระกูลหลินดับสูญอย่างเงียบงัน ชะตานี้จบลงก่อนที่เรื่องราวยุทธภพจะเริ่มต้น`
+          : `${state.hero.name} จากไปในวัยเยาว์ ${extra.cause ? `เพราะ ${extra.cause}` : 'ก่อนจะได้เติบโต'} เรื่องราวชีวิตนี้จบลง แต่ความทรงจำของผู้ที่เคยพบพานยังคงอยู่`
       },
       death_battle: {
         seal: '戰', title: 'เถ้ากระดูกหน้ากำแพง',
@@ -10159,8 +10217,12 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     $('rarity-pct').textContent = `(ความน่าจะเป็น ~${rarity.pct}) · ${rarity.category}`;
 
     const simulationText = extra.simulationResult ? `\n\nผลจำลองอนาคต\nบทบาทที่เหมาะสม: ${extra.simulationResult.role}\nจำลองต่ออีก ${extra.simulationResult.horizonMonths} เดือน · โอกาสสำเร็จ ${extra.simulationResult.success}%\nรางวัล: ปราณ +${extra.simulationResult.rewards.cultivation} · เงิน +${extra.simulationResult.rewards.money} · ความหยั่งรู้ +${extra.simulationResult.rewards.insight}` : '';
-    const storyLead = characterStory ? e.story : `${e.story}\n\n${rootEndingNarrative(type)}`;
-    $('ending-story').textContent = `${storyLead}\n\nร่องรอยตลอดสิบสองปี:\n• ${echoes.join('\n• ')}\n\nแนวทางที่เด่นที่สุดของชีวิตนี้คือ “${pathNames[dominant[0]]}” (${dominant[1]}) จากการตัดสินใจสำคัญ ${Object.keys(state.choices || {}).length} ครั้ง${extra.battleScore ? ` · กำลังรบรวมวันศึก ${extra.battleScore.toLocaleString()}` : ''}${simulationText}`;
+    const freeDeath = state.mode === 'free' && type.startsWith('death');
+    const storyLead = freeDeath && type !== 'death_early'
+      ? `${state.hero.name} สิ้นลมหายใจ${extra.cause ? `: ${extra.cause}` : 'หลังผ่านเรื่องราวมากมายในยุทธภพ'} ความทรงจำของชีวิตนี้ยังคงอยู่กับผู้ที่เคยพบพาน`
+      : characterStory || state.mode === 'free' ? e.story : `${e.story}\n\n${rootEndingNarrative(type)}`;
+    const storyEchoes = state.mode === 'story' ? `\n\nร่องรอยจากการตัดสินใจ:\n• ${echoes.join('\n• ')}` : '';
+    $('ending-story').textContent = `${storyLead}${storyEchoes}\n\nแนวทางที่เด่นที่สุดของชีวิตนี้คือ “${pathNames[dominant[0]]}” (${dominant[1]}) จากการตัดสินใจสำคัญ ${Object.keys(state.choices || {}).length} ครั้ง${extra.battleScore ? ` · กำลังรบรวมวันศึก ${extra.battleScore.toLocaleString()}` : ''}${simulationText}`;
     $('ending-stats').innerHTML = `<div><small>อายุ</small><b>${formatAge(state.hero.ageMonths)}</b></div><div><small>ขั้นบำเพ็ญ</small><b>${realmName(state.hero)}</b></div><div><small>รากวิญญาณ</small><b>${state.hero.rootKnown ? (ROOTS[state.hero.root]?.name || 'ไม่ทราบ') : 'ยังไม่เปิดเผย'}</b></div><div><small>พลังรวม</small><b>${state.hero.power.toLocaleString()}</b></div><div><small>โจมตี / ป้องกัน</small><b>${combat.attack} / ${combat.defense}</b></div><div><small>กาย / ว่องไว</small><b>${combat.body} / ${combat.agility}</b></div><div><small>ชื่อเสียง</small><b>${state.hero.reputation}</b></div><div><small>แนวทางเด่น</small><b>${pathNames[dominant[0]]}</b></div>`;
     const lineage = state.lineageState;
     const simulationReward = extra.simulationResult?.rewards;
@@ -10674,7 +10736,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     const select = $('rest-location-select'); const locations = getAvailableLocations(state, 'rest');
     const key = restLocationKey(state); select.innerHTML = locations.map(location => `<option value="${location.id}">${location.name} · ปลอดภัย ${location.safety}% · ฟื้น ${location.rest.health}/${location.rest.qi}</option>`).join(''); select.value = key;
     const route = restRoute(state); const longRest = state.locations.longRest;
-    $('rest-location-meta').textContent = `${route.location} · ความเสี่ยง ${100 - route.safety}% · ฟื้นจริง สุขภาพ +${route.heal} / ปราณ +${route.qi}${longRest ? ` · พักยาวเหลือ ${longRest.monthsLeft} เดือน` : ''}`;
+    $('rest-location-meta').textContent = `${route.location} · โอกาสตรวจเหตุเสี่ยงขณะพัก ${100 - route.safety}% (จะเกิดเหตุเมื่อมีเหตุที่เข้าเงื่อนไข) · ฟื้นจริง สุขภาพ +${route.heal} / ปราณ +${route.qi}${longRest ? ` · พักยาวเหลือ ${longRest.monthsLeft} เดือน` : ''}`;
     const innButton = $('rent-inn-btn'); if (innButton) { innButton.hidden = state.locations.owned.includes('inn') || state.hero.money < (LOCATION_DEFS.inn.cost || 0); innButton.textContent = `เช่าโรงเตี๊ยม ${LOCATION_DEFS.inn.cost} ตำลึง`; }
     $('auto-rest-rule-select').value = state.autoRestRule.enabled ? String(state.autoRestRule.threshold) : 'off';
     const autoMedSelect = $('auto-medicine-rule-select');
@@ -10833,7 +10895,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       }
       return Math.abs(score) > 0 || !!knownFlags[id] || ['parents', 'relatives'].includes(id);
     }).map(([id, name, glyph]) => [id, name, glyph, id === 'master' ? masterStatus : relationWord(state.relations[id] || 0)]);
-    $('relations-list').innerHTML = data.map(([id, name, g, status]) => `<div class="relation"><span class="npc-avatar">${g}</span><div><strong>${name}</strong><small>${memory[id].category} · ${memory[id].trait}</small><small>เป้าหมาย: ${memory[id].goal} · สถานะ: ${memory[id].status}</small><small>ความสัมพันธ์ ${clamp(state.relations[id] || 0, -100, 100)}/100 · ไว้วางใจ ${clamp(memory[id].trust, -100, 100)} · เข้ากันได้ ${relationshipCompatibility(state, id)}%</small></div><b class="${status === 'เจ็บเรื้อรัง' ? 'negative' : ''}">${status}</b></div>`).join('');
+    $('relations-list').innerHTML = data.map(([id, name, g, status]) => { const relationStatus = id === 'parents' && state.mode === 'free' && (state.hero.ageMonths || 0) < 24 && memory[id].status === 'ห่างเหิน' ? 'อยู่ในความดูแล' : memory[id].status; return `<div class="relation"><span class="npc-avatar">${g}</span><div><strong>${name}</strong><small>${memory[id].category} · ${memory[id].trait}</small><small>เป้าหมาย: ${memory[id].goal} · สถานะ: ${relationStatus}</small><small>ความสัมพันธ์ ${clamp(state.relations[id] || 0, -100, 100)}/100 · ไว้วางใจ ${clamp(memory[id].trust, -100, 100)} · เข้ากันได้ ${relationshipCompatibility(state, id)}%</small></div><b class="${status === 'เจ็บเรื้อรัง' ? 'negative' : ''}">${status}</b></div>`; }).join('');
     const f = updateFactionReputation(state), names = { sect: ['สำนักเมฆาคราม', '雲'], serpent: ['พรรคงูดำ', '蛇'], jianghu: ['ยุทธภพ', '俠'] };
     $('factions-list').innerHTML = Object.entries(names).map(([id, [name, g]]) => `<div class="faction"><span>${g}</span><div><strong>${name}</strong><small>${reputationWord(f[id])}</small></div><b class="${f[id] < 0 ? 'negative' : 'positive'}">${f[id] >= 0 ? '+' : ''}${f[id]}</b></div>`).join('');
   }
@@ -11694,7 +11756,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   function showScreen(id) { ['auth-screen', 'mode-screen', 'title-screen', 'setup-screen', 'game-screen', 'summary-screen'].forEach(x => $(x).hidden = x !== id); }
   function toast(msg) { $('toast').textContent = msg; $('toast').classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2300); }
   function weather() { return pick(['เช้าอากาศแจ่มใส', 'หมอกบางคลุมยอดเขา', 'ลมเหนือพัดแรง', 'ฝนปรอยเหนือชายคา']); }
-  function formatAge(m) { return `${Math.floor(m / 12)} ปี ${m % 12 ? `${m % 12} เดือน` : ''}`.trim(); }
+  function formatAge(m) { if (m < 12) return m > 0 ? `${m} เดือน` : 'แรกเกิด'; return `${Math.floor(m / 12)} ปี ${m % 12 ? `${m % 12} เดือน` : ''}`.trim(); }
   function relationWord(n) { return n >= 35 ? 'ผูกพัน' : n >= 15 ? 'ไว้วางใจ' : n > 0 ? 'รู้จัก' : n === 0 ? 'ไม่รู้จัก' : n >= -15 ? 'ห่างเหิน' : 'บาดหมาง'; }
   function reputationWord(n) { return n >= 35 ? 'ยกย่อง' : n >= 15 ? 'เป็นมิตร' : n >= 0 ? 'เป็นกลาง' : n >= -15 ? 'ระแวง' : 'เป็นศัตรู'; }
 

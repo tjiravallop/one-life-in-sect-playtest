@@ -507,3 +507,17 @@ html,body{max-width:100%;overflow-x:hidden}
 }
 
 .technique-description{margin:5px 0;color:#50483c;font-size:.76rem;line-height:1.55;overflow-wrap:anywhere}
+
+/* Keep the game controls and event choices reachable on narrow screens. */
+@media (max-width: 760px) {
+  .topbar { height: auto; min-height: 58px; padding: 7px 10px; gap: 6px; flex-wrap: wrap; overflow: visible; }
+  .brand-mini { min-width: 0; flex: 1 1 auto; }
+  .topbar-clock { display: flex; order: 2; flex: 1 1 100%; white-space: normal; }
+  .menu-btn { order: 1; flex: 0 0 auto; }
+  .time-controls { order: 3; flex: 1 1 100%; margin: 0; flex-wrap: wrap; min-width: 0; }
+  .time-controls .grow-phase-btn { flex: 1 1 auto; min-width: 0; }
+  .modal-backdrop { padding: 8px; box-sizing: border-box; }
+  .event-modal { width: 100%; max-width: 100%; max-height: calc(100dvh - 16px); box-sizing: border-box; grid-template-columns: minmax(0, 1fr); }
+  .event-body, .event-choices, .choice-btn { min-width: 0; max-width: 100%; box-sizing: border-box; overflow-wrap: anywhere; }
+  .choice-btn { grid-template-columns: 28px minmax(0, 1fr); }
+}
