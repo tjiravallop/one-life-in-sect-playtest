@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@400;500;600;700&family=Sriracha&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=scene-character-1" />
+  <link rel="stylesheet" href="styles.css?v=inventory-readable-1" />
 </head>
 <body>
   <div id="app">
@@ -216,7 +216,7 @@
             <details id="secondary-attributes-details" class="secondary-attributes-details">
               <summary class="secondary-attributes-summary">✦ คุณสมบัติแฝง & สถิติพื้นฐาน (กดเพื่อดู)</summary>
               <div class="core-attributes">
-                <div><span>กาย</span><b id="attr-body-stat">10</b></div>
+                <div><span>พละกำลัง</span><b id="attr-body-stat">10</b></div>
                 <div><span>ปัญญา</span><b id="attr-intellect-stat">10</b></div>
                 <div><span>จิตใจ</span><b id="attr-spirit-stat">10</b></div>
                 <div><span>เสน่ห์</span><b id="attr-charm-stat">10</b></div>
@@ -334,11 +334,19 @@
             <div id="training-selection" class="training-selection"></div>
             <small id="training-selection-note" class="training-selection-note">ไม่เลือก = สุ่มฝึก 1 วิชาที่มี</small>
             <div id="technique-loadout-status" class="loadout-panel"></div>
+            <h3 class="inventory-section-heading">วิชาที่เรียนรู้แล้ว</h3>
             <div id="techniques-list" class="techniques-list"></div>
           </section>
           <section class="panel treasures-panel" data-tab-panel="items" hidden>
             <div class="section-title compact"><div><small>สมบัติและอาวุธ</small><h2>ของวิเศษ</h2></div></div>
             <div id="item-loadout-status" class="item-loadout-status"></div>
+            <h3 class="inventory-section-heading">คลังไอเท็มและคัมภีร์</h3>
+            <div class="inventory-filters" aria-label="ตัวกรองคลังไอเท็ม">
+              <label>ประเภท<select id="item-filter-type"><option value="all">ทุกประเภท</option><option value="equipment">อุปกรณ์สวมใส่</option><option value="manual">คัมภีร์</option><option value="relic">สมบัติและของสำคัญ</option><option value="material">วัตถุดิบ</option></select></label>
+              <label>เกรด<select id="item-filter-grade"><option value="all">ทุกเกรด</option><option value="common">สามัญ</option><option value="uncommon">ชั้นดี</option><option value="rare">หายาก</option><option value="epic">มหากาพย์</option><option value="legendary">ตำนาน</option></select></label>
+              <label>ขั้นต่ำ<select id="item-filter-realm"><option value="all">ทุกขั้น</option><option value="0">ฝึกพื้นฐานร่างกาย</option><option value="1">หลอมกาย</option><option value="2">รวบรวมวิญญาณ</option><option value="3">ควบแน่นวิญญาณ</option><option value="4">สร้างรากฐาน</option><option value="other">ขั้นอื่น / ไม่กำหนด</option></select></label>
+            </div>
+            <p class="inventory-help">คัมภีร์ใช้เรียนรู้วิชา ส่วนวิชาที่เรียนแล้วอยู่ในแท็บวิชา · ยาและของใช้สิ้นเปลืองอยู่ด้านล่าง</p>
             <div id="treasures-list" class="techniques-list"></div>
           </section>
           <section class="panel crafting-panel" data-tab-panel="items" hidden>
@@ -492,6 +500,6 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </div>
-  <script src="app.js?v=event-choices-18"></script>
+  <script src="app.js?v=inventory-item-identity-1"></script>
 </body>
 </html>

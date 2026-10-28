@@ -1,0 +1,72 @@
+[
+  {
+    "count": 1,
+    "power": 120,
+    "itemLoadoutMode": true,
+    "itemLoadout": {
+      "weapon": null,
+      "armor": null,
+      "boots": null,
+      "ring1": null,
+      "ring2": null,
+      "necklace": null,
+      "mount": null
+    }
+  },
+  {
+    "count": 2,
+    "power": 150,
+    "itemLoadoutMode": true,
+    "itemLoadout": {
+      "weapon": null,
+      "armor": null,
+      "boots": null,
+      "ring1": null,
+      "ring2": null,
+      "necklace": null,
+      "mount": null
+    }
+  },
+  {
+    "count": 3,
+    "power": 180,
+    "itemLoadoutMode": true,
+    "itemLoadout": {
+      "weapon": null,
+      "armor": null,
+      "boots": null,
+      "ring1": null,
+      "ring2": null,
+      "necklace": null,
+      "mount": null
+    }
+  },
+  {
+    "count": 4,
+    "power": 210,
+    "itemLoadoutMode": true,
+    "itemLoadout": {
+      "weapon": null,
+      "armor": null,
+      "boots": null,
+      "ring1": null,
+      "ring2": null,
+      "necklace": null,
+      "mount": null
+    }
+  },
+  {
+    "count": 5,
+    "power": 240,
+    "itemLoadoutMode": true,
+    "itemLoadout": {
+      "weapon": null,
+      "armor": null,
+      "boots": null,
+      "ring1": null,
+      "ring2": null,
+      "necklace": null,
+      "mount": null
+    }
+  }
+]

@@ -1,0 +1,3374 @@
+[
+  {
+    "id": "basic_pill",
+    "row": "ยาฟื้นปราณพื้นฐานใช้พักฟื้นแล้วฟื้นสุขภาพเพิ่มวัตถุดิบ: สมุนไพร 2 · ตำลึง 2พร้อมสร้าง · สำเร็จ 100%รายละเอียดสูตรปรุงยา · ความรู้ 1 · สถานที่ ทุกสถานที่ · อุปกรณ์ ไม่กำหนด · ผู้สอน ไม่กำหนดคุณภาพ 1เลือกสร้างในเดือนนี้",
+    "tests": [
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 999,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 997,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 997,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 995,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 995,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 993,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 993,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 991,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 991,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 989,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 989,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 987,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 987,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 985,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 985,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 983,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 983,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 981,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 981,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 979,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 979,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 977,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 977,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 975,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ยาฟื้นปราณพื้นฐาน",
+          "stats": {
+            "heal": 18
+          },
+          "quality": 1
+        },
+        "sale": "ขายยาฟื้นปราณพื้นฐาน · +2 ตำลึง"
+      }
+    ]
+  },
+  {
+    "id": "iron_charm",
+    "row": "ยันต์เหล็กคุ้มกายป้องกัน +3วัตถุดิบ: แร่เหล็ก 2 · หินปราณ 1 · ตำลึง 0ใช้สิทธิ์สร้าง/ศึกษาของเดือนนี้แล้ว · สำเร็จ 100%รายละเอียดสูตรตีเหล็ก · ความรู้ 1 · สถานที่ บ้านของตนเอง / เรือนตระกูล / ค่ายกลพักฟื้นของสำนัก · อุปกรณ์ เตาตีเหล็ก · ผู้สอน ไม่กำหนดคุณภาพ 4เลือกสร้างในเดือนนี้",
+    "tests": [
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 975,
+            "iron": 999,
+            "spiritStone": 999,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10000,
+          "materials": {
+            "herb": 975,
+            "iron": 997,
+            "spiritStone": 998,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10002,
+          "materials": {
+            "herb": 975,
+            "iron": 997,
+            "spiritStone": 998,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10002,
+          "materials": {
+            "herb": 975,
+            "iron": 995,
+            "spiritStone": 997,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10004,
+          "materials": {
+            "herb": 975,
+            "iron": 995,
+            "spiritStone": 997,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10004,
+          "materials": {
+            "herb": 975,
+            "iron": 993,
+            "spiritStone": 996,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10006,
+          "materials": {
+            "herb": 975,
+            "iron": 993,
+            "spiritStone": 996,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10006,
+          "materials": {
+            "herb": 975,
+            "iron": 991,
+            "spiritStone": 995,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10008,
+          "materials": {
+            "herb": 975,
+            "iron": 991,
+            "spiritStone": 995,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10008,
+          "materials": {
+            "herb": 975,
+            "iron": 989,
+            "spiritStone": 994,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10010,
+          "materials": {
+            "herb": 975,
+            "iron": 989,
+            "spiritStone": 994,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10010,
+          "materials": {
+            "herb": 975,
+            "iron": 987,
+            "spiritStone": 993,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10012,
+          "materials": {
+            "herb": 975,
+            "iron": 987,
+            "spiritStone": 993,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10012,
+          "materials": {
+            "herb": 975,
+            "iron": 985,
+            "spiritStone": 992,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10014,
+          "materials": {
+            "herb": 975,
+            "iron": 985,
+            "spiritStone": 992,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10014,
+          "materials": {
+            "herb": 975,
+            "iron": 983,
+            "spiritStone": 991,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10016,
+          "materials": {
+            "herb": 975,
+            "iron": 983,
+            "spiritStone": 991,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10016,
+          "materials": {
+            "herb": 975,
+            "iron": 981,
+            "spiritStone": 990,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10018,
+          "materials": {
+            "herb": 975,
+            "iron": 981,
+            "spiritStone": 990,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10018,
+          "materials": {
+            "herb": 975,
+            "iron": 979,
+            "spiritStone": 989,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10020,
+          "materials": {
+            "herb": 975,
+            "iron": 979,
+            "spiritStone": 989,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10020,
+          "materials": {
+            "herb": 975,
+            "iron": 977,
+            "spiritStone": 988,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10022,
+          "materials": {
+            "herb": 975,
+            "iron": 977,
+            "spiritStone": 988,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10022,
+          "materials": {
+            "herb": 975,
+            "iron": 975,
+            "spiritStone": 987,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 120,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กคุ้มกาย",
+          "bonus": {
+            "defense": 5
+          }
+        },
+        "sale": "ขายยันต์เหล็กคุ้มกาย · +2 ตำลึง"
+      }
+    ]
+  },
+  {
+    "id": "spirit_pill",
+    "row": "โอสถรวมปราณฝึกปราณ +10% เป็นเวลา 3 ครั้งที่ฝึก (คุณภาพสูงเพิ่มผลอีก 2% ต่อระดับ)วัตถุดิบ: สมุนไพร 3 · หินปราณ 2 · ตำลึง 5ใช้สิทธิ์สร้าง/ศึกษาของเดือนนี้แล้ว · สำเร็จ 94%รายละเอียดสูตรปรุงยา · ความรู้ 2 · สถานที่ ทุกสถานที่ · อุปกรณ์ ไม่กำหนด · ผู้สอน เหวินจงคุณภาพ 1เลือกสร้างในเดือนนี้",
+    "tests": [
+      {
+        "ok": true,
+        "before": {
+          "money": 10024,
+          "materials": {
+            "herb": 975,
+            "iron": 975,
+            "spiritStone": 987,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10019,
+          "materials": {
+            "herb": 972,
+            "iron": 975,
+            "spiritStone": 985,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10021,
+          "materials": {
+            "herb": 972,
+            "iron": 975,
+            "spiritStone": 985,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10016,
+          "materials": {
+            "herb": 969,
+            "iron": 975,
+            "spiritStone": 983,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10018,
+          "materials": {
+            "herb": 969,
+            "iron": 975,
+            "spiritStone": 983,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10013,
+          "materials": {
+            "herb": 966,
+            "iron": 975,
+            "spiritStone": 981,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10015,
+          "materials": {
+            "herb": 966,
+            "iron": 975,
+            "spiritStone": 981,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10010,
+          "materials": {
+            "herb": 963,
+            "iron": 975,
+            "spiritStone": 979,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10012,
+          "materials": {
+            "herb": 963,
+            "iron": 975,
+            "spiritStone": 979,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10007,
+          "materials": {
+            "herb": 960,
+            "iron": 975,
+            "spiritStone": 977,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10009,
+          "materials": {
+            "herb": 960,
+            "iron": 975,
+            "spiritStone": 977,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10004,
+          "materials": {
+            "herb": 957,
+            "iron": 975,
+            "spiritStone": 975,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10006,
+          "materials": {
+            "herb": 957,
+            "iron": 975,
+            "spiritStone": 975,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10001,
+          "materials": {
+            "herb": 954,
+            "iron": 975,
+            "spiritStone": 973,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10003,
+          "materials": {
+            "herb": 954,
+            "iron": 975,
+            "spiritStone": 973,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9998,
+          "materials": {
+            "herb": 951,
+            "iron": 975,
+            "spiritStone": 971,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10000,
+          "materials": {
+            "herb": 951,
+            "iron": 975,
+            "spiritStone": 971,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9995,
+          "materials": {
+            "herb": 948,
+            "iron": 975,
+            "spiritStone": 969,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 9997,
+          "materials": {
+            "herb": 948,
+            "iron": 975,
+            "spiritStone": 969,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9992,
+          "materials": {
+            "herb": 945,
+            "iron": 975,
+            "spiritStone": 967,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 9994,
+          "materials": {
+            "herb": 945,
+            "iron": 975,
+            "spiritStone": 967,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9989,
+          "materials": {
+            "herb": 942,
+            "iron": 975,
+            "spiritStone": 965,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 9991,
+          "materials": {
+            "herb": 942,
+            "iron": 975,
+            "spiritStone": 965,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9986,
+          "materials": {
+            "herb": 939,
+            "iron": 975,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โอสถรวมปราณ",
+          "stats": {
+            "training": 5
+          },
+          "quality": 1
+        },
+        "sale": "ขายโอสถรวมปราณ · +2 ตำลึง"
+      }
+    ]
+  },
+  {
+    "id": "field_tool",
+    "row": "ชุดเครื่องมือเดินทางสำรวจและสร้างของมีประสิทธิภาพขึ้นวัตถุดิบ: แร่เหล็ก 2 · สมุนไพร 1 · ตำลึง 3ใช้สิทธิ์สร้าง/ศึกษาของเดือนนี้แล้ว · สำเร็จ 100%รายละเอียดสูตรสร้างเครื่องมือ · ความรู้ 1 · สถานที่ บ้านของตนเอง / เรือนตระกูล / ค่ายกลพักฟื้นของสำนัก · อุปกรณ์ โต๊ะช่าง · ผู้สอน ไม่กำหนดคุณภาพ 4เลือกสร้างในเดือนนี้",
+    "tests": [
+      {
+        "ok": true,
+        "before": {
+          "money": 9988,
+          "materials": {
+            "herb": 939,
+            "iron": 975,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9985,
+          "materials": {
+            "herb": 938,
+            "iron": 973,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 9997,
+          "materials": {
+            "herb": 938,
+            "iron": 973,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 9994,
+          "materials": {
+            "herb": 937,
+            "iron": 971,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10006,
+          "materials": {
+            "herb": 937,
+            "iron": 971,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10003,
+          "materials": {
+            "herb": 936,
+            "iron": 969,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10015,
+          "materials": {
+            "herb": 936,
+            "iron": 969,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10012,
+          "materials": {
+            "herb": 935,
+            "iron": 967,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10024,
+          "materials": {
+            "herb": 935,
+            "iron": 967,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10021,
+          "materials": {
+            "herb": 934,
+            "iron": 965,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10033,
+          "materials": {
+            "herb": 934,
+            "iron": 965,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10030,
+          "materials": {
+            "herb": 933,
+            "iron": 963,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10042,
+          "materials": {
+            "herb": 933,
+            "iron": 963,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10039,
+          "materials": {
+            "herb": 932,
+            "iron": 961,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10051,
+          "materials": {
+            "herb": 932,
+            "iron": 961,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10048,
+          "materials": {
+            "herb": 931,
+            "iron": 959,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10060,
+          "materials": {
+            "herb": 931,
+            "iron": 959,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10057,
+          "materials": {
+            "herb": 930,
+            "iron": 957,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10069,
+          "materials": {
+            "herb": 930,
+            "iron": 957,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10066,
+          "materials": {
+            "herb": 929,
+            "iron": 955,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10078,
+          "materials": {
+            "herb": 929,
+            "iron": 955,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10075,
+          "materials": {
+            "herb": 928,
+            "iron": 953,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10087,
+          "materials": {
+            "herb": 928,
+            "iron": 953,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10084,
+          "materials": {
+            "herb": 927,
+            "iron": 951,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดเครื่องมือเดินทาง",
+          "bonus": {
+            "explore": 9,
+            "craftChance": 5
+          }
+        },
+        "sale": "ขายชุดเครื่องมือเดินทาง · +12 ตำลึง"
+      }
+    ]
+  },
+  {
+    "id": "support_kit",
+    "row": "ชุดสนับสนุนภาคสนามพักฟื้นและเดินทางดีขึ้นวัตถุดิบ: สมุนไพร 2 · แร่เหล็ก 1 · ตำลึง 2ใช้สิทธิ์สร้าง/ศึกษาของเดือนนี้แล้ว · สำเร็จ 100%รายละเอียดสูตรของสนับสนุน · ความรู้ 1 · สถานที่ ทุกสถานที่ · อุปกรณ์ ไม่กำหนด · ผู้สอน เฉินหยูคุณภาพ 3เลือกสร้างในเดือนนี้",
+    "tests": [
+      {
+        "ok": true,
+        "before": {
+          "money": 10096,
+          "materials": {
+            "herb": 927,
+            "iron": 951,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10094,
+          "materials": {
+            "herb": 925,
+            "iron": 950,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10099,
+          "materials": {
+            "herb": 925,
+            "iron": 950,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10097,
+          "materials": {
+            "herb": 923,
+            "iron": 949,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10102,
+          "materials": {
+            "herb": 923,
+            "iron": 949,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10100,
+          "materials": {
+            "herb": 921,
+            "iron": 948,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10105,
+          "materials": {
+            "herb": 921,
+            "iron": 948,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10103,
+          "materials": {
+            "herb": 919,
+            "iron": 947,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10108,
+          "materials": {
+            "herb": 919,
+            "iron": 947,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10106,
+          "materials": {
+            "herb": 917,
+            "iron": 946,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10111,
+          "materials": {
+            "herb": 917,
+            "iron": 946,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10109,
+          "materials": {
+            "herb": 915,
+            "iron": 945,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10114,
+          "materials": {
+            "herb": 915,
+            "iron": 945,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10112,
+          "materials": {
+            "herb": 913,
+            "iron": 944,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10117,
+          "materials": {
+            "herb": 913,
+            "iron": 944,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10115,
+          "materials": {
+            "herb": 911,
+            "iron": 943,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10120,
+          "materials": {
+            "herb": 911,
+            "iron": 943,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10118,
+          "materials": {
+            "herb": 909,
+            "iron": 942,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10123,
+          "materials": {
+            "herb": 909,
+            "iron": 942,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10121,
+          "materials": {
+            "herb": 907,
+            "iron": 941,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10126,
+          "materials": {
+            "herb": 907,
+            "iron": 941,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10124,
+          "materials": {
+            "herb": 905,
+            "iron": 940,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10129,
+          "materials": {
+            "herb": 905,
+            "iron": 940,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10127,
+          "materials": {
+            "herb": 903,
+            "iron": 939,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "ชุดสนับสนุนภาคสนาม",
+          "bonus": {
+            "restHealth": 6,
+            "restQi": 6
+          }
+        },
+        "sale": "ขายชุดสนับสนุนภาคสนาม · +5 ตำลึง"
+      }
+    ]
+  },
+  {
+    "id": "travel_sword",
+    "row": "กระบี่เดินทางโจมตี +5 · ว่องไว +1 เมื่อสวมใส่วัตถุดิบ: แร่เหล็ก 3 · ตำลึง 3ใช้สิทธิ์สร้าง/ศึกษาของเดือนนี้แล้ว · สำเร็จ 100%รายละเอียดสูตรตีเหล็ก · ความรู้ 1 · สถานที่ บ้านของตนเอง / เรือนตระกูล / ค่ายกลพักฟื้นของสำนัก · อุปกรณ์ เตาตีเหล็ก · ผู้สอน ไม่กำหนดคุณภาพ 4เลือกสร้างในเดือนนี้",
+    "tests": [
+      {
+        "ok": true,
+        "before": {
+          "money": 10132,
+          "materials": {
+            "herb": 903,
+            "iron": 939,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10129,
+          "materials": {
+            "herb": 903,
+            "iron": 936,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10134,
+          "materials": {
+            "herb": 903,
+            "iron": 936,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10131,
+          "materials": {
+            "herb": 903,
+            "iron": 933,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10136,
+          "materials": {
+            "herb": 903,
+            "iron": 933,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10133,
+          "materials": {
+            "herb": 903,
+            "iron": 930,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10138,
+          "materials": {
+            "herb": 903,
+            "iron": 930,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10135,
+          "materials": {
+            "herb": 903,
+            "iron": 927,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10140,
+          "materials": {
+            "herb": 903,
+            "iron": 927,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10137,
+          "materials": {
+            "herb": 903,
+            "iron": 924,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10142,
+          "materials": {
+            "herb": 903,
+            "iron": 924,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10139,
+          "materials": {
+            "herb": 903,
+            "iron": 921,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10144,
+          "materials": {
+            "herb": 903,
+            "iron": 921,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10141,
+          "materials": {
+            "herb": 903,
+            "iron": 918,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10146,
+          "materials": {
+            "herb": 903,
+            "iron": 918,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10143,
+          "materials": {
+            "herb": 903,
+            "iron": 915,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10148,
+          "materials": {
+            "herb": 903,
+            "iron": 915,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10145,
+          "materials": {
+            "herb": 903,
+            "iron": 912,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10150,
+          "materials": {
+            "herb": 903,
+            "iron": 912,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10147,
+          "materials": {
+            "herb": 903,
+            "iron": 909,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10152,
+          "materials": {
+            "herb": 903,
+            "iron": 909,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10149,
+          "materials": {
+            "herb": 903,
+            "iron": 906,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10154,
+          "materials": {
+            "herb": 903,
+            "iron": 906,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10151,
+          "materials": {
+            "herb": 903,
+            "iron": 903,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "กระบี่เดินทาง",
+          "bonus": {
+            "attack": 5,
+            "agility": 1
+          }
+        },
+        "sale": "ขายกระบี่เดินทาง · +5 ตำลึง"
+      }
+    ]
+  },
+  {
+    "id": "refined_iron_charm",
+    "row": "ยันต์เหล็กชั้นดีเครื่องรางป้องกันวัตถุดิบ: แร่เหล็ก 2 · หินปราณ 1 · ตำลึง 3 · แร่เหล็ก ชั้นดี 1ใช้สิทธิ์สร้าง/ศึกษาของเดือนนี้แล้ว · สำเร็จ 100%รายละเอียดสูตรตีเหล็ก · ความรู้ 2 · สถานที่ บ้านของตนเอง / เรือนตระกูล / ค่ายกลพักฟื้นของสำนัก · อุปกรณ์ เตาตีเหล็ก · ผู้สอน ไม่กำหนดคุณภาพ 4เลือกสร้างในเดือนนี้",
+    "tests": [
+      {
+        "ok": true,
+        "before": {
+          "money": 10156,
+          "materials": {
+            "herb": 903,
+            "iron": 903,
+            "spiritStone": 963,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10153,
+          "materials": {
+            "herb": 903,
+            "iron": 901,
+            "spiritStone": 962,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10158,
+          "materials": {
+            "herb": 903,
+            "iron": 901,
+            "spiritStone": 962,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10155,
+          "materials": {
+            "herb": 903,
+            "iron": 899,
+            "spiritStone": 961,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10160,
+          "materials": {
+            "herb": 903,
+            "iron": 899,
+            "spiritStone": 961,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10157,
+          "materials": {
+            "herb": 903,
+            "iron": 897,
+            "spiritStone": 960,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10162,
+          "materials": {
+            "herb": 903,
+            "iron": 897,
+            "spiritStone": 960,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10159,
+          "materials": {
+            "herb": 903,
+            "iron": 895,
+            "spiritStone": 959,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10164,
+          "materials": {
+            "herb": 903,
+            "iron": 895,
+            "spiritStone": 959,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10161,
+          "materials": {
+            "herb": 903,
+            "iron": 893,
+            "spiritStone": 958,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10166,
+          "materials": {
+            "herb": 903,
+            "iron": 893,
+            "spiritStone": 958,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10163,
+          "materials": {
+            "herb": 903,
+            "iron": 891,
+            "spiritStone": 957,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10168,
+          "materials": {
+            "herb": 903,
+            "iron": 891,
+            "spiritStone": 957,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10165,
+          "materials": {
+            "herb": 903,
+            "iron": 889,
+            "spiritStone": 956,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10170,
+          "materials": {
+            "herb": 903,
+            "iron": 889,
+            "spiritStone": 956,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10167,
+          "materials": {
+            "herb": 903,
+            "iron": 887,
+            "spiritStone": 955,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10172,
+          "materials": {
+            "herb": 903,
+            "iron": 887,
+            "spiritStone": 955,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10169,
+          "materials": {
+            "herb": 903,
+            "iron": 885,
+            "spiritStone": 954,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10174,
+          "materials": {
+            "herb": 903,
+            "iron": 885,
+            "spiritStone": 954,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10171,
+          "materials": {
+            "herb": 903,
+            "iron": 883,
+            "spiritStone": 953,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10176,
+          "materials": {
+            "herb": 903,
+            "iron": 883,
+            "spiritStone": 953,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10173,
+          "materials": {
+            "herb": 903,
+            "iron": 881,
+            "spiritStone": 952,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10178,
+          "materials": {
+            "herb": 903,
+            "iron": 881,
+            "spiritStone": 952,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10175,
+          "materials": {
+            "herb": 903,
+            "iron": 879,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 132,
+          "n": 1
+        },
+        "item": {
+          "name": "ยันต์เหล็กชั้นดี",
+          "bonus": {
+            "defense": 7
+          }
+        },
+        "sale": "ขายยันต์เหล็กชั้นดี · +5 ตำลึง"
+      }
+    ]
+  },
+  {
+    "id": "stone_lantern",
+    "row": "โคมหินปราณเพิ่มโอกาสสร้างของ 4% เมื่อพกไว้วัตถุดิบ: แร่เหล็ก 1 · ตำลึง 3 · หินปราณ ชั้นดี 1ใช้สิทธิ์สร้าง/ศึกษาของเดือนนี้แล้ว · สำเร็จ 100%รายละเอียดสูตรสร้างเครื่องมือ · ความรู้ 2 · สถานที่ บ้านของตนเอง / เรือนตระกูล / ค่ายกลพักฟื้นของสำนัก · อุปกรณ์ โต๊ะช่าง · ผู้สอน ไม่กำหนดคุณภาพ 4เลือกสร้างในเดือนนี้",
+    "tests": [
+      {
+        "ok": true,
+        "before": {
+          "money": 10180,
+          "materials": {
+            "herb": 903,
+            "iron": 879,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10177,
+          "materials": {
+            "herb": 903,
+            "iron": 878,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10179,
+          "materials": {
+            "herb": 903,
+            "iron": 878,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10176,
+          "materials": {
+            "herb": 903,
+            "iron": 877,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10178,
+          "materials": {
+            "herb": 903,
+            "iron": 877,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10175,
+          "materials": {
+            "herb": 903,
+            "iron": 876,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10177,
+          "materials": {
+            "herb": 903,
+            "iron": 876,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10174,
+          "materials": {
+            "herb": 903,
+            "iron": 875,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10176,
+          "materials": {
+            "herb": 903,
+            "iron": 875,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10173,
+          "materials": {
+            "herb": 903,
+            "iron": 874,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10175,
+          "materials": {
+            "herb": 903,
+            "iron": 874,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10172,
+          "materials": {
+            "herb": 903,
+            "iron": 873,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10174,
+          "materials": {
+            "herb": 903,
+            "iron": 873,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10171,
+          "materials": {
+            "herb": 903,
+            "iron": 872,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10173,
+          "materials": {
+            "herb": 903,
+            "iron": 872,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10170,
+          "materials": {
+            "herb": 903,
+            "iron": 871,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10172,
+          "materials": {
+            "herb": 903,
+            "iron": 871,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10169,
+          "materials": {
+            "herb": 903,
+            "iron": 870,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10171,
+          "materials": {
+            "herb": 903,
+            "iron": 870,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10168,
+          "materials": {
+            "herb": 903,
+            "iron": 869,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10170,
+          "materials": {
+            "herb": 903,
+            "iron": 869,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10167,
+          "materials": {
+            "herb": 903,
+            "iron": 868,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      },
+      {
+        "ok": true,
+        "before": {
+          "money": 10169,
+          "materials": {
+            "herb": 903,
+            "iron": 868,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 0
+        },
+        "after": {
+          "money": 10166,
+          "materials": {
+            "herb": 903,
+            "iron": 867,
+            "spiritStone": 951,
+            "beast": 999,
+            "spiritSpring": 999
+          },
+          "power": 90,
+          "n": 1
+        },
+        "item": {
+          "name": "โคมหินปราณ",
+          "bonus": {
+            "craftChance": 4
+          }
+        },
+        "sale": "ขายโคมหินปราณ · +2 ตำลึง"
+      }
+    ]
+  }
+]

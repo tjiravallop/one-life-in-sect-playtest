@@ -85,6 +85,10 @@
     'ข้ามเคราะห์เซียน'
   ];
 
+  // โบนัสอายุขัยเพิ่มเป็นสองเท่าในแต่ละขั้นใหญ่หลังหลอมกาย
+  function majorRealmLifespanBonus(realm) { return 20 * (2 ** (realm - 2)); }
+  function randomLifespanYears() { return 70 + Math.floor(Math.random() * 21); }
+
   const ACTIVITY = {
     train: { name: 'ฝึกตน', location: 'สำนักเมฆาคราม', className: 'training' },
     work: { name: 'ทำงาน', location: 'หมู่บ้านเชิงเขา', className: 'working' },
@@ -242,10 +246,10 @@
   }
   const RECIPES = [
     { id: 'basic_pill', name: 'ยาฟื้นปราณพื้นฐาน', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 1, cost: { herb: 2, money: 2 }, time: 1, chance: 100, quality: 'healing', effect: 'ใช้พักฟื้นแล้วฟื้นสุขภาพเพิ่ม', craft: (s, item) => { s.consumables.push({ ...item, id: 'basic_pill', name: 'ยาฟื้นปราณพื้นฐาน', heal: item.stats.heal, category: 'consumable', subtype: 'pill' }); } },
-    { id: 'iron_charm', name: 'ยันต์เหล็กคุ้มกาย', kind: 'ตีเหล็ก', category: 'talisman', subtype: 'ward', knowledge: 'smithing', knowledgeMin: 1, equipment: 'forge', locations: ['owned', 'estate', 'sect'], cost: { iron: 2, spiritStone: 1 }, time: 1, chance: 78, quality: 'defense', effect: 'ป้องกัน +3', craft: (s, item) => addTreasure(s, item.name, item.stats, { category: 'talisman', subtype: 'ward' }) },
+    { id: 'iron_charm', name: 'ยันต์เหล็กคุ้มกาย', kind: 'ตีเหล็ก', category: 'talisman', subtype: 'ward', knowledge: 'smithing', knowledgeMin: 1, equipment: 'forge', locations: ['owned', 'estate', 'sect'], cost: { iron: 2, spiritStone: 1 }, time: 1, chance: 78, quality: 'defense', effect: 'ป้องกัน +3', craft: (s, item) => addTreasure(s, item.name, item.stats, { category: 'talisman', subtype: 'ward', recipeId: item.recipeId }) },
     { id: 'spirit_pill', name: 'โอสถรวมปราณ', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 2, teacher: 'master', cost: { herb: 3, spiritStone: 2, money: 5 }, time: 1, chance: 68, quality: 'training', effect: 'ฝึกปราณ +10% เป็นเวลา 3 ครั้งที่ฝึก', craft: (s, item) => s.consumables.push({ ...item, id: 'spirit_pill', name: 'โอสถรวมปราณ', category: 'consumable', subtype: 'pill', trainingBonus: 10, trainingUses: 3 }) },
-    { id: 'field_tool', name: 'ชุดเครื่องมือเดินทาง', kind: 'สร้างเครื่องมือ', category: 'consumable', subtype: 'tool', knowledge: 'tools', knowledgeMin: 1, equipment: 'workbench', locations: ['owned', 'estate', 'sect'], cost: { iron: 2, herb: 1, money: 3 }, time: 1, chance: 84, quality: 'utility', effect: 'สำรวจและสร้างของมีประสิทธิภาพขึ้น', craft: (s, item) => addTreasure(s, item.name, item.stats, { category: 'consumable', subtype: 'tool' }) },
-    { id: 'support_kit', name: 'ชุดสนับสนุนภาคสนาม', kind: 'ของสนับสนุน', category: 'consumable', subtype: 'tool', knowledge: 'support', knowledgeMin: 1, teacher: 'friend', cost: { herb: 2, iron: 1, money: 2 }, time: 1, chance: 82, quality: 'support', effect: 'พักฟื้นและเดินทางดีขึ้น', craft: (s, item) => addTreasure(s, item.name, item.stats, { category: 'consumable', subtype: 'tool' }) }
+    { id: 'field_tool', name: 'ชุดเครื่องมือเดินทาง', kind: 'สร้างเครื่องมือ', category: 'consumable', subtype: 'tool', knowledge: 'tools', knowledgeMin: 1, equipment: 'workbench', locations: ['owned', 'estate', 'sect'], cost: { iron: 2, herb: 1, money: 3 }, time: 1, chance: 84, quality: 'utility', effect: 'สำรวจและสร้างของมีประสิทธิภาพขึ้น', craft: (s, item) => addTreasure(s, item.name, item.stats, { category: 'consumable', subtype: 'tool', recipeId: item.recipeId }) },
+    { id: 'support_kit', name: 'ชุดสนับสนุนภาคสนาม', kind: 'ของสนับสนุน', category: 'consumable', subtype: 'tool', knowledge: 'support', knowledgeMin: 1, teacher: 'friend', cost: { herb: 2, iron: 1, money: 2 }, time: 1, chance: 82, quality: 'support', effect: 'พักฟื้นและเดินทางดีขึ้น', craft: (s, item) => addTreasure(s, item.name, item.stats, { category: 'consumable', subtype: 'tool', recipeId: item.recipeId }) }
   ];
   // เกรดวัตถุดิบใช้ชุดชื่อและสีเดียวกับไอเทม ส่วนคุณภาพการปรุงเป็นอีกค่าหนึ่ง
   const MATERIAL_NAMES = { herb: 'สมุนไพร', iron: 'แร่เหล็ก', spiritStone: 'หินปราณ', beast: 'วัตถุดิบสัตว์', spiritSpring: 'น้ำพุวิญญาณ' };
@@ -323,12 +327,12 @@
   ];
   const JOB_DEFS = [
     { id: 'odd_jobs', name: 'แรงงานรับจ้าง', income: 3, requirement: 'เริ่มต้นได้', minMonth: 0, workload: 1 },
-    { id: 'farmer', name: 'ชาวนาเชิงเขา', income: 4, requirement: 'กาย 12', minMonth: 0, workload: 2 },
-    { id: 'hunter', name: 'นายพรานท้องถิ่น', income: 5, requirement: 'กาย 14 หรือว่องไว 14 · เสี่ยงบาดเจ็บจากงาน', minMonth: 0, workload: 2 },
+    { id: 'farmer', name: 'ชาวนาเชิงเขา', income: 4, requirement: 'พละกำลัง 12', minMonth: 0, workload: 2 },
+    { id: 'hunter', name: 'นายพรานท้องถิ่น', income: 5, requirement: 'พละกำลัง 14 หรือว่องไว 14 · เสี่ยงบาดเจ็บจากงาน', minMonth: 0, workload: 2 },
     { id: 'physician', name: 'หมอยาสมุนไพร', income: 8, requirement: 'ปัญญา 14 และความรู้ปรุงยา 1+', minMonth: 0, workload: 1 },
     { id: 'merchant', name: 'เสมียนการค้า', income: 7, requirement: 'ปัญญา 14 · เรื่องราวเปิดทางหลังเดือน 24', minMonth: 24, workload: 1 },
-    { id: 'guard', name: 'ผู้คุ้มกันคาราวาน', income: 10, requirement: 'กาย 16 หรือว่องไว 14 · พลัง 120', minMonth: 36, workload: 3 },
-    { id: 'artisan', name: 'ช่างตีเหล็ก', income: 10, requirement: 'กาย 18 และมีแร่เหล็ก', minMonth: 0, workload: 2 },
+    { id: 'guard', name: 'ผู้คุ้มกันคาราวาน', income: 10, requirement: 'พละกำลัง 16 หรือว่องไว 14 · พลัง 120', minMonth: 36, workload: 3 },
+    { id: 'artisan', name: 'ช่างตีเหล็ก', income: 10, requirement: 'พละกำลัง 18 และมีแร่เหล็ก', minMonth: 0, workload: 2 },
     { id: 'sect_clerk', name: 'เสมียนสำนัก', income: 9, requirement: 'เข้าสำนักและปัญญา 16', minMonth: 84, workload: 1, storyOnly: true },
     { id: 'underworld_runner', name: 'คนส่งข่าวใต้ดิน', income: 12, requirement: 'มีสายสัมพันธ์โลกมืดและเสน่ห์ 18', minMonth: 60, workload: 3, illegal: true, freeOnly: false }
   ];
@@ -339,10 +343,11 @@
     estate: { name: 'เรือนตระกูล', cost: 120, upkeep: 4, housing: 'เหมาะกับตระกูลและทายาท' }
   };
   const SECT_RANKS = [
-    { id: 'outer', name: 'ศิษย์นอก', merit: 0, realm: 1 },
-    { id: 'inner', name: 'ศิษย์ใน', merit: 30, realm: 2 },
-    { id: 'core', name: 'ศิษย์แกนหลัก', merit: 70, realm: 3 },
-    { id: 'elder', name: 'ผู้อาวุโส', merit: 120, realm: 4 }
+    { id: 'outer', name: 'ศิษย์นอก', merit: 0, realm: 1, stage: 1 },
+    { id: 'inner', name: 'ศิษย์ใน', merit: 30, realm: 2, stage: 1 },
+    { id: 'core', name: 'ศิษย์เอก', merit: 70, realm: 2, stage: 6 },
+    { id: 'heir', name: 'ศิษย์สืบทอด', merit: 100, realm: 3, stage: 1 },
+    { id: 'elder', name: 'อาจารย์ / ผู้อาวุโส', merit: 120, realm: 3, stage: 6 }
   ];
   const OFFICIAL_ASSIGNMENTS = {
     normal: { name: 'งานปกติ', affiliation: 'any', merit: 3, money: 2, reputation: 1, risk: 0, rights: ['เข้าพื้นที่ทำงาน'] },
@@ -776,7 +781,7 @@
     const threshold = c.affiliation === 'sect'
       ? { power: target.merit * 40, case: target.merit / 2 + 20, loyalty: target.merit / 2 }[choice]
       : { power: target.merit * 20, case: target.merit, loyalty: target.merit / 2 }[choice];
-    const realmReady = c.affiliation !== 'sect' || s.hero.realm >= target.realm;
+    const realmReady = c.affiliation !== 'sect' || (s.hero.realm > target.realm || (s.hero.realm === target.realm && (s.hero.stage || 0) >= target.stage));
     const passed = merit >= target.merit && realmReady && scores[choice] >= threshold;
     c.lastExamMonth = s.month; c.examCount++; c.lastExamChoice = choice;
     if (c.affiliation === 'sect') s.sectCareer.examCount++;
@@ -785,7 +790,7 @@
       else c.rank = target.id;
       (target.rights || []).forEach(right => { if (!c.rights.includes(right)) c.rights.push(right); });
       addLog(`สอบ${OFFICIAL_EXAM_OPTIONS[choice].name}ผ่าน: ได้รับตำแหน่ง${target.name}`, true);
-    } else addLog(`สอบ${OFFICIAL_EXAM_OPTIONS[choice].name}${target.name}ไม่ผ่าน ต้องเพิ่มผลงานหรือความพร้อม`);
+    } else addLog(`สอบ${OFFICIAL_EXAM_OPTIONS[choice].name}${target.name}ไม่ผ่าน ${!realmReady ? `ต้องมีขั้น${REALMS[target.realm - 1]} ขั้น ${target.stage} ขึ้นไป` : 'ต้องเพิ่มผลงานหรือความพร้อม'}`);
     return passed;
   }
   function resolveOfficialDiscipline(s, choice = 'defend') {
@@ -901,7 +906,7 @@
     return s.household;
   }
   function canTakeJob(s, job) {
-    ensureAttributes(s); const a = s.hero.attributes, combat = s.hero.combat || {};
+    const effectiveCombat = syncCombat(s), a = effectiveCombat.attributes, combat = effectiveCombat;
     if ((s.hero?.ageMonths || 0) < 144) return false;
     if (s.mode === 'story' && s.month < (job.minMonth || 0)) return false;
     if (job.storyOnly && s.mode !== 'story' && s.mode !== 'free') return false;
@@ -1072,7 +1077,8 @@
   }
   function enforceDebt(s) {
     const household = ensureHousehold(s);
-    const index = (s.treasures || []).findIndex(item => !Object.values(s.itemLoadout || {}).includes(typeof item === 'object' ? (item.id || item.name) : item));
+    ensureItemLoadout(s);
+    const index = (s.treasures || []).findIndex(item => !Object.values(s.itemLoadout || {}).includes(item.inventoryUid));
     if (index >= 0) {
       const seized = s.treasures.splice(index, 1)[0];
       household.seizedAssets.push(typeof seized === 'object' ? (seized.name || seized.id) : seized);
@@ -1095,6 +1101,20 @@
   function ensureInventory(s) {
     s.materials = s.materials || { herb: 0, iron: 0, spiritStone: 0 };
     s.consumables = Array.isArray(s.consumables) ? s.consumables : [];
+    ensureTreasureIdentities(s);
+    // ยาจากเหตุการณ์เก่าเคยอยู่ในของวิเศษและเผลอให้ผลติดตัว ย้ายมาใช้จริงทีละชิ้น
+    const storyConsumables = {
+      'ยาหอมลมหายใจแรก': { heal: 12 }, 'เม็ดยาเกล็ดหิมะ': { heal: 20 },
+      'เม็ดยาสมุนไพรต้นสุดท้าย': { heal: 36 }, 'เถ้าระฆังไร้เสียง': { karmaBonus: 3, luckBonus: 2 }
+    };
+    if (Array.isArray(s.treasures)) {
+      for (let i = s.treasures.length - 1; i >= 0; i--) {
+        const item = s.treasures[i], spec = item && typeof item === 'object' && storyConsumables[item.name];
+        if (!spec || !(item.consumable || item.singleUse)) continue;
+        s.treasures.splice(i, 1);
+        s.consumables.push({ ...item, ...spec, category: 'consumable', subtype: 'pill', bonus: {} });
+      }
+    }
     s.nextConsumableUid = Math.max(0, Number(s.nextConsumableUid) || 0);
     const usedUids = new Set();
     for (const item of s.consumables) {
@@ -1138,7 +1158,6 @@
     if (!recipe) return { ok: false, reasons: ['ไม่พบสูตร'] };
     const reasons = [];
     if (s.lastCraftMonth === s.month) reasons.push('ใช้สิทธิ์สร้างหรือศึกษาของเดือนนี้แล้ว');
-    if ((recipe.category !== 'consumable' || (recipe.subtype === 'tool' && recipe.id !== 'home_repair_kit')) && (s.treasures || []).some(item => (typeof item === 'object' ? item.name : item) === recipe.name)) reasons.push('มีอุปกรณ์ชิ้นนี้แล้ว');
     if ((s.crafting.knowledge[recipe.knowledge] || 0) < (recipe.knowledgeMin || 0)) reasons.push(`ต้องมีความรู้${recipe.kind}`);
     if (recipe.teacher && !hasCraftTeacher(s, recipe.teacher) && (s.crafting.knowledge[recipe.knowledge] || 0) < (recipe.knowledgeMin || 1) + 1) reasons.push('ต้องมีผู้สอน หรือศึกษาความรู้ให้สูงกว่าเกณฑ์ 1 ระดับ');
     if (recipe.equipment && !s.crafting.equipment.includes(recipe.equipment)) reasons.push(`ต้องมี${({ forge: 'เตาตีเหล็ก', workbench: 'โต๊ะช่าง', alchemy_stove: 'เตาปรุงยา' })[recipe.equipment] || recipe.equipment}`);
@@ -1176,7 +1195,8 @@
     const knowledge = Number(s.crafting.knowledge[recipe?.knowledge] || 0);
     const teacher = recipe?.teacher && hasCraftTeacher(s, recipe.teacher) ? 8 : 0;
     const equipment = recipe?.equipment && s.crafting.equipment.includes(recipe.equipment) ? 8 : 0;
-    const stat = recipe?.kind === 'ปรุงยา' ? s.hero.attributes.spirit : recipe?.kind === 'ตีเหล็ก' ? s.hero.attributes.body : s.hero.attributes.intellect;
+    const attributes = syncCombat(s).attributes;
+    const stat = recipe?.kind === 'ปรุงยา' ? attributes.spirit : recipe?.kind === 'ตีเหล็ก' ? attributes.body : attributes.intellect;
     const item = craftingItemBonus(s);
     return { item, chance: clamp(Number(recipe?.chance || 0) + knowledge * 5 + teacher + equipment + Math.floor(stat / 10) + item.craftChance, 5, 100), quality: clamp(1 + Math.floor(knowledge / 2) + (equipment ? 1 : 0) + item.qualityBonus, 1, 4) };
   }
@@ -1229,7 +1249,7 @@
     recipe.craft(s, item);
     const madeConsumable = s.consumables?.[s.consumables.length - 1];
     if (madeConsumable?.recipeId === recipe.id && madeConsumable.trainingBonus) madeConsumable.trainingBonus += (quality - 1) * 2;
-    const created = s.treasures?.find(candidate => candidate.name === item.name) || s.consumables?.find(candidate => candidate.recipeId === recipe.id);
+    const created = [...(s.treasures || [])].reverse().find(candidate => candidate.name === item.name) || [...(s.consumables || [])].reverse().find(candidate => candidate.recipeId === recipe.id);
     if (created && !created.recipeId) created.recipeId = recipe.id;
     addLog(`สร้าง${recipe.name}สำเร็จ คุณภาพระดับ ${quality} (${profile.chance}% โอกาสสำเร็จ)`, true);
     return true;
@@ -1339,10 +1359,11 @@
     addLog(`รวม${MATERIAL_NAMES[stack.material]}${ITEM_GRADES[grade].name} ${stack.amount} ชิ้นกลับเข้าคลัง`); return true;
   }
   function disassembleItem(s, itemId) {
-    ensureInventory(s); let item; let remove;
-    const treasureIndex = s.treasures.findIndex(candidate => typeof candidate === 'object' && (candidate.id === itemId || candidate.recipeId === itemId));
-    if (treasureIndex >= 0) { item = s.treasures[treasureIndex]; remove = () => s.treasures.splice(treasureIndex, 1); }
-    else { const consumableIndex = s.consumables.findIndex(candidate => candidate.id === itemId || candidate.recipeId === itemId); if (consumableIndex < 0) return false; item = s.consumables[consumableIndex]; remove = () => s.consumables.splice(consumableIndex, 1); }
+    ensureInventory(s); ensureItemLoadout(s); let item; let remove;
+    let treasureIndex = s.treasures.findIndex(candidate => candidate.inventoryUid === itemId);
+    if (treasureIndex < 0) treasureIndex = s.treasures.findIndex(candidate => candidate.id === itemId || candidate.recipeId === itemId);
+    if (treasureIndex >= 0) { item = s.treasures[treasureIndex]; remove = () => { s.treasures.splice(treasureIndex, 1); Object.keys(s.itemLoadout).forEach(slot => { if (s.itemLoadout[slot] === item.inventoryUid) s.itemLoadout[slot] = null; }); }; }
+    else { let consumableIndex = s.consumables.findIndex(candidate => candidate.inventoryUid === itemId); if (consumableIndex < 0) consumableIndex = s.consumables.findIndex(candidate => candidate.id === itemId || candidate.recipeId === itemId); if (consumableIndex < 0) return false; item = s.consumables[consumableIndex]; remove = () => s.consumables.splice(consumableIndex, 1); }
     const recipe = RECIPES.find(candidate => candidate.id === item.recipeId || candidate.id === itemId); if (!recipe) return false;
     remove(); Object.entries(recipe.cost || {}).forEach(([key, value]) => { if (key !== 'money') s.materials[key] = (s.materials[key] || 0) + Math.max(1, Math.floor(value * .5)); }); addLog(`แยกชิ้นส่วน${item.name || recipe.name}คืนเป็นวัตถุดิบบางส่วน`); return true;
   }
@@ -1356,12 +1377,13 @@
     if (item.poisonCoating && s.poisonCoating?.usesLeft > 0) { addLog('อาวุธเคลือบยาไว้แล้ว ใช้ซ้อนกันไม่ได้'); return false; }
     if (item.trainingBonus && (!s.hero.cultivationAccess || (s.pillEffect?.usesLeft || 0) > 0)) { addLog(!s.hero.cultivationAccess ? 'ต้องมีวิชาบำเพ็ญก่อนใช้โอสถปราณ' : 'ยังมีโอสถปราณออกฤทธิ์อยู่ ใช้ซ้อนกันไม่ได้'); return false; }
     const isHealing = (item.heal || 0) > 0;
-    const hasOtherUtility = item.cures || item.fatigueRelief || item.homeRepair || item.poisonCoating || item.trainingBonus;
+    const hasOtherUtility = item.cures || item.fatigueRelief || item.homeRepair || item.poisonCoating || item.trainingBonus || item.karmaBonus || item.luckBonus;
     if (isHealing && !hasOtherUtility && s.hero.health >= s.hero.maxHealth) {
       addLog(`สุขภาพเต็มเปี่ยมอยู่แล้ว (${Math.round(s.hero.health)}/${s.hero.maxHealth}) จึงเก็บ${item.name}ไว้ ไม่เสียโอสถโดยเปล่าประโยชน์`);
       return false;
     }
     s.consumables.splice(index, 1);
+    if (item.karmaBonus || item.luckBonus) { ensureAttributes(s); s.hero.karma += Number(item.karmaBonus || 0); s.hero.attributes.luck += Number(item.luckBonus || 0); addLog(`ใช้${item.name}: กรรม +${item.karmaBonus || 0} · โชค +${item.luckBonus || 0}`, true); return true; }
     if (item.cures === 'poison') { s.conditions.poison = null; addLog(`ใช้${item.name} ขจัดพิษจากการสำรวจ`); return true; }
     if (item.fatigueRelief) { const household = ensureHousehold(s); household.workFatigue = Math.max(0, household.workFatigue - item.fatigueRelief); addLog(`ใช้${item.name} ลดความเหนื่อยจากงาน ${item.fatigueRelief} หน่วย`); return true; }
     if (item.homeRepair) { ensureHousehold(s).repairMonths = item.homeRepair; addLog(`ใช้${item.name} ลดค่าดูแลบ้าน 1 ตำลึงต่อเดือน ${item.homeRepair} เดือน`); return true; }
@@ -1413,11 +1435,12 @@
   }
   function sellItem(s, itemId) {
     if (!canSellItems(s)) return false;
-    ensureInventory(s); const key = String(itemId);
-    const treasureIndex = s.treasures.findIndex(item => String(typeof item === 'object' ? (item.id || item.name) : item) === key);
+    ensureInventory(s); ensureItemLoadout(s); const key = String(itemId);
+    let treasureIndex = s.treasures.findIndex(item => item.inventoryUid === key);
+    if (treasureIndex < 0) treasureIndex = s.treasures.findIndex(item => String(item.id || item.name) === key);
     if (treasureIndex >= 0) {
       const item = s.treasures.splice(treasureIndex, 1)[0]; const value = itemSalePrice(s, item);
-      s.hero.money += value; Object.keys(s.itemLoadout || {}).forEach(slot => { if (s.itemLoadout[slot] === key) s.itemLoadout[slot] = null; });
+      s.hero.money += value; Object.keys(s.itemLoadout || {}).forEach(slot => { if (s.itemLoadout[slot] === item.inventoryUid) s.itemLoadout[slot] = null; });
       addLog(`ขาย${typeof item === 'object' ? item.name : item} ได้ ${value} ตำลึง`); return true;
     }
     const consumableIndex = s.consumables.findIndex(item => String(item.inventoryUid) === key || String(item.id) === key);
@@ -5392,12 +5415,12 @@
     return (!choice.requires || choice.requires(s)) && evaluateCondition(s, choice.conditions);
   }
 
-  const ATTRIBUTE_LABELS = { body: 'กาย', intellect: 'ปัญญา', spirit: 'จิตใจ', charm: 'เสน่ห์', luck: 'โชค' };
+  const ATTRIBUTE_LABELS = { body: 'พละกำลัง', intellect: 'ปัญญา', spirit: 'จิตใจ', charm: 'เสน่ห์', luck: 'โชค' };
   function rollFate(s, check) {
     ensureAttributes(s);
     const stat = check?.stat || 'luck';
-    const base = Number(s.hero.attributes[stat] || 0);
-    const karmaBonus = Math.max(-8, Math.min(8, Math.floor((s.hero.karma || 0) / 10)));
+    const base = Number(syncCombat(s).attributes[stat] || 0);
+    const karmaBonus = Math.max(-8, Math.min(8, Math.floor((syncCombat(s).karma || 0) / 10)));
     const die = 1 + Math.floor(Math.random() * 20);
     const difficulty = Number(check?.difficulty || 20);
     const total = base + karmaBonus + die;
@@ -5408,19 +5431,19 @@
   }
 
   const TECHNIQUES = [
-    { id: 'survival', name: 'สัญชาตญาณเอาตัวรอด', effect: 'กาย +1 · ว่องไว +1', bonus: { body: 1, agility: 1 }, unlock: () => true },
+    { id: 'survival', name: 'สัญชาตญาณเอาตัวรอด', effect: 'กายา +1 · ว่องไว +1', bonus: { body: 1, agility: 1 }, unlock: () => true },
     { id: 'breath', name: 'เคล็ดรวบรวมปราณเมฆา', effect: 'วิชาบำเพ็ญพื้นฐาน · ความเร็วฝึกตน +10%', bonus: { training: 10 }, unlock: (s) => s.flags.basicCultivation },
     { id: 'sword', name: 'กระบี่ธารไหล', effect: 'โจมตี +6', bonus: { attack: 6 }, unlock: (s) => s.flags.swordLearned },
     { id: 'step', name: 'ย่างก้าวไร้เงา', effect: 'ว่องไว +6', bonus: { agility: 6 }, unlock: (s) => s.flags.stepLearned },
     { id: 'cloudShield', name: 'ม่านเมฆคุ้มกาย', effect: 'ป้องกัน +8', bonus: { defense: 8 }, unlock: (s) => s.flags.shieldLearned },
     { id: 'tigerBody', name: 'กายาพยัคฆ์หิน', effect: 'กายา +8 · ป้องกัน +3', bonus: { body: 8, defense: 3 }, unlock: (s) => s.flags.bodyLearned },
     { id: 'swiftBreath', name: 'โคจรปราณเก้าชีพจร', effect: 'ความเร็วฝึกตน +22%', bonus: { training: 22 }, unlock: (s) => s.flags.cultivationLearned },
-    { id: 'ironBody', name: 'กายาเหล็กดำ', effect: 'ป้องกัน +5 · กาย +5', bonus: { defense: 5, body: 5 }, unlock: (s) => s.hero.combat?.body >= 15 },
+    { id: 'ironBody', name: 'กายาเหล็กดำ', effect: 'ป้องกัน +5 · กายา +5', bonus: { defense: 5, body: 5 }, unlock: (s) => s.hero.combat?.body >= 15 },
     { id: 'clanBlade', name: 'มีดสั้นตระกูลหลิน', effect: 'โจมตี +5 · ว่องไว +3', bonus: { attack: 5, agility: 3 }, unlock: (s) => s.flags.familyToken },
     { id: 'starSword', name: 'กระบี่ดาวตก', effect: 'โจมตี +12', bonus: { attack: 12 }, unlock: (s) => s.flags.spiritWeapon },
     { id: 'voidBreath', name: 'หายใจหลอมสุญญตา', effect: 'ความเร็วฝึกตน +18% · โจมตี +4', bonus: { training: 18, attack: 4 }, unlock: (s) => s.flags.enlightenment },
-    { id: 'forbidden', name: 'โลหิตงูดำต้องห้าม', effect: 'โจมตี +15 · กาย -3', bonus: { attack: 15, body: -3 }, unlock: (s) => s.flags.forbiddenPower },
-    { id: 'masterPendant', name: 'จี้หยกคุ้มชีพอาจารย์เหวิน', effect: 'ป้องกัน +10 · กาย +8', bonus: { defense: 10, body: 8 }, unlock: (s) => s.flags.masterBondGiven },
+    { id: 'forbidden', name: 'โลหิตงูดำต้องห้าม', effect: 'โจมตี +15 · กายา -3', bonus: { attack: 15, body: -3 }, unlock: (s) => s.flags.forbiddenPower },
+    { id: 'masterPendant', name: 'จี้หยกคุ้มชีพอาจารย์เหวิน', effect: 'ป้องกัน +10 · กายา +8', bonus: { defense: 10, body: 8 }, unlock: (s) => s.flags.masterBondGiven },
     { id: 'seniorFlow', name: 'กระบี่ธารเมฆาประสาน', effect: 'โจมตี +14 · ว่องไว +5', bonus: { attack: 14, agility: 5 }, unlock: (s) => s.flags.seniorBondGiven },
     { id: 'discovery_sword_uncommon', name: 'กระบี่ทางไผ่', grade: 'uncommon', effect: 'โจมตี +5', bonus: { attack: 5 }, unlock: s => (s.learnedManualTechniques || []).includes('discovery_sword_uncommon') },
     { id: 'discovery_sword_rare', name: 'กระบี่เงาหิน', grade: 'rare', effect: 'โจมตี +9 · ว่องไว +2', bonus: { attack: 9, agility: 2 }, unlock: s => (s.learnedManualTechniques || []).includes('discovery_sword_rare') },
@@ -5430,7 +5453,7 @@
     ['uncommon', 'rare', 'epic'].forEach((grade, index) => {
       const id = `discovery_${type}_${grade}`;
       const bonus = def.bonus([5, 9, 14][index]);
-      const labels = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กาย', agility: 'ว่องไว', training: 'ความเร็วฝึก' };
+      const labels = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กายา', agility: 'ว่องไว', training: 'ความเร็วฝึก' };
       TECHNIQUES.push({ id, name: def.names[index], grade, techniqueSubtype: def.subtype, manualSlot: def.slot, learningType: def.learningType,
         effect: Object.entries(bonus).map(([key, value]) => `${labels[key]} +${value}${key === 'training' ? '%' : ''}`).join(' · '), bonus,
         unlock: s => (s.learnedManualTechniques || []).includes(id) });
@@ -5438,7 +5461,7 @@
   });
   ADDITIONAL_MANUAL_TECHNIQUES.forEach(entry => {
     const def = ADDITIONAL_MANUAL_TYPES[entry.type];
-    const labels = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กาย', agility: 'ว่องไว', training: 'ความเร็วฝึก' };
+    const labels = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กายา', agility: 'ว่องไว', training: 'ความเร็วฝึก' };
     TECHNIQUES.push({ id: entry.id, name: entry.name, grade: entry.grade, techniqueSubtype: def.subtype, manualSubtype: def.manualSubtype, manualSlot: def.slot, learningType: def.learningType, description: entry.description, bonus: { ...entry.bonus },
       effect: Object.entries(entry.bonus).map(([key, value]) => `${labels[key]} +${value}${key === 'training' ? '%' : ''}`).join(' · '), unlock: s => (s.learnedManualTechniques || []).includes(entry.id) });
   });
@@ -5491,6 +5514,7 @@
     weapon: { id: 'weapon', name: 'อาวุธ', subtypes: { sword: 'ดาบ', jian: 'กระบี่', dao: 'ดาบใหญ่/ดาบโค้ง', spear: 'หอก', staff: 'พลอง/กระบอง', dagger: 'มีดสั้น', bow: 'ธนู', whip: 'แส้', fan: 'พัดเหล็ก', claw: 'กรงเล็บ', hammer: 'ค้อน', needle: 'เข็มลับ' } },
     armor: { id: 'armor', name: 'เครื่องป้องกัน', subtypes: { head: 'เครื่องป้องกันศีรษะ', body: 'เกราะ/เสื้อ', legs: 'เครื่องป้องกันขา', boots: 'รองเท้า', cloak: 'ผ้าคลุม', shield: 'โล่/กระบัง' } },
     talisman: { id: 'talisman', name: 'เครื่องราง', subtypes: { jade: 'หยก', ward: 'ยันต์คุ้มครอง', pendant: 'จี้/ตรา', ring: 'แหวน', necklace: 'สร้อย', bell: 'ระฆัง', relic: 'วัตถุโบราณ', keepsake: 'ของแทนใจ' } },
+    material: { id: 'material', name: 'วัตถุดิบ', subtypes: { ore: 'แร่', relic: 'วัตถุดิบพิเศษ' } },
     consumable: { id: 'consumable', name: 'ของกดใช้', subtypes: { pill: 'ยา/โอสถ', food: 'อาหาร', potion: 'น้ำยา', tool: 'เครื่องมือ', poison: 'พิษ', scroll: 'ม้วนใช้ครั้งเดียว' } },
     cursed: { id: 'cursed', name: 'ของอาถรรพ์', subtypes: { blood: 'โลหิตอาถรรพ์', soul: 'วิญญาณ', seal: 'คำสาปผนึก', forbidden: 'พลังต้องห้าม', haunted: 'วัตถุสิงสู่' } },
     technique_manual: { id: 'technique_manual', name: 'คัมภีร์วิชา', subtypes: { attack_fist: 'คัมภีร์หมัด', attack_sword: 'คัมภีร์ดาบ', attack_jian: 'คัมภีร์กระบี่', defense: 'คัมภีร์ป้องกัน', movement: 'คัมภีร์ตัวเบา', cultivation: 'คัมภีร์บำเพ็ญ' } },
@@ -5531,7 +5555,7 @@
     makeLibraryItem('common_cursed_haunted_1', 'หน้ากากคนเฝ้าศพ', 'cursed', 'haunted', { agility: 6, karma: -1 }),
     makeLibraryItem('common_cursed_blood_2', 'ปลอกแขนดูดแรง', 'cursed', 'blood', { attack: 7.5, body: -1 }),
     makeLibraryItem('common_cursed_soul_2', 'ขวดเสียงครวญ', 'cursed', 'soul', { spirit: 6, restQi: -2 }),
-    makeLibraryItem('common_cursed_seal_2', 'ป้ายผนึกแตก', 'cursed', 'seal', { defense: 6, breakthroughProtection: -1 }),
+    makeLibraryItem('common_cursed_seal_2', 'ป้ายผนึกแตก', 'cursed', 'seal', { defense: 6, breakthroughBonus: -2 }),
     makeLibraryItem('common_cursed_forbidden_2', 'ตำราครึ่งหน้า', 'cursed', 'forbidden', { training: 6, riskReduction: -1 }),
     makeLibraryItem('common_cursed_haunted_2', 'สร้อยฟันผีดิบ', 'cursed', 'haunted', { luck: 3, karma: -1 })
   ];
@@ -5684,6 +5708,20 @@
     epic: { weapons: EPIC_WEAPONS, armor: EPIC_ARMOR, jewelry: [...EPIC_RINGS, ...EPIC_NECKLACES], cursed: EPIC_CURSED_ITEMS, mounts: EPIC_MOUNTS },
     legendary: { weapons: [], armor: [], jewelry: [], cursed: [], mounts: [] }
   };
+  // เกรดบอกคุณภาพ ส่วนชั้นบอกขั้นขั้นต่ำ: กระจายทุกสีในทุกชั้น
+  const EQUIPMENT_REALM_SCALE = [1, 2, 3.5];
+  Object.entries(ITEM_LIBRARY).forEach(([grade, groups]) => {
+    const shift = { common: 0, uncommon: 1, rare: 2, epic: 3 }[grade] ?? 0;
+    ['weapons', 'armor', 'jewelry'].forEach(category => (groups[category] || []).forEach((item, index) => {
+      const designIndex = category === 'weapons' ? index % 5 : index;
+      const tier = [0, 0, 1, 1, 2][(designIndex + shift) % 5];
+      item.equipmentRealm = tier;
+      item.equipmentStage = tier ? 1 : 0;
+      item.bonus = Object.fromEntries(Object.entries(item.bonus || {}).map(([key, value]) => [key,
+        ['attack', 'defense', 'body', 'agility'].includes(key) && Number.isFinite(value)
+          ? Math.round(value * EQUIPMENT_REALM_SCALE[tier] * 100) / 100 : value]));
+    }));
+  });
   const ITEM_LIBRARY_BY_ID = Object.fromEntries(Object.values(ITEM_LIBRARY).flatMap(group => Object.values(group).flat()).map(item => [item.id, item]));
   const TECHNIQUE_CATEGORY_DEFS = {
     attack: { id: 'attack', name: 'วิชาจู่โจม', subtypes: { fist: 'วิชาหมัด', sword: 'วิชาดาบ', jian: 'วิชากระบี่', dao: 'วิชาดาบใหญ่', spear: 'วิชาหอก', staff: 'วิชาพลอง', claw: 'วิชากรงเล็บ' } },
@@ -5781,6 +5819,65 @@
     'กระบี่สำรวจ มหากาพย์': 'กระบี่ดาราซ่อนคม'
   };
 
+  // ของเฉพาะเหตุการณ์: กำหนดขั้นตามเรื่องราว ไม่ผูกกับสีเกรด
+  const STORY_EQUIPMENT_REQUIREMENTS = {
+    'กระบี่ทางสน': 0, 'กระบี่เมฆเคลื่อน': 1, 'กระบี่ดาราซ่อนคม': 2,
+    'กระบี่ดาวตก': 1, 'กระบี่ธารเมฆาประสาน': 1, 'กระบี่หักกินโลหิต': 2,
+    'ค้อนคำสัตย์แห่งเตาหลอม': 2, 'กระบี่เดินทาง': 0,
+    'เสื้อหนังนายพราน': 0, 'เกราะพยัคฆ์ดำ': 1,
+    'จี้หยกคุ้มชีพอาจารย์เหวิน': 1, 'ตราคำสอนเหวินจง': 0,
+    'แผ่นหยกฟังเสียงกระบี่': 2, 'เส้นไหมกระบี่เมฆา': 2,
+    'ระฆังคืนหนี้': 1, 'กล่องเรือนนิรันดร์': 2, 'หยกอุ่นคุ้มชีพ': 0,
+    'ยันต์คุ้มครองผู้ไร้เดียงสา': 0, 'เถ้าระฆังไร้เสียง': 1,
+    'หยดแสงจากไข้หิมะ': 1, 'น้ำค้างเงาจันทร์': 1,
+    'กระดิ่งฝนใส': 0, 'ขนกระเรียนขาว': 0, 'ลูกข่างเหล็กจากดาว': 0,
+    'หน้ากากไม้หลบสายตา': 0, 'ขลุ่ยนำทางป่าไผ่': 0, 'เข็มกลัดผู้เดินทาง': 0,
+    'ธงเมฆาที่เย็บคืน': 1
+  };
+  // ค่าสมบัติเนื้อเรื่องที่พกติดตัว ปรับแยกตามบทบาทและเกรดเพื่อลดการซ้อนพลัง
+  const STORY_RELIC_BONUSES = {
+    'แผ่นหยกฟังเสียงกระบี่': { attack: 5, agility: 2, training: 3 },
+    'ยันต์คุ้มครองผู้ไร้เดียงสา': { defense: 3, body: 2, luck: 2 },
+    'เส้นไหมกระบี่เมฆา': { attack: 5, defense: 3, agility: 2 },
+    'ระฆังคืนหนี้': { luck: 4, spirit: 3, defense: 2 },
+    'กล่องเรือนนิรันดร์': { luck: 3, intellect: 3, defense: 2 },
+    'เถ้าระฆังไร้เสียง': { karma: 3, luck: 2, defense: 2 },
+    'หยกอุ่นคุ้มชีพ': { defense: 3, body: 2, luck: 1 },
+    'เศษหยกเขียวจากห้องตรวจ': { intellect: 3, spirit: 2 },
+    'ขนกระเรียนขาว': { spirit: 3, luck: 3, restHealth: 3 },
+    'กระดิ่งฝนใส': { luck: 3, spirit: 2, defense: 2 },
+    'ลูกข่างเหล็กจากดาว': { body: 3, luck: 2, defense: 2 },
+    'หยดแสงจากไข้หิมะ': { spirit: 3, luck: 2, defense: 2 },
+    'น้ำค้างเงาจันทร์': { spirit: 3, restHealth: 3, luck: 2 },
+    'ประกายจันทร์ติดนิ้ว': { intellect: 3, spirit: 3, luck: 2 },
+    'เหรียญโคมไร้เงา': { luck: 3, defense: 2 },
+    'เศษบัญชีหมึกแดง': { intellect: 3, luck: 2 },
+    'หน้ากากไม้หลบสายตา': { agility: 3, luck: 2, defense: 2 },
+    'ขลุ่ยนำทางป่าไผ่': { agility: 3, luck: 2, intellect: 2 },
+    'เข็มกลัดผู้เดินทาง': { defense: 3, luck: 2 },
+    'ห่อผนึกของคนพเนจร': { agility: 3, intellect: 2 },
+    'ตราผนึกคำเชิญเมฆา': { intellect: 3, spirit: 2 },
+    'เหรียญผู้ผ่านลานประลอง': { attack: 3, agility: 2 },
+    'แผนที่ครึ่งใบจากคนเก่า': { intellect: 3, luck: 2 },
+    'เศษแผนที่ไร้นาม': { luck: 3, agility: 2 },
+    'ใบรับรองหนี้เก่าของตระกูล': { intellect: 3, reputation: 2 },
+    'เครื่องมือเหล็กประจำเรือน': { body: 3, defense: 2 },
+    'ตราคาราวานตะวันตก': { agility: 3, luck: 2 },
+    'ตราประทับจากศัตรูเก่า': { attack: 4, intellect: 2 },
+    'ตราหมึกบันทึกตระกูล': { charm: 3, reputation: 3 },
+    'ธงเมฆาที่เย็บคืน': { defense: 4, spirit: 2 },
+    'พู่กันพงศาวดารปลายชีวิต': { spirit: 3, charm: 2 },
+    'ถ้วยชาของผู้ล่วงลับ': { spirit: 4, intellect: 2, defense: 2 },
+    'รอยตื่นรู้แห่งเมฆา': { training: 4 }
+  };
+  const STORY_RELIC_CATEGORIES = {
+    'แผ่นหยกฟังเสียงกระบี่': 'jade', 'เส้นไหมกระบี่เมฆา': 'relic',
+    'เข็มกลัดผู้เดินทาง': 'keepsake', 'จี้หยกคุ้มชีพอาจารย์เหวิน': 'necklace'
+  };
+  const SPECIAL_ARMOR_STATS = {
+    'เสื้อหนังนายพราน': { grade: 'common', bonus: { defense: 5, body: 1 } },
+    'เกราะพยัคฆ์ดำ': { grade: 'rare', bonus: { defense: 5, body: 3 } }
+  };
   const SPECIAL_ARMOR_DESCRIPTIONS = {
     'เสื้อหนังนายพราน': 'เสื้อหนังที่ตัดจากวัสดุสำหรับผู้เดินทาง ตะเข็บแน่นช่วยคุ้มกายโดยไม่รั้งการเคลื่อนไหว',
     'เกราะพยัคฆ์ดำ': 'เกราะจากหีบที่พยัคฆ์เฝ้าไว้ เนื้อเกราะเข้มและเสริมช่วงลำตัว ช่วยรับแรงพร้อมประคองร่างกาย'
@@ -5789,11 +5886,22 @@
   function normalizeItemGrade(item = {}) {
     if (typeof item === 'string') item = { name: item, bonus: {} };
     else if (!item || typeof item !== 'object') item = {};
-    if (SPECIAL_ARMOR_DESCRIPTIONS[item.name]) { item.description = SPECIAL_ARMOR_DESCRIPTIONS[item.name]; item.category = 'armor'; item.subtype = 'body'; }
+    if (item.craftingMaterial) { item.category = 'material'; item.subtype = 'relic'; }
+    else if (item.consumable) { item.category = 'consumable'; item.subtype = 'pill'; }
+    if (SPECIAL_ARMOR_DESCRIPTIONS[item.name]) {
+      item.description = SPECIAL_ARMOR_DESCRIPTIONS[item.name]; item.category = 'armor'; item.subtype = 'body';
+      const spec = SPECIAL_ARMOR_STATS[item.name], realm = STORY_EQUIPMENT_REQUIREMENTS[item.name] || 0;
+      item.grade = spec.grade; item.gradeExplicit = true;
+      item.bonus = Object.fromEntries(Object.entries(spec.bonus).map(([key, value]) => [key, value * EQUIPMENT_REALM_SCALE[realm]]));
+    }
     if (LEGACY_DISCOVERY_WEAPON_NAMES[item.name]) item.name = LEGACY_DISCOVERY_WEAPON_NAMES[item.name];
+    const relicSubtype = STORY_RELIC_CATEGORIES[item.name];
+    if (relicSubtype) { item.category = 'talisman'; item.subtype = relicSubtype; }
+    if (STORY_RELIC_BONUSES[item.name]) item.bonus = { ...STORY_RELIC_BONUSES[item.name] };
     const special = SPECIAL_WEAPON_DETAILS[item.name];
     if (special) {
-      item.bonus = { ...special.bonus }; item.description = special.description;
+      const tier = STORY_EQUIPMENT_REQUIREMENTS[item.name] || 0;
+      item.bonus = Object.fromEntries(Object.entries(special.bonus).map(([key, value]) => [key, ['attack', 'defense', 'body', 'agility'].includes(key) ? Math.round(value * EQUIPMENT_REALM_SCALE[tier] * 100) / 100 : value])); item.description = special.description;
       item.category = 'weapon'; item.subtype = item.name.startsWith('ค้อน') ? 'hammer' : 'jian';
       if (special.grade) { item.grade = special.grade; item.gradeExplicit = true; }
     }
@@ -5803,6 +5911,11 @@
     item.gradeData = ITEM_GRADES[item.grade];
     item.category = inferItemCategory(item);
     item.subtype = inferItemSubtype(item, item.category);
+    const libraryItem = item.id && ITEM_LIBRARY_BY_ID[item.id];
+    if (libraryItem && ['weapon', 'armor', 'talisman'].includes(libraryItem.category)) { item.equipmentRealm = libraryItem.equipmentRealm; item.equipmentStage = libraryItem.equipmentStage; item.bonus = { ...libraryItem.bonus }; }
+    else if (Object.prototype.hasOwnProperty.call(STORY_EQUIPMENT_REQUIREMENTS, item.name)) { item.equipmentRealm = STORY_EQUIPMENT_REQUIREMENTS[item.name]; item.equipmentStage = item.equipmentRealm ? 1 : 0; }
+    else if (['weapon', 'armor', 'talisman'].includes(item.category)) { item.equipmentRealm = Number.isInteger(item.equipmentRealm) ? clamp(item.equipmentRealm, 0, REALMS.length) : 0; item.equipmentStage = item.equipmentRealm ? clamp(Number(item.equipmentStage) || 1, 1, 9) : 0; }
+    if (libraryItem?.category === 'cursed') item.bonus = { ...libraryItem.bonus };
     item.categoryData = ITEM_CATEGORY_DEFS[item.category];
     item.subtypeName = item.categoryData?.subtypes?.[item.subtype] || item.subtype;
     item.id = item.id || item.name;
@@ -5856,8 +5969,24 @@
     forbidden: 'combat', masterPendant: 'defense', seniorFlow: 'combat',
     discovery_sword_uncommon: 'combat', discovery_sword_rare: 'combat', discovery_sword_epic: 'combat'
   };
+  // ปรับวิชาจากคัมภีร์อิสระตามชั้น โดยเก็บสัดส่วนเอกลักษณ์ของแต่ละวิชาไว้
+  // วิชาบำเพ็ญใช้สเกลที่อ่อนกว่า เพราะโบนัสฝึกมีผลร่วมกับตัวคูณอื่น
+  function balanceDiscoveryManualTechnique(technique) {
+    if (!technique.id.startsWith('discovery_') || technique.grade === 'legendary') return;
+    const realm = manualRealmForTechnique(technique);
+    const cultivation = techniqueSlot(technique) === 'cultivation';
+    const multiplier = cultivation ? ([1, 1.25, 1.5][realm] ?? 1) : ([1, 2, 3][realm] ?? 1);
+    const labels = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กายา', agility: 'ว่องไว', training: 'ความเร็วฝึก' };
+    technique.bonus = Object.fromEntries(Object.entries(technique.bonus || {}).map(([key, value]) => [key, Number.isFinite(value) ? Math.round(value * multiplier) + (cultivation && key === 'training' ? realm * 2 : 0) : value]));
+    if (cultivation && technique.grade === 'epic') {
+      const extra = [{ defense: 2 }, { body: 3 }, { agility: 4 }][realm];
+      if (extra) Object.entries(extra).forEach(([key, value]) => { technique.bonus[key] = (technique.bonus[key] || 0) + value; });
+    }
+    technique.effect = Object.entries(technique.bonus).map(([key, value]) => `${labels[key] || key} ${value >= 0 ? '+' : ''}${value}${key === 'training' ? '%' : ''}`).join(' · ');
+  }
   TECHNIQUES.forEach(technique => {
     if (technique.manualSlot) TECHNIQUE_SLOTS[technique.id] = technique.manualSlot;
+    balanceDiscoveryManualTechnique(technique);
     technique.grade = technique.grade || inferItemGrade(technique.bonus);
     technique.gradeData = ITEM_GRADES[technique.grade];
     technique.category = techniqueCategory(technique);
@@ -5872,6 +6001,14 @@
     return s.techniqueLoadout;
   }
   // Infants and young children (through age 5) may only equip jewelry.
+  function equipmentRequirement(s, item) {
+    const normalized = normalizeItemGrade(typeof item === 'object' ? item : { name: item, bonus: {} });
+    if (!['weapon', 'armor', 'talisman'].includes(normalized.category)) return null;
+    const realm = Number(normalized.equipmentRealm) || 0, stage = Number(normalized.equipmentStage) || 0;
+    const currentRealm = s.hero?.cultivationAccess || s.flags?.basicCultivation ? Math.max(1, Number(s.hero?.realm) || 1) : 0;
+    const currentStage = Number(s.hero?.stage) || (currentRealm ? 1 : 0);
+    return { realm, stage, name: realm ? `${REALMS[realm - 1]} ขั้น ${stage}` : 'ฝึกพื้นฐานร่างกาย', eligible: currentRealm > realm || (currentRealm === realm && currentStage >= stage) };
+  }
   function itemAllowedByAge(s, item) {
     const age = Number(s?.hero?.ageMonths);
     if (!Number.isFinite(age) || age > 60) return true;
@@ -5879,9 +6016,31 @@
     return normalized.category === 'talisman';
   }
 
+  function ensureTreasureIdentities(s) {
+    s.treasures = Array.isArray(s.treasures) ? s.treasures : [];
+    s.nextTreasureUid = Math.max(0, Number(s.nextTreasureUid) || 0);
+    const reserved = new Set(s.treasures.filter(item => item && typeof item === 'object' && typeof item.inventoryUid === 'string' && item.inventoryUid).map(item => item.inventoryUid));
+    const used = new Set();
+    s.treasures.forEach((item, index) => {
+      if (!item || typeof item !== 'object') item = s.treasures[index] = { name: String(item || ''), bonus: {} };
+      if (typeof item.inventoryUid === 'string' && item.inventoryUid && !used.has(item.inventoryUid)) { used.add(item.inventoryUid); return; }
+      let uid; do { uid = `treasure-${++s.nextTreasureUid}`; } while (reserved.has(uid) || used.has(uid));
+      item.inventoryUid = uid; used.add(uid);
+    });
+  }
   function ensureItemLoadout(s) {
+    ensureTreasureIdentities(s);
     s.itemLoadout = s.itemLoadout || { weapon: null, armor: null, boots: null, ring1: null, ring2: null, necklace: null, mount: null };
     Object.keys(ITEM_SLOT_DEFS).forEach(slot => { if (!(slot in s.itemLoadout)) s.itemLoadout[slot] = null; });
+    // เซฟเดิมอ้างชนิดหรือชื่อไอเท็ม แปลงเป็นรหัสของชิ้นที่สวมโดยไม่ทิ้งช่องที่หาไม่พบ
+    const assigned = new Set();
+    Object.keys(ITEM_SLOT_DEFS).forEach(slot => {
+      const key = s.itemLoadout[slot]; if (!key) return;
+      const exact = s.treasures.find(item => item.inventoryUid === String(key));
+      const legacy = !exact && s.treasures.find(item => !assigned.has(item.inventoryUid) && String(item.id || item.name) === String(key));
+      const item = exact || legacy;
+      if (item) { s.itemLoadout[slot] = item.inventoryUid; assigned.add(item.inventoryUid); }
+    });
     // Old saves stored boots in the armor slot. Keep them equipped in the new slot.
     const previousArmor = s.itemLoadout.armor ? findTreasure(s, s.itemLoadout.armor) : null;
     if (previousArmor) {
@@ -5908,7 +6067,9 @@
     return null;
   }
   function findTreasure(s, itemId) {
-    return (s.treasures || []).find(item => String(typeof item === 'object' ? (item.id || item.name) : item) === String(itemId));
+    ensureTreasureIdentities(s);
+    const key = String(itemId);
+    return s.treasures.find(item => item.inventoryUid === key) || s.treasures.find(item => String(item.id || item.name) === key);
   }
   function getEquippedMount(s) {
     const loadout = ensureItemLoadout(s);
@@ -5919,9 +6080,9 @@
     if (s.itemLoadoutMode) return;
     (s.treasures || []).forEach(item => {
       const normalized = normalizeItemGrade(typeof item === 'object' ? item : { name: item, bonus: {} });
-      if (!itemAllowedByAge(s, normalized)) return;
+      if (!itemAllowedByAge(s, normalized) || equipmentRequirement(s, normalized)?.eligible === false) return;
       const slot = normalized.subtype === 'ring' ? (!loadout.ring1 ? 'ring1' : !loadout.ring2 ? 'ring2' : null) : itemSlot(normalized);
-      if (slot && !loadout[slot]) loadout[slot] = normalized.id || normalized.name;
+      if (slot && !loadout[slot]) loadout[slot] = normalized.inventoryUid;
     });
     s.itemLoadoutMode = true;
   }
@@ -5937,7 +6098,8 @@
     ensureItemLoadout(s); const item = findTreasure(s, itemId);
     if (!item) return false;
     const normalized = typeof item === 'object' ? normalizeItemGrade(item) : normalizeItemGrade({ id: item, name: item, bonus: {} });
-    if (!itemAllowedByAge(s, normalized)) return false;
+    const alreadyEquipped = Object.values(s.itemLoadout).some(id => String(id) === String(normalized.inventoryUid));
+    if (!alreadyEquipped && (!itemAllowedByAge(s, normalized) || equipmentRequirement(s, normalized)?.eligible === false)) return false;
     const inferredSlot = itemSlot(normalized);
     const targetSlot = slot || inferredSlot;
     if (!targetSlot || !ITEM_SLOT_DEFS[targetSlot]) return false;
@@ -5947,7 +6109,7 @@
     if (targetSlot === 'ring1' || targetSlot === 'ring2') {
       if (normalized.category !== 'talisman' || normalized.subtype !== 'ring') return false;
     } else if (inferredSlot && inferredSlot !== targetSlot) return false;
-    const itemKey = normalized.id || normalized.name;
+    const itemKey = normalized.inventoryUid;
     Object.keys(s.itemLoadout).forEach(key => { if (s.itemLoadout[key] === itemKey && key !== targetSlot) s.itemLoadout[key] = null; });
     s.itemLoadout[targetSlot] = s.itemLoadout[targetSlot] === itemKey ? null : itemKey;
     s.itemLoadoutMode = true;
@@ -5956,17 +6118,31 @@
   function equippedTreasures(s) {
     ensureItemLoadout(s);
     const ids = new Set(Object.values(s.itemLoadout).filter(Boolean).map(String));
-    return (s.treasures || []).filter(item => ids.has(String(typeof item === 'object' ? (item.id || item.name) : item)));
+    return (s.treasures || []).filter(item => ids.has(String(item.inventoryUid)));
   }
   function activeTreasures(s) {
-    if (!s.itemLoadoutMode) return (s.treasures || []).filter(item => !item?.techniqueId && (!itemSlot(normalizeItemGrade(typeof item === 'object' ? item : { name: item, bonus: {} })) || itemAllowedByAge(s, item)));
-    const equipped = new Set(equippedTreasures(s));
-    return (s.treasures || []).filter(item => {
-      if (item?.techniqueId) return false;
+    const equipped = s.itemLoadoutMode ? new Set(equippedTreasures(s)) : null;
+    const eligible = (s.treasures || []).filter(item => {
+      if (item?.techniqueId || item?.consumable || item?.craftingMaterial || isUnopenedStoryContainer(item)) return false;
       const normalized = normalizeItemGrade(typeof item === 'object' ? item : { name: item, bonus: {} });
+      if (equipmentRequirement(s, normalized)?.eligible === false) return false;
       const canEquip = !!itemSlot(normalized) || (normalized.category === 'talisman' && normalized.subtype === 'ring');
-      return !canEquip || equipped.has(item);
+      if (canEquip && !itemAllowedByAge(s, normalized)) return false;
+      return !canEquip || !equipped || equipped.has(item);
     });
+    // Copies made from the same recipe remain separate inventory items, but
+    // only the strongest eligible copy contributes passive bonuses.
+    const best = new Map();
+    eligible.forEach(item => {
+      if (!item?.recipeId) return;
+      const score = Object.values(itemBonus(item)).reduce((sum, value) => sum + (Number(value) || 0), 0);
+      if (!best.has(item.recipeId) || score > best.get(item.recipeId).score) best.set(item.recipeId, { item, score });
+    });
+    return eligible.filter(item => !item?.recipeId || best.get(item.recipeId)?.item === item);
+  }
+  // ตราบนขวดหรือเอกสารบางชนิดเป็นรายละเอียดของวัตถุ ไม่ใช่กล่องที่ยังไม่ได้เปิด
+  function isUnopenedStoryContainer(item) {
+    return !!item?.sealed && ['กล่องเรือนนิรันดร์', 'ห่อผนึกของคนพเนจร'].includes(item.name);
   }
   function effectiveTechniques(s) {
     const unlocked = unlockedTechniques(s);
@@ -5978,6 +6154,27 @@
     if (!s?.loadoutMode) return null;
     const id = ensureTechniqueLoadout(s).cultivation;
     return TECHNIQUES.find(t => t.id === id && techniqueSlot(t) === 'cultivation' && t.unlock(s)) || null;
+  }
+
+  // เพดานของวิชาที่กำหนดไว้ ไม่ลดขั้นเดิมหากผู้เล่นติดตั้งวิชาที่ต่ำกว่า
+  function cultivationTechniqueCeiling(technique) {
+    if (!technique || techniqueSlot(technique) !== 'cultivation') return null;
+    if (Number.isInteger(technique.maxRealm)) return { realm: technique.maxRealm, stage: technique.maxStage || 9 };
+    if (technique.id.startsWith('discovery_')) return { realm: Math.min(REALMS.length, manualRealmForTechnique(technique) + 1), stage: 9 };
+    if (technique.id === 'manual_cloud_origin' || technique.id === 'breath') return { realm: 1, stage: 9 };
+    if (technique.id === 'swiftBreath') return { realm: 2, stage: 9 };
+    if (technique.id === 'voidBreath') return { realm: 3, stage: 9 };
+    return null;
+  }
+  function cultivationCeilingName(technique) {
+    const cap = cultivationTechniqueCeiling(technique);
+    return cap ? `${REALMS[cap.realm - 1]} ขั้น ${cap.stage}` : null;
+  }
+  function cultivationAtCeiling(s) {
+    const cap = cultivationTechniqueCeiling(equippedCultivationTechnique(s));
+    if (!cap || !s.hero?.cultivationAccess) return false;
+    const realm = Number(s.hero.realm) || 0, stage = Number(s.hero.stage) || 0;
+    return realm > cap.realm || (realm === cap.realm && stage >= cap.stage);
   }
 
   function equipTechnique(s, id) {
@@ -6032,6 +6229,7 @@
     s.trainingMastery = s.trainingMastery && typeof s.trainingMastery === 'object' ? s.trainingMastery : {};
     s.trainingFocus = Array.isArray(s.trainingFocus) ? s.trainingFocus : [];
     s.trainingSwitchCooldown = Math.max(0, Number(s.trainingSwitchCooldown) || 0);
+    s.trainingConsistencyMonths = clamp(Math.floor(Number(s.trainingConsistencyMonths) || 0), 0, 5);
     s.trainingFoundation = Math.max(0, Number(s.trainingFoundation) || 0);
     s.breakthroughState = s.breakthroughState && typeof s.breakthroughState === 'object' ? s.breakthroughState : { ready: false, nextPromptMonth: 0, lastAttempt: null };
     s.breakthroughState.ready = !!s.breakthroughState.ready;
@@ -6049,6 +6247,20 @@
   };
   // Legendary manuals are authored separately; this only prepares the learning system.
   const MANUAL_STUDY_TARGETS = { common: 6, uncommon: 12, rare: 18, epic: 24, legendary: 36 };
+  // ชั้นคัมภีร์แยกจากเกรดสี คัมภีร์บทแรกยังเปิดทางบำเพ็ญได้ก่อนหลอมกาย
+  function manualRealmForTechnique(technique) {
+    if (Number.isInteger(technique?.manualRealm)) return clamp(technique.manualRealm, 0, REALMS.length);
+    if (technique?.id?.startsWith('discovery_third_')) return 2;
+    if (technique?.id?.startsWith('discovery_alt_')) return 1;
+    return 0;
+  }
+  function manualRealmName(realm) { return realm === 0 ? 'ฝึกพื้นฐานร่างกาย' : (REALMS[realm - 1] || 'ไม่ทราบขั้น'); }
+  function manualStudyTarget(manual) { return (MANUAL_STUDY_TARGETS[manual.grade] || 12) + Math.min(2, Math.max(0, Number(manual.manualRealm) || 0)) * 4; }
+  function manualLearningRequirement(s, manual) {
+    const required = Number.isInteger(manual?.manualRealm) ? clamp(manual.manualRealm, 0, REALMS.length) : manualRealmForTechnique(TECHNIQUES.find(t => t.id === manual?.techniqueId));
+    const current = s.hero?.cultivationAccess || s.flags?.basicCultivation ? Math.max(1, Number(s.hero?.realm) || 1) : 0;
+    return { required, name: manualRealmName(required), eligible: current >= required };
+  }
   function normalizeDiscoveryManuals(s) {
     s.learnedManualTechniques = Array.isArray(s.learnedManualTechniques) ? s.learnedManualTechniques : [];
     (s.treasures || []).forEach(item => {
@@ -6063,6 +6275,7 @@
       const def = MANUAL_DISCOVERY_TYPES[typeKey];
       item.category = 'technique_manual'; item.subtype = technique.manualSubtype || def?.manualSubtype || (technique.manualSlot === 'cultivation' ? 'cultivation' : 'attack_jian');
       item.learningType = technique.learningType || def?.learningType || 'martial';
+      item.manualRealm = manualRealmForTechnique(technique);
       item.bonus = {};
     });
   }
@@ -6070,6 +6283,21 @@
     normalizeDiscoveryManuals(s);
     return (s.treasures || []).filter(item => item?.techniqueId && !s.learnedManualTechniques.includes(item.techniqueId));
   }
+  // แต้มเรียน 1 จุดเทียบกับหนึ่งเดือนฐานที่ฝึก 100% และอ่านด้วยตนเอง
+  function manualStudySpeed(s, route) {
+    const combat = syncCombat(s);
+    const root = ROOT_TRAINING_MULTIPLIER[s.hero?.root] ?? ROOT_TRAINING_MULTIPLIER.human;
+    const location = Math.max(.1, Number(route?.knowledgeGain) || 1);
+    const teacher = Math.max(.1, Number(route?.teacher?.multiplier) || 1);
+    const learningItems = Math.max(.1, 1 + learningItemBonus(s) / 100);
+    return Math.max(.1, combat.training / 100 * root * location * teacher * learningItems);
+  }
+  function manualStudyMonthsLeft(s, manual, route) {
+    const learning = ensureLearningState(s);
+    const remaining = Math.max(0, manualStudyTarget(manual) - (Number(learning.manualProgress[manual.techniqueId]) || 0));
+    return Math.ceil((remaining - 1e-9) / manualStudySpeed(s, route));
+  }
+  function formatManualProgress(value) { return String(Number((Number(value) || 0).toFixed(2))); }
   function studySelectedManual(s, route) {
     const learning = ensureLearningState(s);
     if (!learning.techniqueFocus?.startsWith('manual:')) return null;
@@ -6077,9 +6305,11 @@
     const manual = availableTechniqueManuals(s).find(item => item.techniqueId === id);
     const technique = TECHNIQUES.find(item => item.id === id);
     if (!manual || !technique) { learning.techniqueFocus = null; return null; }
-    const target = MANUAL_STUDY_TARGETS[manual.grade] || 12;
-    const gain = Math.max(1, Math.round(route.knowledgeGain * route.teacher.multiplier));
-    learning.manualProgress[id] = Math.min(target, (learning.manualProgress[id] || 0) + gain);
+    const requirement = manualLearningRequirement(s, manual);
+    if (!requirement.eligible) { learning.techniqueFocus = null; addLog(`ยังเรียน “${manual.name}” ไม่ได้ ต้องมีขั้น ${requirement.name} จึงกลับไปศึกษาความรู้ทั่วไป`, true); return null; }
+    const target = manualStudyTarget(manual);
+    const gain = manualStudySpeed(s, route);
+    learning.manualProgress[id] = Math.min(target, Math.round(((Number(learning.manualProgress[id]) || 0) + gain) * 1000000) / 1000000);
     const complete = learning.manualProgress[id] >= target;
     if (complete) {
       // Preserve the active set before unlocking; the new technique is not equipped automatically.
@@ -6170,6 +6400,24 @@
     const index = TECHNIQUE_MASTERY_LEVELS.findIndex(item => item.min === level.min);
     return [1, 1.03, 1.07, 1.12, 1.18][Math.max(0, index)] || 1;
   }
+  // พื้นฐานกายมีเพดาน 100 เพื่อไม่ให้โบนัสจากเซฟเก่าหรืออีเวนต์เกินสมดุล
+  function bodyFoundationBenefits(s) {
+    const value = clamp(Number(s.hero?.bodyFoundation) || 0, 0, 100);
+    return {
+      value,
+      breakthroughBonus: Math.floor(value / 10),
+      injuryChanceMultiplier: 1 - value / 200,
+      healthCostMultiplier: 1 - value * .003,
+      earlyTrainingMultiplier: (s.hero?.realm || 0) === 1 ? 1 + value * .002 : 1
+    };
+  }
+
+  function disciplineBenefits(s) {
+    const value = clamp(Number(s.hero?.discipline) || 0, 0, 100);
+    const months = clamp(Math.floor(Number(s.trainingConsistencyMonths) || 0), 0, 5);
+    return { value, months, breakthroughBonus: Math.floor(value / 10), trainingMultiplier: 1 + months * value / 5000 };
+  }
+
   function trainingProfile(s, techniques = []) {
     ensureTrainingState(s);
     techniques = techniques.filter(Boolean);
@@ -6178,12 +6426,13 @@
     const resourceCost = trainingResourceCost(s, techniques);
     const location = trainingLocationKey(s);
     const locationMultiplier = TRAINING_LOCATION_MULTIPLIERS[location] || 1;
-    const rootMultiplier = .72 + rootLevel(s) * .1;
+    const rootMultiplier = ROOT_TRAINING_MULTIPLIER[s.hero.root] ?? ROOT_TRAINING_MULTIPLIER.human;
     const methodMultiplier = (techniques.length ? techniques.reduce((sum, technique) => sum + 1 + Number(technique.bonus?.training || 0) / 100, 0) / techniques.length : .7) * item.gradeRate;
     const compatibility = techniques.length ? techniques.reduce((sum, technique) => sum + (techniqueIsTrainable(s, technique) ? 1 : .35), 0) / techniques.length : 1;
     const masteryMultiplier = techniques.length ? techniques.reduce((sum, technique) => sum + techniqueMasteryBonus(s, technique.id), 0) / techniques.length : 1;
-    const healthCost = Math.max(1, Math.round((goal.risk > 1 ? 3 : 1) + item.healthCost));
-    return { goal, item, resourceCost, location, locationMultiplier, rootMultiplier, methodMultiplier, masteryMultiplier, compatibility, healthCost };
+    const bodyFoundation = bodyFoundationBenefits(s);
+    const healthCost = Math.max(1, Math.round(((goal.risk > 1 ? 3 : 1) + item.healthCost) * bodyFoundation.healthCostMultiplier));
+    return { goal, item, resourceCost, location, locationMultiplier, rootMultiplier, methodMultiplier, masteryMultiplier, compatibility, healthCost, bodyFoundation };
   }
 
   const CULTIVATION_GRADE_BREAKTHROUGH_BONUS = { common: 0, uncommon: 6, rare: 10, epic: 18, legendary: 30 };
@@ -6204,12 +6453,12 @@
 
   function breakthroughChance(s, mode = 'force', extraFoundation = 0) {
     ensureTrainingState(s); const techniques = breakthroughTrainingSet(s); const p = trainingProfile(s, techniques);
-    const base = 18 + rootLevel(s) * 7 + Math.round((s.trainingFoundation + extraFoundation) * .45) + Math.round((s.hero.discipline || 0) / 20);
+    const base = 18 + rootLevel(s) * 7 + Math.round((s.trainingFoundation + extraFoundation) * .45);
     const site = p.location === 'sect' ? 12 : p.location === 'hidden_cave' ? 5 : 0;
     const mastery = techniques.reduce((sum, t) => sum + (techniqueMasteryLevel(s, t.id).min / 10), 0);
     const item = p.item.breakthroughBonus;
     const modeBonus = mode === 'item' ? 18 : mode === 'foundation' ? 10 : 0;
-    return clamp(Math.round((base + site + mastery + item + modeBonus) * (mode === 'force' ? .72 : 1)) + cultivationGradeBreakthroughBonus(s), 5, 95);
+    return clamp(Math.round((base + site + mastery + item + modeBonus) * (mode === 'force' ? .72 : 1)) + cultivationGradeBreakthroughBonus(s) + bodyFoundationBenefits(s).breakthroughBonus + disciplineBenefits(s).breakthroughBonus, 5, 95);
   }
 
   function breakthroughItem(s) { return activeTreasures(s).find(item => Number(itemBonus(item).breakthroughBonus || 0) > 0); }
@@ -6218,14 +6467,14 @@
     const healthRatio = h.maxHealth ? h.health / h.maxHealth : 1;
     const qiRatio = h.qiMax ? h.qi / h.qiMax : 1;
     const dangerousStage = (h.realm || 1) >= 3 || (h.stage || 1) >= 7;
-    const protectedByItem = activeTreasures(s).some(item => Number(itemBonus(item).breakthroughProtection || 0) > 0);
+    const protectedByItem = activeTreasures(s).reduce((sum, item) => sum + Number(itemBonus(item).breakthroughProtection || 0), 0) > 0;
     const fatal = mode === 'force' && !protectedByItem && dangerousStage && chance <= 10 && healthRatio <= .3 && qiRatio <= .25;
     if (fatal) return { severity: 'fatal', healthLoss: h.health, qiLoss: Math.max(12, Math.round((h.qiMax || 20) * .3)), scar: true };
     const severe = mode === 'force' && (chance < 25 || dangerousStage);
     return { severity: severe ? 'severe' : 'injury', healthLoss: severe ? 18 + Math.max(0, (h.realm || 1) - 1) * 4 : mode === 'force' ? 12 : 5, qiLoss: severe ? 18 : 12, scar: severe && chance < 18 };
   }
   function attemptBreakthrough(s, mode) {
-    ensureTrainingState(s); const h = s.hero; if (!h.cultivationAccess || !equippedCultivationTechnique(s) || !s.breakthroughState.ready) return false;
+    ensureTrainingState(s); const h = s.hero; if (!h.cultivationAccess || !equippedCultivationTechnique(s) || !s.breakthroughState.ready || cultivationAtCeiling(s)) return false;
     const item = mode === 'item' ? breakthroughItem(s) : null;
     if (mode === 'item' && !item) return false;
     const chance = breakthroughChance(s, mode);
@@ -6248,7 +6497,7 @@
   function breakthroughEvent(s) {
     ensureTrainingState(s); const item = breakthroughItem(s); const force = breakthroughChance(s, 'force'); const itemChance = breakthroughChance(s, 'item'); const foundation = breakthroughChance(s, 'force', 8);
     return { id: `breakthrough-${s.month}-${s.hero.realm}-${s.hero.stage}`, tag: 'ด่านทะลวงขั้น', title: `ประตูด่าน ${realmName(s.hero)}`, art: 'breakthrough',
-      text: `ความก้าวหน้าของเจ้าถึงขีดจำกัดแล้ว ปราณหมุนวนอยู่หน้าประตูด่าน หากเลือกผิด ชีพจรอาจบาดเจ็บ แต่หากวางรากฐานต่อ โอกาสสำเร็จจะสูงขึ้น วิชาบำเพ็ญที่ติดตั้ง: ${equippedCultivationTechnique(s)?.name || 'ไม่มี'} · โบนัสจากเกรด +${cultivationGradeBreakthroughBonus(s)} จุดเปอร์เซ็นต์ (โอกาสรวมสูงสุด 95%)`,
+      text: `ความก้าวหน้าของเจ้าถึงขีดจำกัดแล้ว ปราณหมุนวนอยู่หน้าประตูด่าน หากเลือกผิด ชีพจรอาจบาดเจ็บ แต่หากวางรากฐานต่อ โอกาสสำเร็จจะสูงขึ้น วิชาบำเพ็ญที่ติดตั้ง: ${equippedCultivationTechnique(s)?.name || 'ไม่มี'} · โบนัสจากเกรด +${cultivationGradeBreakthroughBonus(s)} จุดเปอร์เซ็นต์ · พื้นฐานกาย +${bodyFoundationBenefits(s).breakthroughBonus} · วินัย +${disciplineBenefits(s).breakthroughBonus} จุดเปอร์เซ็นต์ (โอกาสรวมสูงสุด 95%)${s.hero.stage === 9 && s.hero.realm < REALMS.length ? ` · หากทะลวงขั้นใหญ่สำเร็จ อายุขัย +${majorRealmLifespanBonus(s.hero.realm + 1).toLocaleString()} ปี` : ''}`,
       choices: [
         { text: `ฝืนทะลวงทันที · โอกาสสำเร็จ ${force}%`, note: force < 20 ? 'อันตรายสูงมาก: หากพลาดอาจเสียชีวิต' : force < 45 ? 'อันตรายสูง: หากพลาดอาจบาดเจ็บหนัก' : 'เสี่ยงบาดเจ็บหากล้มเหลว', effect: state => attemptBreakthrough(state, 'force') },
         { text: item ? `ใช้ ${item.name} ช่วยทะลวง · โอกาสสำเร็จ ${itemChance}%` : 'ใช้ของช่วยทะลวง', note: item ? (itemChance < 20 ? 'อันตรายสูงมากแม้มีของช่วย: หากพลาดอาจเสียชีวิต' : itemChance < 45 ? 'ยังมีความเสี่ยงบาดเจ็บหนัก' : 'ใช้ของวิเศษหนึ่งชิ้น') : 'ต้องมีของวิเศษที่ช่วยทะลวงขั้น', locked: 'ยังไม่มีของวิเศษที่เหมาะสม', requires: () => !!item, effect: state => attemptBreakthrough(state, 'item') },
@@ -6290,7 +6539,8 @@
       qi: Math.max(0, Number(itemBonus(item).restQi || 0))
     })).filter(entry => entry.health || entry.qi).sort((a, b) => (b.health + b.qi) - (a.health + a.qi));
     const best = ranked[0];
-    return best ? { name: best.item.name, health: best.health, qi: best.qi } : { name: null, health: 0, qi: 0 };
+    const penalties = items.reduce((sum, item) => { const bonus = itemBonus(item); sum.health += Math.min(0, Number(bonus.restHealth || 0)); sum.qi += Math.min(0, Number(bonus.restQi || 0)); return sum; }, { health: 0, qi: 0 });
+    return { name: best?.item.name || null, health: (best?.health || 0) + penalties.health, qi: (best?.qi || 0) + penalties.qi };
   }
 
   function restRoute(s) {
@@ -6304,8 +6554,8 @@
       key,
       location: location.name,
       safety: location.safety,
-      heal: Math.round((rest.health + item.health) * rest.healthMultiplier * formationMultiplier),
-      qi: Math.round((rest.qi + item.qi) * rest.qiMultiplier * formationMultiplier),
+      heal: Math.max(0, Math.round((rest.health + item.health) * rest.healthMultiplier * formationMultiplier)),
+      qi: Math.max(0, Math.round((rest.qi + item.qi) * rest.qiMultiplier * formationMultiplier)),
       itemName: item.name,
       log: item.name ? `พักที่${location.name}โดยอาศัย${item.name}` : `พักที่${location.name}`
     };
@@ -6563,7 +6813,7 @@
     const exploration = ensureExplorationState(s);
     const available = getAvailableExplorationAreas(s);
     const area = available.find(item => item.id === exploration.selectedArea) || available[0] || EXPLORATION_AREA_DEFS.village_trails;
-    const a = ensureAttributes(s);
+    const a = syncCombat(s).attributes;
     const knowledge = (s.paths?.insight || 0) + Math.floor((a.intellect || 0) / 8);
     const mapBonus = s.flags?.foundMap ? 18 : 0;
     const powerBonus = Math.min(20, Math.floor((s.hero?.power || 0) / 80));
@@ -6792,10 +7042,9 @@
     return 12690 + (r - 5) * 22500 + s * 2500;
   }
 
-  // ปรับปลายทางพลังตามความยากของรากวิญญาณ โดยคงรากมนุษย์ไว้เป็นฐาน
-  // เป้าหมายช่วงท้ายโดยประมาณ: มนุษย์ 4,000 · ปฐพี 5,000 · สวรรค์ 6,000 · เซียน 7,000 · ตำนาน 8,000
-  const ROOT_POWER_MULTIPLIER = {
-    none: 1,
+  // รากวิญญาณส่งผลต่อความเร็วบำเพ็ญ ไม่คูณพลังรวม
+  const ROOT_TRAINING_MULTIPLIER = {
+    none: .62,
     human: 1.00,
     earth: 1.75,
     heaven: 2.50,
@@ -6806,6 +7055,7 @@
   const defaultState = (name, talent, root, gender = 'unspecified') => {
     const r = ROOTS[root] || ROOTS.human, t = TALENTS[talent] || TALENTS.jade;
     const normalizedGender = ['male', 'female', 'unspecified'].includes(gender) ? gender : 'unspecified';
+    const initialLifespan = randomLifespanYears();
     const initial = ({
        version: VERSION,
        runId: createRunId(),
@@ -6820,7 +7070,8 @@
         rootKnown: false,
         rootDiscovery: null,
         ageMonths: 5 * 12,
-        lifespan: 74,
+        lifespan: initialLifespan,
+        lifespanMonths: initialLifespan * 12,
         health: talent === 'steady' ? 120 : 100,
         maxHealth: talent === 'steady' ? 120 : 100,
         qi: 0,
@@ -6865,6 +7116,7 @@
        learningState: { months: 0, lastLocation: null, lastTechnique: null, lastType: null, lastTeacher: null, techniqueFocus: null, focus: 'lore', autoRule: 'balanced', knowledge: { lore: 0, cultivation: 0, martial: 0, survival: 0 } },
       trainingFocus: [],
       trainingSwitchCooldown: 0,
+      trainingConsistencyMonths: 0,
       trainingFoundation: 0,
       breakthroughState: { ready: false, nextPromptMonth: 0, lastAttempt: null },
       loadoutMode: true,
@@ -7322,7 +7574,7 @@
     },
     arrival: {
       month: 84, tag: 'อายุ 12 ปี · เหตุการณ์สำคัญ', art: 'gate', title: 'ก้าวแรกใต้เมฆาคราม',
-      dynamicText: s => adaptiveDialogue(s, 'สำนักเมฆาครามเป็นเพียงสำนักระดับต่ำ ประมุขอยู่ขั้นสร้างรากฐานและศิษย์ส่วนใหญ่ยังหลอมกาย อาจารย์เหวินมองเจ้าอยู่ครู่หนึ่ง ก่อนยื่นป้ายไม้ศิษย์นอกพร้อมเคล็ดรวบรวมปราณพื้นฐาน “ที่นี่ให้โอกาส แต่ไม่เคยรับรองชะตาของผู้ใด”'),
+      dynamicText: s => adaptiveDialogue(s, 'สำนักเมฆาครามเป็นเพียงสำนักระดับต่ำ ประมุขมีพลังราวขั้นสร้างรากฐาน ขั้น 1 และศิษย์นอกอยู่ขั้นหลอมกาย ศิษย์ในรวบรวมวิญญาณขั้น 1–5 ศิษย์เอกรวบรวมวิญญาณขั้น 6–9 ศิษย์สืบทอดควบแน่นวิญญาณขั้น 1–5 ส่วนอาจารย์และผู้อาวุโสอยู่ขั้นควบแน่นวิญญาณขั้น 6–9 อาจารย์เหวินมองเจ้าอยู่ครู่หนึ่ง ก่อนยื่นป้ายไม้ศิษย์นอกพร้อมเคล็ดรวบรวมปราณพื้นฐาน “ที่นี่ให้โอกาส แต่ไม่เคยรับรองชะตาของผู้ใด”'),
       choices: [
         { text: 'คำนับและขอคำชี้แนะเรื่องการฝึก', note: 'อาจารย์จดจำความมุ่งมั่นของเจ้า', effect: s => { s.relations.master += 12; s.hero.cultivation += 10; addLog('อาจารย์ชี้แนะจังหวะลมหายใจ ทำให้พื้นฐานมั่นคงขึ้น', true); } },
         { text: 'ช่วยศิษย์พี่ขนของเข้าสำนัก', note: 'เสียแรงเล็กน้อย แต่ได้รู้จักผู้คน', effect: s => { s.relations.senior += 14; s.hero.health -= 4; s.hero.money += 3; addLog('ศิษย์พี่เซี่ยหลันตอบแทนด้วยอาหารและตำลึงเล็กน้อย', true); } },
@@ -7394,7 +7646,7 @@
       text: 'ระหว่างทางกลับสำนัก ลูกศรอาบพิษพุ่งออกจากเงาไม้ ขุนพลย่อยงูดำสามคนปิดทาง เจ้าต้องตัดสินใจในชั่วลมหายใจ',
       choices: [
         { text: 'ชักอาวุธ สู้เต็มกำลัง', note: 'พลัง 1,000 ขึ้นไปจึงมีโอกาสรอด หากฝืนสู้ทั้งที่พลังไม่ถึงจะเสียชีวิตทันที', effect: s => { if (s.hero.power < 1000) { s.hero.health = 0; endGame('death_battle', { cause: 'ฝืนสู้กับขุนพลย่อยงูดำทั้งที่พลังไม่ถึง 1,000 ถูกสังหารกลางป่าสน' }); } else { resolveAmbush(s, 'fight'); } } },
-        { text: 'ใช้ภูมิประเทศถ่วงเวลาแล้วถอย', note: 'แผนที่หรือวิชาย่างก้าวช่วยได้', effect: s => resolveAmbush(s, 'flee') },
+        { text: 'ใช้ภูมิประเทศถ่วงเวลาแล้วถอย', note: 'มีแผนที่ วิชาย่างก้าว ของแทนใจสหาย พรสวรรค์ดวงตาเฉียบคม หรือว่องไวอย่างน้อย 12 จะช่วยให้ถอยได้ดี มิฉะนั้นเสียสุขภาพ 32', effect: s => resolveAmbush(s, 'flee') },
         { text: 'อ้างว่ามีข้อมูลของสำนัก แลกกับชีวิต', note: 'รอดง่าย แต่เสียชื่อเสียง', effect: s => { s.flags.survivedAmbush = true; s.hero.reputation -= 18; s.relations.master -= 15; s.hero.health -= 8; addLog('คำลวงซื้อเวลาให้เจ้าหนี แต่ข่าวความขลาดแพร่กลับถึงสำนัก', true); } }
       ]
     },
@@ -7420,7 +7672,7 @@
             s.relations.master += 28;
             s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 25);
             if (s.flags.helpedFriend) s.relations.friend += 14;
-            addLog('อาจารย์เหวินฟื้นตัวจากพิษร้าย พลังยุทธ์ฟื้นคืนเต็มสิบส่วน สำนักมีความหวังอีกครั้ง และมอบตราผู้สืบทอดให้เจ้า', true);
+            addLog('อาจารย์เหวินฟื้นตัวจากพิษร้าย พลังยุทธ์ฟื้นคืนเต็มสิบส่วน สำนักมีความหวังอีกครั้ง และมอบตราแสดงความไว้วางใจให้เจ้า', true);
           }
         },
         {
@@ -7443,7 +7695,7 @@
             s.flags.masterHealed = false;
             s.flags.masterCrippled = true;
             s.flags.forbiddenPower = true;
-            s.hero.lifespan -= 10;
+            ensureLifespanState(s); s.hero.lifespanMonths = Math.max(s.hero.ageMonths, s.hero.lifespanMonths - 120); s.hero.lifespan = s.hero.lifespanMonths / 12;
             s.hero.powerBonus += 450;
             s.relations.master -= 18;
             addLog('พลังเย็นเยียบไหลเข้าชีพจร ขณะที่อาจารย์เหวินบาดเจ็บเรื้อรังไร้คนเยียวยา เสาหลักสำนักกำลังจะสั่นคลอน', true);
@@ -7521,9 +7773,9 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       month: 216, tag: 'มหันตภัย', title: 'คืนสำนักแตก',
       dynamicText: s => adaptiveDialogue(s, 'เปลวไฟลุกขึ้นพร้อมเสียงระฆังเตือนภัย แม่ทัพงูดำขั้นสร้างรากฐาน ขุนพลขั้นควบแน่น 10 คน และทหารขั้นรวบรวม 50 คน ทะลักเข้าสู่ประตูเขา หากสำนักและหลินอันไม่ได้เตรียมพร้อมอย่างแท้จริง การเลือกสู้คือความตาย'),
       choices: [
-        { text: 'รวมศิษย์เข้าต้านศัตรู เคียงข้างอาจารย์', note: 'ตัดสินชะตาด้วยพลังของสำนักและหลินอันร่วมกัน', requires: s => updateFactionReputation(s).sect >= 0, locked: 'ชื่อเสียงต่อสำนักต่ำเกินกว่าจะรวมผู้คน', effect: s => finishBattle(s) },
-        { text: 'พาผู้คนหนีผ่านอุโมงค์ลับ', note: 'ต้องมีแผนที่หรือเสบียง + ว่องไว ≥ 6 + กายา ≥ 4 หรือพลังรวม ≥ 300; ชื่อเสียงต่ำกว่า -15 จะกลายเป็น Outlaw', requires: s => (s.flags.foundMap || s.flags.escapePrepared), locked: 'ยังไม่มีเส้นทางหรือเสบียงสำหรับพาผู้คนหนี', effect: s => finishEscape(s, true) },
-        { text: 'ฉวยเสบียงแล้วหนีเพียงลำพัง', note: 'ต้องมี (ว่องไว ≥ 6 หรือเส้นทางพร้อม) + กายา ≥ 4 หรือพลังรวม ≥ 300; ชื่อเสียงต่ำกว่า -15 จะกลายเป็น Outlaw', effect: s => finishEscape(s, false) },
+        { text: 'รวมศิษย์เข้าต้านศัตรู เคียงข้างอาจารย์', note: 'ตัดสินชะตาด้วยพลังของสำนักและหลินอันร่วมกัน', dynamicNote: s => siegeBattleOmen(s), requires: s => updateFactionReputation(s).sect >= 0, locked: 'ชื่อเสียงต่อสำนักต่ำเกินกว่าจะรวมผู้คน', effect: s => finishBattle(s) },
+        { text: 'พาผู้คนหนีผ่านอุโมงค์ลับ', note: 'ต้องมีแผนที่หรือเสบียง และเส้นทางพร้อม และ (ว่องไว ≥ 6 หรือเมตตา ≥ 6) และ (กายา ≥ 4 หรือพลังรวม ≥ 300); ชื่อเสียงต่ำกว่า -15 จะกลายเป็น Outlaw', requires: s => (s.flags.foundMap || s.flags.escapePrepared), locked: 'ยังไม่มีเส้นทางหรือเสบียงสำหรับพาผู้คนหนี', effect: s => finishEscape(s, true) },
+        { text: 'ฉวยเสบียงแล้วหนีเพียงลำพัง', note: 'ต้องมี (ว่องไว ≥ 6 หรือเส้นทางพร้อม) และ (กายา ≥ 4 หรือพลังรวม ≥ 300); ชื่อเสียงต่ำกว่า -15 จะกลายเป็น Outlaw', effect: s => finishEscape(s, false) },
         { text: 'ส่งสัญญาณ เปิดประตูให้กองโจรงูดำ', note: 'ทรยศสำนักและรับรางวัลจากศัตรู', requires: s => s.flags.betrayedSect, locked: 'ต้องเข้าร่วมงูดำเสียก่อน', effect: s => endGame('traitor_kingpin', { battleScore: 0 }) }
       ]
     }
@@ -8842,7 +9094,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       text: 'ช่างตีเหล็กพบโลหะสีดำชิ้นหนึ่งตกอยู่กลางลานบ้าน หลังจากดาวตกพาดผ่านท้องฟ้าเมื่อคืนก่อน\n\nแม้ถูกโยนลงในเตาหลอมหลายครั้ง มันกลับไม่ละลาย แต่กลับส่งเสียงคล้ายเด็กหัวเราะทุกครั้งที่เจ้าอยู่ใกล้\n\nช่างจึงเก็บมันไว้ให้ครอบครัว พร้อมกล่าวว่าโลหะชิ้นนี้อาจกลายเป็นอาวุธหรือเครื่องรางของเจ้าในวันที่เติบโตพอ',
       choices: [
         { text: 'ฝากช่างตีเหล็กเก็บรักษาไว้', note: 'ได้เหล็ก หินปราณ และเศษเหล็กจากฟ้า', effect: s => { s.flags.infantStarFragment = true; s.materials.iron += 3; s.materials.spiritStone += 1; addTreasure(s, 'เศษเหล็กจากฟ้า', { attack: 10, defense: 8 }, { grade: 'epic', craftingMaterial: true }); s.hero.attributes.body += 2; addLog('ช่างตีเหล็กเก็บเศษเหล็กจากฟ้าไว้ให้เจ้า โลหะนี้ยังรอวันที่จะถูกตีขึ้นเป็นของคู่กาย', true); } },
-        { text: 'ให้ช่างขึ้นรูปเป็นของเล่นชิ้นเล็ก', note: 'ได้ของวิเศษที่ช่วยเพิ่มกายและความกล้า', effect: s => { s.flags.infantStarFragment = true; addTreasure(s, 'ลูกข่างเหล็กจากดาว', { body: 8, luck: 5, defense: 6 }, { grade: 'epic' }); s.hero.attributes.body += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8); addLog('เศษดาวถูกตีเป็นลูกข่างเหล็ก แม้หมุนช้า แต่ไม่เคยล้มลงแม้ถูกผลักด้วยแรงใด', true); } },
+        { text: 'ให้ช่างขึ้นรูปเป็นของเล่นชิ้นเล็ก', note: 'เพิ่มพละกำลังและความกล้า พร้อมได้รับของวิเศษ', effect: s => { s.flags.infantStarFragment = true; addTreasure(s, 'ลูกข่างเหล็กจากดาว', { body: 8, luck: 5, defense: 6 }, { grade: 'epic' }); s.hero.attributes.body += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8); addLog('เศษดาวถูกตีเป็นลูกข่างเหล็ก แม้หมุนช้า แต่ไม่เคยล้มลงแม้ถูกผลักด้วยแรงใด', true); } },
         { text: 'นำโลหะไปคืนจุดที่ดาวตก', note: 'นำเศษดาวกลับไป เพิ่มกรรม ปัญญา และชื่อเสียง', effect: s => { s.flags.infantStarFragment = true; s.flags.starfallSiteKnown = true; s.hero.karma += 4; s.hero.attributes.intellect += 2; s.hero.reputation += 1; addLog('ครอบครัวนำเศษดาวกลับไปยังจุดที่มันตกลงมา ดินตรงนั้นยังอุ่น และมีรอยแร่ประหลาดซ่อนอยู่ใต้ดิน', true); } }
       ]
     },
@@ -8852,7 +9104,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       tag: 'มหากาพย์ · วัยทารก', art: 'snow-fever', title: 'ไข้คืนหิมะ',
       text: 'ในคืนที่หิมะตกหนัก เจ้าตัวร้อนจนผู้ดูแลคิดว่าอาจไม่รอดถึงเช้า เปลวไฟในเตาผิงเองยังสั่นไหวราวกับหวาดกลัว\n\nผู้ดูแลนำยาสามัญทุกอย่างที่มีมาผสมกันโดยไม่มีทางเลือกอื่น และหยดแรกที่แตะริมฝีปากของเจ้ากลับเปล่งแสงสีทอง\n\nก่อนรุ่งเช้า ไข้ของเจ้าลดลง เหลือเพียงรอยแสงบาง ๆ บนข้อมือ ราวกับร่างกายได้จดจำความตายไว้เป็นบทเรียนแรก',
       choices: [
-        { text: 'ดื่มยาที่ผู้ดูแลปรุงต่อจนหมด', note: 'ฟื้นสุขภาพ เพิ่มสุขภาพสูงสุดและกาย พร้อมได้รับเม็ดยา', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 10); s.hero.maxHealth += 5; s.hero.attributes.body += 3; addTreasure(s, 'เม็ดยาเกล็ดหิมะ', { body: 8, health: 5 }, { grade: 'rare', consumable: true }); addLog('ยาสามัญที่รวมกันอย่างสิ้นหวังช่วยให้เจ้ารอด และร่างกายจดจำคืนไข้หิมะไว้เป็นภูมิคุ้มกัน', true); } },
+        { text: 'ดื่มยาที่ผู้ดูแลปรุงต่อจนหมด', note: 'ฟื้นสุขภาพ เพิ่มสุขภาพสูงสุดและพละกำลัง พร้อมได้รับเม็ดยา', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 10); s.hero.maxHealth += 5; s.hero.attributes.body += 3; addTreasure(s, 'เม็ดยาเกล็ดหิมะ', { body: 8, health: 5 }, { grade: 'rare', consumable: true }); addLog('ยาสามัญที่รวมกันอย่างสิ้นหวังช่วยให้เจ้ารอด และร่างกายจดจำคืนไข้หิมะไว้เป็นภูมิคุ้มกัน', true); } },
         { text: 'หยุดยาและใช้ความอบอุ่นของครอบครัวรักษาเจ้า', note: 'ปลอดภัยกว่า และเพิ่มความผูกพันกับครอบครัว', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 6); s.relations.parents += 5; s.relations.relatives += 2; s.hero.attributes.spirit += 2; addLog('อ้อมแขนของครอบครัวช่วยพาเจอผ่านคืนหิมะ ความทรงจำเรื่องการถูกปกป้องฝังแน่นอยู่ในจิตใจ', true); } },
         { text: 'เก็บหยดแสงสีทองไว้ในขวดหยก', note: 'ได้รับไอเทมและเพิ่มจิตใจ แต่สุขภาพลดลงสูงสุด 4', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.max(1, s.hero.health - 4); addTreasure(s, 'หยดแสงจากไข้หิมะ', { spirit: 10, luck: 6, defense: 6 }, { grade: 'epic', sealed: true }); s.hero.attributes.spirit += 4; addLog('หยดแสงสีทองถูกเก็บในขวดหยก กลายเป็นของวิเศษที่ยังเต้นเบา ๆ เมื่อเจ้าหลับ', true); } }
       ]
@@ -9036,7 +9288,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       when: s => (s.hero?.health || 0) < (s.hero?.maxHealth || 100) * .55 || s.activity === 'rest', title: 'สมุนไพรต้นสุดท้าย',
       text: 'สมุนไพรต้นหนึ่งงอกขึ้นข้างบ่อน้ำในปีที่ไม่มีสิ่งใดเติบโต มันมีใบเพียงสามใบและดอกเดียว แต่กลิ่นของมันทำให้ความเจ็บปวดตามข้อกระดูกเบาบางลง\n\nผู้คนบอกให้เจ้าเก็บมันไว้กินในคืนสุดท้าย เพราะยานี้อาจยืดลมหายใจได้อีกหลายปี\n\nแต่เจ้ารู้ดีว่า หากถอนมันในวันนี้ จะไม่มีใครได้เห็นว่าพืชต้นนี้จะออกดอกอีกครั้งหรือไม่',
       choices: [
-        { text: 'ถอนมาต้มเป็นยาให้ตนเอง', note: 'ฟื้นสุขภาพและเพิ่มอายุขัยเล็กน้อย', effect: s => { s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 22); s.hero.lifespan += 2; addTreasure(s, 'เม็ดยาสมุนไพรต้นสุดท้าย', { body: 8, spirit: 8 }, { grade: 'epic', consumable: true }); addLog('ยาจากสมุนไพรต้นสุดท้ายช่วยให้เจ้าหายใจได้ลึกขึ้นอีกครั้ง แม้รู้ว่าทุกสิ่งย่อมมีวันหมดลง', true); } },
+        { text: 'ถอนมาต้มเป็นยาให้ตนเอง', note: 'ฟื้นสุขภาพและเพิ่มอายุขัยเล็กน้อย', effect: s => { s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 22); ensureLifespanState(s); s.hero.lifespanMonths += 24; s.hero.lifespan = s.hero.lifespanMonths / 12; addTreasure(s, 'เม็ดยาสมุนไพรต้นสุดท้าย', { body: 8, spirit: 8 }, { grade: 'epic', consumable: true }); addLog('ยาจากสมุนไพรต้นสุดท้ายช่วยให้เจ้าหายใจได้ลึกขึ้นอีกครั้ง แม้รู้ว่าทุกสิ่งย่อมมีวันหมดลง', true); } },
         { text: 'ฝากให้ผู้สืบทอดดูแลต่อ', note: 'เพิ่ม Legacy และ Karma แต่ไม่ได้ฟื้นสุขภาพทันที', effect: s => { s.family.legacyScore += 7; s.hero.karma += 4; s.flags.lastHerbInherited = true; addLog('เจ้าฝากสมุนไพรต้นสุดท้ายไว้กับคนรุ่นหลัง และสอนว่าการรักษาชีวิตไม่จำเป็นต้องเริ่มจากการเด็ดทุกสิ่งมาเป็นของตน', true); } },
         { text: 'แบ่งรากให้ผู้ป่วยในหมู่บ้าน', note: 'เพิ่ม Karma และชื่อเสียง แต่เสียโอกาสยืดชีวิต', effect: s => { s.hero.karma += 7; s.hero.reputation += 5; s.hero.health = Math.max(1, s.hero.health - 4); addLog('รากสมุนไพรถูกแบ่งเป็นชิ้นเล็ก ๆ หลายส่วน ผู้ป่วยรอดชีวิต แม้เวลาของเจ้าจะไม่เพิ่มขึ้นเลย', true); } }
       ]
@@ -9068,14 +9320,14 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     // Bond Event: อาจารย์เหวิน
     {
       id: 'master_bond', minAge: 12, storyCharacter: 'lin-an', activity: 'train', minMonth: 90, unlock: s => s.relations.master >= 20, title: 'ชาน้ำชาบนผาเมฆา', text: 'อาจารย์เหวินรินชาสมุนไพรโบราณให้เจ้า “ในบรรดาศิษย์รุ่นนี้ แววตาของเจ้าหนักแน่นที่สุด” ท่านยื่นจี้หยกเก่าแก่ที่ลงอักขระคุ้มกายไว้ให้', choices: [
-        { text: 'คุกเข่ารับจี้หยกและคำสอน', note: 'ของวิเศษ: ป้องกัน +10 · กายา +8', effect: s => { s.flags.masterBondGiven = true; addTreasure(s, 'จี้หยกคุ้มชีพอาจารย์เหวิน', { defense: 10, body: 8 }); s.relations.master += 15; s.hero.cultivation += 25; addLog('จี้หยกไออุ่นของอาจารย์ปกป้องชีพจร ทำให้รากฐานมั่นคงขึ้น', true); } },
+        { text: 'คุกเข่ารับจี้หยกและคำสอน', note: 'ได้รับจี้หยก · สวมใส่ต้องถึงหลอมกาย', effect: s => { s.flags.masterBondGiven = true; addTreasure(s, 'จี้หยกคุ้มชีพอาจารย์เหวิน', { defense: 10, body: 8 }); s.relations.master += 15; s.hero.cultivation += 25; addLog('จี้หยกไออุ่นของอาจารย์ปกป้องชีพจร ทำให้รากฐานมั่นคงขึ้น', true); } },
         { text: 'ขอเรียนเคล็ดลมปราณเสริมแทน', note: 'ความเร็วฝึกตน +15%', effect: s => { s.hero.combat.training += 15; s.relations.master += 10; addLog('อาจารย์ปรับชีพจรลมหายใจให้ ความเร็วในการบำเพ็ญเพิ่มขึ้นอย่างมาก', true); } }
       ]
     },
     // Bond Event: ศิษย์พี่เซี่ยหลัน
     {
       id: 'senior_bond', minAge: 12, storyCharacter: 'lin-an', activity: 'train', minMonth: 92, unlock: s => s.relations.senior >= 20, title: 'กระบี่ใต้แสงจันทร์', text: 'เซี่ยหลันเรียกเจ้าไปที่ลานกระบี่หลังเที่ยงคืน “เพลงกระบี่สำนักมีท่าลับที่บันทึกไว้เพียงนอกตำรา เจ้าพร้อมจะเรียนหรือไม่?”', choices: [
-        { text: 'ฝึกกระบวนท่าลับจนรุ่งสาง', note: 'กระบี่หายาก: โจมตี +15 · ว่องไว +5 เมื่อสวมใส่', effect: s => { s.flags.seniorBondGiven = true; addTreasure(s, 'กระบี่ธารเมฆาประสาน', { attack: 14, agility: 5 }); s.relations.senior += 15; s.hero.powerBonus += 80; addLog('เจ้ากับศิษย์พี่ประสานกระบี่ใต้แสงจันทร์ กระบวนท่าไหลลื่นไร้ช่องโหว่', true); } },
+        { text: 'ฝึกกระบวนท่าลับจนรุ่งสาง', note: 'กระบี่หายาก · ขั้นต่ำหลอมกาย · เมื่อสวมใส่ โจมตี +30 · ว่องไว +10', effect: s => { s.flags.seniorBondGiven = true; addTreasure(s, 'กระบี่ธารเมฆาประสาน', { attack: 14, agility: 5 }); s.relations.senior += 15; s.hero.powerBonus += 80; addLog('เจ้ากับศิษย์พี่ประสานกระบี่ใต้แสงจันทร์ กระบวนท่าไหลลื่นไร้ช่องโหว่', true); } },
         { text: 'ขอให้ศิษย์พี่ช่วยฝึกเสริมร่างกาย', note: 'กายา +6 · สุขภาพสูงสุด +15', effect: s => { s.hero.combat.body += 6; s.hero.maxHealth += 15; s.hero.health = s.hero.maxHealth; s.relations.senior += 10; addLog('การฝึกเคี่ยวกรำของศิษย์พี่ทำให้กล้ามเนื้อและกระดูกแข็งแกร่งขึ้น', true); } }
       ]
     },
@@ -9100,13 +9352,13 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     },
     {
       id: 'enlightenment', minAge: 12, activity: 'train', minMonth: 84, unlock: s => !!s.hero?.cultivationAccess && !!equippedCultivationTechnique(s), title: 'หนึ่งลมหายใจ หนึ่งโลก', text: 'ระหว่างโคจรปราณ เสียงรอบกายเงียบหาย เจ้าสัมผัสประตูด่านที่ไม่เคยเห็นมาก่อน โอกาสตื่นรู้เช่นนี้อาจมีเพียงครั้งเดียว', choices: [
-        { text: 'ปล่อยจิตตามกระแสเต๋า', note: 'ตื่นรู้ฉับพลัน: ความเร็วฝึก +12% และความก้าวหน้าเพิ่มมาก', effect: s => { s.flags.enlightenment = true; s.hero.cultivation += 55; addTreasure(s, 'รอยตื่นรู้แห่งเมฆา', { training: 12 }); addLog('เจ้าตื่นรู้กลางลานฝึก ปราณก้าวหน้าเท่ากับหลายเดือน', true); } },
+        { text: 'ปล่อยจิตตามกระแสเต๋า', note: 'ตื่นรู้ฉับพลัน: เปิดเผยวิชาบำเพ็ญ เพิ่มความก้าวหน้า และได้รอยตื่นรู้ช่วยฝึก', effect: s => { s.flags.enlightenment = true; s.hero.cultivation += 55; addTreasure(s, 'รอยตื่นรู้แห่งเมฆา', { training: 12 }); addLog('เจ้าตื่นรู้กลางลานฝึก ปราณก้าวหน้าเท่ากับหลายเดือน', true); } },
         { text: 'ถอนสมาธิ เก็บความมั่นคงไว้ก่อน', note: 'ปลอดภัย ฟื้นสุขภาพเล็กน้อย', effect: s => { s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 10); addLog('เจ้าไม่ไล่ตามภาพลวง รากฐานจึงมั่นคงขึ้น'); } }
       ]
     },
     {
       id: 'deviation', minAge: 12, activity: 'train', minMonth: 84, requires: s => s.hero && s.hero.cultivationAccess !== false, title: 'ปราณย้อนเข้าหัวใจ', text: 'การฝึกต่อเนื่องทำให้ลมปราณปั่นป่วน หากฝืนทะลวงด่านอาจก้าวหน้าในคืนเดียว—หรือชีพจรแตกดับ', choices: [
-        { text: 'ฝืนทะลวงเดี๋ยวนี้', note: 'ต้องติดตั้งวิชาบำเพ็ญ · อันตรายถึงตาย: ควรมีพลัง 900 และสุขภาพ 45', requires: s => !!equippedCultivationTechnique(s), locked: 'ต้องติดตั้งวิชาบำเพ็ญก่อน', effect: s => { if (s.hero.power >= 900 && s.hero.health >= 45) { advanceCultivationStage(s, 1, true); s.hero.health -= 22; addLog('เจ้าฝืนผ่านด่านสำเร็จ แม้เลือดไหลจากมุมปาก', true); } else { s.hero.health = 0; endGame('death_deviation', { cause: 'ฝืนทะลวงด่านทั้งที่รากฐานและสุขภาพไม่พอ ชีพจรระเบิดดับสิ้น' }); } } },
+        { text: 'ฝืนทะลวงเดี๋ยวนี้', note: 'ต้องติดตั้งวิชาบำเพ็ญ · อันตรายถึงตาย: ควรมีพลัง 900 และสุขภาพ 45', requires: s => !!equippedCultivationTechnique(s) && !cultivationAtCeiling(s), locked: 'ต้องติดตั้งวิชาบำเพ็ญที่ยังไม่ถึงเพดานก่อน', effect: s => { if (s.hero.power >= 900 && s.hero.health >= 45) { advanceCultivationStage(s, 1, true); s.hero.health -= 22; addLog('เจ้าฝืนผ่านด่านสำเร็จ แม้เลือดไหลจากมุมปาก', true); } else { s.hero.health = 0; endGame('death_deviation', { cause: 'ฝืนทะลวงด่านทั้งที่รากฐานและสุขภาพไม่พอ ชีพจรระเบิดดับสิ้น' }); } } },
         { text: 'หยุดฝึกและระบายปราณ', note: 'เสียความก้าวหน้า 15 แต่ไม่เสี่ยงชีวิต', effect: s => { s.hero.cultivation = Math.max(0, s.hero.cultivation - 15); s.hero.health = Math.max(1, s.hero.health - 6); addLog('เจ้ารักษาชีพจรไว้ได้ แต่ต้องเริ่มสะสมปราณใหม่บางส่วน'); } }
       ]
     },
@@ -9142,7 +9394,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     },
     {
       id: 'forge', minAge: 12, activity: 'work', minMonth: 24, title: 'เหล็กดาวตกในเตาหลอม', text: 'ช่างตีเหล็กเมาพลาดทิ้งก้อนเหล็กดาวตกไว้ เจ้าช่วยประคองไฟจนมันหลอมได้ เขายอมตีของให้หนึ่งชิ้นแทนค่าจ้าง', choices: [
-        { text: 'ตีเป็นกระบี่ดาวตก', note: 'กระบี่หายาก: โจมตี +17.5 · ว่องไว +2.5 เมื่อสวมใส่', effect: s => { s.flags.spiritWeapon = true; addTreasure(s, 'กระบี่ดาวตก', { attack: 12 }); addLog('กระบี่ดาวตกส่งเสียงกังวานเมื่อปราณไหลผ่าน', true); } },
+        { text: 'ตีเป็นกระบี่ดาวตก', note: 'กระบี่หายาก · ขั้นต่ำหลอมกาย · เมื่อสวมใส่ โจมตี +35 · ว่องไว +5', effect: s => { s.flags.spiritWeapon = true; addTreasure(s, 'กระบี่ดาวตก', { attack: 12 }); addLog('กระบี่ดาวตกส่งเสียงกังวานเมื่อปราณไหลผ่าน', true); } },
         { text: 'ขายเหล็ก แบ่งเงินกับช่าง', effect: s => { s.hero.money += 30; s.hero.reputation += 3; addLog('เงินก้อนใหญ่มาถึงมือโดยไม่มีผู้ใดเสียเปรียบ'); } }
       ]
     },
@@ -9160,13 +9412,13 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     },
     {
       id: 'ancient_blade', minAge: 12, activity: 'explore', minMonth: 36, title: 'กระบี่หักในสุสานไร้นาม', text: 'ใต้กองหิน เจ้าพบกระบี่หักที่ยังปล่อยไอสังหาร เจ้าของเดิมอาจเป็นยอดฝีมือ—หรือฆาตกรที่ถูกลบชื่อ', choices: [
-        { text: 'หยดเลือดทำพันธสัญญา', note: 'พลัง 350 ขึ้นไปควบคุมได้ · เมื่อสวมใส่: โจมตี +22.75 ว่องไว +3.25 กาย -3.25', effect: s => { if (s.hero.power >= 350) { s.flags.spiritWeapon = true; addTreasure(s, 'กระบี่หักกินโลหิต', { attack: 14, agility: 4 }); s.hero.reputation -= 5; addLog('กระบี่หักยอมสงบในมือ แต่ไอสังหารทำให้ผู้คนหวาดกลัว', true); } else { s.hero.health -= 35; s.hero.powerBonus += 30; addLog('กระบี่ต่อต้านและดูดเลือดไปมาก ก่อนเจ้าจะสะกดมันได้'); } } },
+        { text: 'หยดเลือดทำพันธสัญญา', note: 'พลัง 350 ขึ้นไปควบคุมได้ · สวมใส่ต้องถึงรวบรวมวิญญาณ · กระบี่มหากาพย์เพิ่มโจมตีและว่องไว แต่ลดกายา', effect: s => { if (s.hero.power >= 350) { s.flags.spiritWeapon = true; addTreasure(s, 'กระบี่หักกินโลหิต', { attack: 14, agility: 4 }); s.hero.reputation -= 5; addLog('กระบี่หักยอมสงบในมือ แต่ไอสังหารทำให้ผู้คนหวาดกลัว', true); } else { s.hero.health -= 35; s.hero.powerBonus += 30; addLog('กระบี่ต่อต้านและดูดเลือดไปมาก ก่อนเจ้าจะสะกดมันได้'); } } },
         { text: 'ฝังมันกลับตามเดิม', effect: s => { s.hero.reputation += 4; addLog('บางพลังไม่ควรถูกปลุก เจ้าจดจำตำแหน่งสุสานไว้'); } }
       ]
     },
     {
       id: 'beast_den', minAge: 12, activity: 'explore', minMonth: 60, title: 'รังพยัคฆ์เกราะดำ', text: 'พยัคฆ์ปีศาจขวางทางกลับ ด้านหลังมันมีหีบหยกโบราณ แต่กรงเล็บเดียวก็อาจฉีกร่างผู้ฝึกตนที่อ่อนแอได้', choices: [
-        { text: 'สังหารพยัคฆ์ชิงหีบหยก', note: 'ต้องมีพลัง 400 · เกราะเพิ่มป้องกัน +10 กายา +6', requires: s => s.hero.power >= 400, locked: 'พลังไม่ถึง 400 การต่อสู้คือความตาย', effect: s => { s.hero.health -= 18; s.hero.money += 24; addTreasure(s, 'เกราะพยัคฆ์ดำ', { defense: 10, body: 6 }); addLog('หลังศึกหนัก เกราะพยัคฆ์กลายเป็นสมบัติของเจ้า', true); } },
+        { text: 'สังหารพยัคฆ์ชิงหีบหยก', note: 'ต้องมีพลัง 400 · สวมใส่ต้องถึงหลอมกาย · เกราะเพิ่มป้องกัน +25 และกายา +15', requires: s => s.hero.power >= 400, locked: 'พลังไม่ถึง 400 การต่อสู้คือความตาย', effect: s => { s.hero.health -= 18; s.hero.money += 24; addTreasure(s, 'เกราะพยัคฆ์ดำ', { defense: 10, body: 6 }); addLog('หลังศึกหนัก เกราะพยัคฆ์กลายเป็นสมบัติของเจ้า', true); } },
         { text: 'โปรยอาหารล่อแล้วหลบหนี', effect: s => { s.hero.money = Math.max(0, s.hero.money - 4); s.hero.health -= 5; addLog('เจ้ารอดออกมาโดยไม่เห็นว่าภายในหีบมีสิ่งใด'); } }
       ]
     },
@@ -9196,8 +9448,20 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     return { weapon: weapon.name, technique: technique.name, subtype: weapon.subtype, multiplier: 1.1 };
   }
 
+  // ความชำนาญขยายเฉพาะโบนัสโจมตีของวิชาต่อสู้ที่ติดตั้ง ไม่คูณอาวุธหรือพลังฐาน
+  function martialSkillBonus(s) {
+    return Math.floor(clamp(Number(s.hero?.martialSkill) || 0, 0, 100) / 10) * .02;
+  }
   function techniqueBonuses(s) {
-    return effectiveTechniques(s).reduce((sum, t) => { Object.entries(t.bonus || {}).forEach(([key, value]) => sum[key] = (sum[key] || 0) + value); return sum; }, { attack: 0, defense: 0, body: 0, agility: 0, training: 0 });
+    const equippedCombat = s.loadoutMode ? ensureTechniqueLoadout(s).combat : null;
+    return effectiveTechniques(s).reduce((sum, t) => {
+      Object.entries(t.bonus || {}).forEach(([key, value]) => {
+        const bonus = key === 'attack' && value > 0 && t.id === equippedCombat && techniqueSlot(t) === 'combat'
+          ? value * (1 + martialSkillBonus(s)) : value;
+        sum[key] = (sum[key] || 0) + bonus;
+      });
+      return sum;
+    }, { attack: 0, defense: 0, body: 0, agility: 0, training: 0 });
   }
   // A child's body can use only part of an artifact's physical power. Stored
   // item bonuses stay intact and gradually become available through age 12.
@@ -9292,9 +9556,10 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   ];
 
   function addTreasure(s, name, bonus, meta = {}) {
-    if (!(s.treasures || []).some(item => (typeof item === 'string' ? item : item.name) === name)) {
+    if (meta.recipeId || !(s.treasures || []).some(item => (typeof item === 'string' ? item : item.name) === name)) {
       const item = normalizeItemGrade({ name, bonus: bonus || {}, ...meta });
       s.treasures.push(item);
+      ensureTreasureIdentities(s);
     }
   }
   function ensureAttributes(s) {
@@ -9372,11 +9637,19 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   function cultivationRank(hero) { return !hero?.cultivationAccess && !(hero?.realm > 0) ? 0 : (Math.max(1, hero.realm || 1) - 1) * 9 + Math.max(1, hero.stage || 1); }
   function realmName(hero) { return !hero?.cultivationAccess && !(hero?.realm > 0) ? 'ยังไม่เปิดทางบำเพ็ญ' : `${REALMS[Math.min(REALMS.length - 1, Math.max(0, (hero.realm || 1) - 1))]} ขั้น ${Math.max(1, hero.stage || 1)}`; }
   function advanceCultivationStage(s, amount = 1, forced = false) {
-    if (!s.hero?.cultivationAccess || !equippedCultivationTechnique(s)) return false;
+    if (!s.hero?.cultivationAccess || !equippedCultivationTechnique(s) || cultivationAtCeiling(s)) return false;
     const h = s.hero; h.stage = Math.max(1, h.stage || 1);
     for (let i = 0; i < amount; i++) {
+      if (cultivationAtCeiling(s)) break;
       if (h.stage < 9) h.stage++;
-      else if (h.realm < REALMS.length) { h.realm++; h.stage = 1; }
+      else if (h.realm < REALMS.length) {
+        ensureLifespanState(s);
+        h.realm++; h.stage = 1;
+        const bonusYears = majorRealmLifespanBonus(h.realm);
+        h.lifespanMonths += bonusYears * 12;
+        h.lifespan = h.lifespanMonths / 12;
+        addLog(`ทะลวงขั้นใหญ่สำเร็จ อายุขัยเพิ่ม ${bonusYears.toLocaleString()} ปี`, true);
+      }
       else { h.stage = 9; h.cultivation = Math.min(99, h.cultivation); }
     }
     h.combat.attack += 2; h.combat.defense += 2; h.combat.body += 2; h.combat.agility += 2; h.maxHealth += 4; h.health = Math.min(h.maxHealth, h.health + (forced ? 10 : 16));
@@ -9387,6 +9660,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     if (!h.cultivationAccess) { h.cultivation = 0; return; }
     if (!equippedCultivationTechnique(s)) return;
     while (h.cultivation >= 100) {
+      if (cultivationAtCeiling(s)) break;
       if (h.stage < 9) {
         h.cultivation -= 100;
         advanceCultivationStage(s);
@@ -9414,17 +9688,18 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     const body = Math.max(1, c.body + b.body + tb.body);
     const agility = Math.max(1, c.agility + b.agility + tb.agility);
     const realmPower = calculateRealmPower(s.hero.realm, s.hero.stage);
-    const mentalPower = Math.round((s.hero.attributes.intellect + s.hero.attributes.spirit + s.hero.attributes.charm + s.hero.attributes.luck) * .8);
+    const attributes = { ...s.hero.attributes };
+    ['intellect', 'spirit', 'charm', 'luck'].forEach(key => { attributes[key] += Number(b[key] || 0) + Number(tb[key] || 0); });
+    const mentalPower = Math.round((attributes.intellect + attributes.spirit + attributes.charm + attributes.luck) * .8);
     const statsPower = Math.round(attack * 8 + defense * 6 + body * 5 + agility * 5 + mentalPower);
     const rawPower = realmPower + statsPower + Math.max(0, Number(s.hero.powerBonus) || 0);
-    const rootPotential = ROOT_POWER_MULTIPLIER[s.hero.root] || 1;
-    const rootMultiplier = 1 + (rootPotential - 1) * Math.min(Math.max(0, Number(s.hero.ageMonths) || 0) / 144, 1);
-    s.hero.power = Math.round(rawPower * rootMultiplier);
+    s.hero.power = Math.round(rawPower);
     return {
       attack, defense, body, agility, compatibility,
-      attributes: { ...s.hero.attributes }, karma: s.hero.karma,
-      training: Math.max(25, c.training + b.training + tb.training),
-      realmPower, statsPower, rootMultiplier, equipmentMaturity: equipmentMaturityFactor(s), totalPower: s.hero.power
+      attributes, karma: (s.hero.karma || 0) + Number(tb.karma || 0) + Number(b.karma || 0),
+      // เซฟเก่าเก็บค่าฝึกเริ่มต้นที่รวมรากไว้แล้ว หักส่วนรากออกก่อนใช้ตัวคูณฝึก
+      training: Math.max(25, c.training - ((ROOTS[s.hero.root]?.training ?? 100) - 100) + b.training + tb.training),
+      realmPower, statsPower, equipmentMaturity: equipmentMaturityFactor(s), totalPower: s.hero.power
     };
   }
 
@@ -9496,9 +9771,8 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
 
   // ฐานถูกขยับให้สงครามปลายทางยังอันตรายจริง พลังตัวละครจึงมีความหมาย
   // โดยเฉพาะรากมนุษย์ที่ต้องเล่นถูกแทบทุกทางเลือกจึงจะชนะได้
-  function finishBattle(s) {
+  function siegeBattleStrength(s) {
     const combat = syncCombat(s);
-    const preparation = battlePreparation(s);
 
     // 1. กำลังรบกองทัพงูดำ
     let serpentArmy = 70000;
@@ -9522,7 +9796,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
 
     // 3. กำลังรบเฉพาะตัวของหลินอัน
     const linAnPower = combat.totalPower +
-      (s.flags.spiritWeapon ? 300 : 0) +
+      (s.flags.spiritWeapon && activeTreasures(s).some(item => ['กระบี่ดาวตก', 'กระบี่หักกินโลหิต'].includes(typeof item === 'object' ? item.name : item)) ? 300 : 0) +
       (s.flags.forbiddenPower ? 800 : 0) +
       (s.flags.masterBondGiven ? 250 : 0) +
       (s.flags.seniorBondGiven ? 350 : 0) +
@@ -9530,7 +9804,21 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
 
     const totalDefense = sectDefense + linAnPower;
     const netAdvantage = totalDefense - serpentArmy;
+    return { totalDefense, netAdvantage, linAnPower };
+  }
+
+  function siegeBattleOmen(s) {
+    const { netAdvantage } = siegeBattleStrength(s);
+    if (netAdvantage < -3000) return 'กองทัพงูดำเหนือกว่ามาก หากยืนหยัดตอนนี้ สำนักมีแนวโน้มแตกพ่ายและเจ้าอาจสิ้นชีพ';
+    if (netAdvantage < 0) return 'กำลังฝ่ายเรายังเป็นรอง แม้ห่างกันไม่มาก หากเข้าต้านตอนนี้ สำนักมีแนวโน้มแตกพ่ายและเจ้าอาจสิ้นชีพ';
+    if (netAdvantage < 3000) return 'กำลังฝ่ายเราพอรับมือได้อย่างฉิวเฉียด มีแนวโน้มรักษาสำนักไว้ได้ แต่ศึกจะหนักหน่วง';
+    return 'กำลังฝ่ายเรามีเปรียบ มีแนวโน้มรักษาสำนักไว้ได้ แต่ชัยชนะอาจยังแลกด้วยความสูญเสีย';
+  }
+
+  function finishBattle(s) {
+    const { totalDefense, netAdvantage, linAnPower } = siegeBattleStrength(s);
     const battleScore = totalDefense;
+    const preparation = battlePreparation(s);
 
     // การเตรียมการกำหนดระดับชัยชนะ ไม่ใช่เงื่อนไขแพ้ศึกโดยอัตโนมัติ
     const root = s.hero.root || 'human';
@@ -9615,7 +9903,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
 
   function addLog(text, highlight = false) {
     if (!state) return;
-    state.log.unshift({ month: state.month, text, highlight, at: Date.now() });
+    state.log.unshift({ month: state.month, worldMonth: state.world?.worldMonth ?? state.worldMonth ?? state.month, ageMonths: state.hero?.ageMonths ?? null, text, highlight, at: Date.now() });
     state.log = state.log.slice(0, 80);
   }
 
@@ -9632,6 +9920,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   }
   function processMonth(offline = false) {
     if (!state || state.ending || state.pendingEvent) return false;
+    if (state.autoMode && state.activity === 'train' && cultivationAtCeiling(state)) { state.autoMode = false; addLog('หยุดฝึกอัตโนมัติ: วิชาบำเพ็ญถึงเพดานแล้ว ต้องเปลี่ยนวิชา', true); saveGame(); render(); return false; }
     if (needsTrainingHealthWarning(state)) { triggerEvent('training-health-warning', trainingHealthWarning()); return false; }
     state.month++;
     state.characterMonth = state.month;
@@ -9710,6 +9999,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     const h = state.hero;
     ensurePreCultivationState(state);
     const combat = syncCombat(state);
+    if (state.activity !== 'train') state.trainingConsistencyMonths = 0;
     const roll = Math.random();
     let travelHandled = false;
     if (state.activity === 'travel') {
@@ -9737,6 +10027,10 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         h.discipline = Math.min(100, (h.discipline || 0) + 1);
         h.attributes.body = Math.min(126, (h.attributes.body || 10) + 1);
         addLog('วิ่งเล่นและออกกำลังตามวัย ร่างกายกระปรี้กระเปร่า ว่องไวและพื้นฐานกายพัฒนา');
+      } else if (cultivationAtCeiling(state)) {
+        const technique = equippedCultivationTechnique(state);
+        state.trainingConsistencyMonths = 0; state.autoMode = false;
+        addLog(`ถึงเพดานของวิชา${technique.name} (${cultivationCeilingName(technique)}) ต้องติดตั้งวิชาบำเพ็ญที่มีเพดานสูงกว่าก่อนฝึกต่อ`, true);
       } else {
       let techniques = state.breakthroughState?.ready ? breakthroughTrainingSet(state) : chooseTrainingSet(state);
       const hasMethod = h.cultivationAccess && !!equippedCultivationTechnique(state);
@@ -9751,7 +10045,8 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       const profile = trainingProfile(state, techniques);
       const currentFocus = techniques.map(technique => technique.id).sort();
       const focusChanged = JSON.stringify(currentFocus) !== JSON.stringify(state.trainingFocus);
-      if (focusChanged) { state.trainingSwitchCooldown = 1; state.trainingFocus = currentFocus; }
+      if (focusChanged) { state.trainingSwitchCooldown = 1; state.trainingFocus = currentFocus; state.trainingConsistencyMonths = 0; }
+      if (!techniques.length || !hasMethod) state.trainingConsistencyMonths = 0;
       const majorBreakthroughReady = hasMethod && h.cultivation >= 100 && h.stage >= 9 && h.realm < REALMS.length;
       if (hasMethod && majorBreakthroughReady) {
         h.cultivation = 100;
@@ -9764,11 +10059,14 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         const qiEfficiency = h.qi >= qiCost ? 1 : .45;
         h.qi = Math.max(0, h.qi - qiCost);
         const switchingPenalty = state.trainingSwitchCooldown ? .55 : 1;
-        effectiveGain = Math.max(1, Math.round(gain * qiEfficiency * profile.goal.progress * profile.locationMultiplier * profile.rootMultiplier * profile.methodMultiplier * profile.masteryMultiplier * profile.compatibility * (1 + profile.item.cultivationRate / 100) * switchingPenalty));
+        if (techniques.length) state.trainingConsistencyMonths = Math.min(5, state.trainingConsistencyMonths + 1);
+        const discipline = disciplineBenefits(state);
+        effectiveGain = Math.max(1, Math.round(gain * qiEfficiency * profile.goal.progress * profile.locationMultiplier * profile.rootMultiplier * profile.bodyFoundation.earlyTrainingMultiplier * discipline.trainingMultiplier * profile.methodMultiplier * profile.masteryMultiplier * profile.compatibility * (1 + profile.item.cultivationRate / 100) * switchingPenalty));
         if (state.pillEffect?.usesLeft > 0) { effectiveGain = Math.max(1, Math.round(effectiveGain * (1 + state.pillEffect.bonus / 100))); state.pillEffect.usesLeft--; if (!state.pillEffect.usesLeft) { addLog('ฤทธิ์โอสถปราณหมดลง'); state.pillEffect = null; } }
         h.cultivation += effectiveGain;
         state.trainingSwitchCooldown = Math.max(0, state.trainingSwitchCooldown - 1);
         techniques.forEach(technique => { state.trainingMastery[technique.id] = Math.min(120, Number(state.trainingMastery[technique.id] || 0) + Math.max(1, Math.round(profile.goal.mastery * (1 + profile.item.masteryRate / 100)))); });
+        if (techniques.some(technique => techniqueSlot(technique) === 'combat')) h.martialSkill = Math.min(100, h.martialSkill + (state.trainingGoal === 'mastery' ? 2 : 1));
       }
       else {
         h.bodyFoundation = Math.min(100, h.bodyFoundation + Math.round((techniques.length ? 2 : 3) * profile.goal.body * profile.locationMultiplier));
@@ -9777,7 +10075,9 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         h.attributes.body = Math.min(126, h.attributes.body + 1);
         h.attributes.spirit = Math.min(126, h.attributes.spirit + 1);
       }
-      h.health -= roll < (.22 * profile.goal.risk) ? profile.healthCost + 1 : profile.healthCost;
+      if (hasMethod) h.discipline = Math.min(100, (h.discipline || 0) + 1);
+      if (hasMethod && state.trainingGoal === 'body') h.bodyFoundation = Math.min(100, h.bodyFoundation + 1);
+      h.health -= roll < clamp(.22 * profile.goal.risk * profile.bodyFoundation.injuryChanceMultiplier - profile.item.riskReduction / 100, 0, 1) ? profile.healthCost + 1 : profile.healthCost;
       if (!hasMethod && h.cultivationAccess) addLog('ต้องติดตั้งวิชาบำเพ็ญก่อนจึงจะเพิ่มความก้าวหน้าหรือเลื่อนขั้นได้');
       if (!hasMethod) {
         const manual = availableTechniqueManuals(state).find(item => item.subtype === 'cultivation');
@@ -9837,7 +10137,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
         learning.techniqueKnowledge[focus.id] = Math.min(100, Number(learning.techniqueKnowledge[focus.id] || 0) + techniqueGain);
         learning.lastTechnique = focus.id;
       }
-      if (manualStudy && !manualStudy.complete) addLog(`อ่านคัมภีร์ “${manualStudy.technique.name}” ความเข้าใจ ${manualStudy.progress}/${manualStudy.target}`);
+      if (manualStudy && !manualStudy.complete) addLog(`อ่านคัมภีร์ “${manualStudy.technique.name}” ความเข้าใจ ${formatManualProgress(manualStudy.progress)}/${manualStudy.target}`);
       addLog(`${route.log} เรียน${typeDef.name} +${learned}${route.teacher.id !== 'self' ? ` จาก${route.teacher.name}` : ''}${focus ? ` ความรู้วิชา “${focus.name}” เพิ่มขึ้น ${Math.max(1, Math.round(route.knowledgeGain * route.teacher.multiplier))}` : ''} ปัญญาและจิตใจเพิ่มขึ้น`);
     } else if (state.activity === 'social') {
       if (h.ageMonths < 60) {
@@ -9946,6 +10246,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     updateLineageState(state);
     if (state.ending) return false;
     resolveCultivationProgress(state);
+    if (state.autoMode && state.activity === 'train' && cultivationAtCeiling(state)) { state.autoMode = false; addLog('หยุดฝึกอัตโนมัติ: วิชาบำเพ็ญถึงเพดานแล้ว ต้องเปลี่ยนวิชา', true); }
     h.health = clamp(h.health, 0, h.maxHealth);
 
     ensureLifespanState(state);
@@ -10018,7 +10319,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     }
 
     ensureTrainingState(state);
-    if (state.breakthroughState.ready && equippedCultivationTechnique(state) && state.month >= state.breakthroughState.nextPromptMonth && state.activity === 'train') {
+    if (state.breakthroughState.ready && equippedCultivationTechnique(state) && !cultivationAtCeiling(state) && state.month >= state.breakthroughState.nextPromptMonth && state.activity === 'train') {
       if (state.autoMode && state.autoTrainingRule === 'auto-foundation') { state.trainingFoundation += 8; state.breakthroughState.nextPromptMonth = state.month + 2; addLog('Auto ฝึกพื้นฐานต่อแทนการทะลวงขั้น ความมั่นคงเพิ่มขึ้น'); updateWorldCopy(); saveGame(); render(); return true; }
       if (state.autoMode && state.autoTrainingRule === 'auto-item' && breakthroughItem(state)) { attemptBreakthrough(state, 'item'); updateWorldCopy(); saveGame(); render(); return true; }
       const event = breakthroughEvent(state); state.lastRandomMonth = state.month; triggerEvent(event.id, event); return false;
@@ -10063,7 +10364,74 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       .replace(/(?:^|\s*[·,]\s*)\s*(?=\s*[·,]|$)/g, '').trim();
   }
 
+  // Show the player's current values alongside the requirements already
+  // presented by an event; these are context, not a new availability check.
+  function choiceDecisionContext(s, choice, eventId) {
+    const combat = syncCombat(s), h = s.hero || {}, values = [];
+    const note = `${choice.text || ''} ${choice.note || ''} ${choice.locked || ''} ${typeof choice.dynamicNote === 'function' ? choice.dynamicNote(s) : ''}`;
+    const requirementSource = typeof choice.requires === 'function' ? String(choice.requires) : '';
+    const source = [choice.requires, choice.effect].filter(fn => typeof fn === 'function').map(fn => String(fn)).join(' ');
+    const add = (label, value) => { if (value != null && !values.some(v => v.startsWith(`${label} `))) values.push(`${label} ${value}`); };
+    const mentions = (words, pattern) => words.test(note) || pattern.test(source);
+    if (mentions(/พลัง(?:รวม)?/, /\b(?:s|state)\.hero\??\.power\s*(?:[<>]=?|===?)/)) add('พลัง', Math.round(h.power || 0).toLocaleString());
+    if (mentions(/สุขภาพ|บาดเจ็บ/, /\b(?:s|state)\.hero\??\.health\s*(?:[<>]=?|===?)/)) add('สุขภาพ', `${Math.round(h.health || 0)}/${h.maxHealth}`);
+    if (mentions(/ปราณ/, /\b(?:s|state)\.hero\??\.qi\s*(?:[<>]=?|===?)/)) add('ปราณ', Math.round(h.qi || 0));
+    if (mentions(/ตำลึง|เงิน/, /\b(?:s|state)\.hero\??\.money\s*(?:[<>]=?|===?)/)) add('เงิน', `${Math.round(h.money || 0)} ตำลึง`);
+    if (mentions(/ว่องไว/, /\bcombat\.agility\s*(?:[<>]=?|===?)/)) add('ว่องไว', combat.agility);
+    if (mentions(/กายา/, /\bcombat\.body\s*(?:[<>]=?|===?)/)) add('กายา', combat.body);
+    if (mentions(/ชื่อเสียง/, /\b(?:s|state)\.hero\??\.reputation\s*(?:[<>]=?|===?)/)) add('ชื่อเสียง', h.reputation || 0);
+    const pathLabels = { compassion: 'เมตตา', duty: 'ภักดี', freedom: 'อิสระ', insight: 'หยั่งรู้' };
+    for (const [key, label] of Object.entries(pathLabels)) if (note.includes(label) || new RegExp(`\\.paths\\??\\.${key}\\b`).test(requirementSource)) add(label, s.paths?.[key] || 0);
+    for (const [key, def] of Object.entries(RELATIONSHIP_DEFS)) if (new RegExp(`\\.relations\\??\\.${key}\\b`).test(requirementSource)) add(`ความสัมพันธ์${def.name || key}`, s.relations?.[key] || 0);
+    for (const [key, label] of Object.entries({ sect: 'สำนัก', serpent: 'งูดำ', jianghu: 'ยุทธภพ' })) if (new RegExp(`\\.factions\\??\\.${key}\\b`).test(requirementSource) || note.includes(`ชื่อเสียง${label}`)) add(`ชื่อเสียง${label}`, s.factions?.[key] || 0);
+    for (const [key, label] of Object.entries(ATTRIBUTE_LABELS)) if (new RegExp(`\\.attributes\\??\\.${key}\\b`).test(requirementSource)) add(label, combat.attributes?.[key] || 0);
+    for (const [key, label] of Object.entries({ foundMap: 'แผนที่', escapePrepared: 'เสบียงหรือทางหนี', stepLearned: 'วิชาย่างก้าว', metSect: 'รู้จักสำนัก', warnedMaster: 'เตือนอาจารย์แล้ว', knowsTraitor: 'เบาะแสคนทรยศ', betrayedSect: 'เข้าร่วมงูดำ' })) if (new RegExp(`\\.flags\\??\\.${key}\\b`).test(requirementSource)) add(label, s.flags?.[key] ? 'มี' : 'ไม่มี');
+    for (const [key, label] of Object.entries(MATERIAL_NAMES)) if (note.includes(label) || source.includes(`materials.${key}`) || source.includes(`materials?.${key}`)) add(label, s.materials?.[key] || 0);
+    if (choice.check) {
+      const stat = choice.check.stat || 'luck', base = Number(combat.attributes?.[stat] || 0);
+      const karma = Math.max(-8, Math.min(8, Math.floor((combat.karma || 0) / 10)));
+      add(ATTRIBUTE_LABELS[stat] || stat, `${base} · กรรม ${karma >= 0 ? '+' : ''}${karma} · ทอย 1–20`);
+    }
+    const visit = condition => {
+      if (!condition || typeof condition !== 'object') return;
+      for (const key of ['all', 'any']) (condition[key] || []).forEach(visit);
+      if (condition.not) visit(condition.not);
+      const named = { 'hero.power': 'พลัง', 'hero.health': 'สุขภาพ', 'hero.qi': 'ปราณ', 'hero.money': 'เงิน', 'hero.reputation': 'ชื่อเสียง' };
+      if (condition.statMin) {
+        const path = condition.statMin.path, relation = path.startsWith('relations.') ? path.slice(10) : null, attribute = path.startsWith('hero.attributes.') ? path.slice(16) : null;
+        add(named[path] || (relation ? `ความสัมพันธ์${RELATIONSHIP_DEFS[relation]?.name || relation}` : attribute ? ATTRIBUTE_LABELS[attribute] || attribute : path), `${Number(readStatePath(s, path) || 0)} / ต้องมี ${condition.statMin.value}`);
+      }
+      if (condition.relationMin) add(`ความสัมพันธ์${RELATIONSHIP_DEFS[condition.relationMin.key]?.name || condition.relationMin.key}`, `${s.relations?.[condition.relationMin.key] || 0} / ต้องมี ${condition.relationMin.value}`);
+      if (condition.factionMin) add(`ชื่อเสียงฝ่าย ${condition.factionMin.key}`, `${s.factions?.[condition.factionMin.key] || 0} / ต้องมี ${condition.factionMin.value}`);
+      if (condition.pathMin) add(pathLabels[condition.pathMin.key] || condition.pathMin.key, `${s.paths?.[condition.pathMin.key] || 0} / ต้องมี ${condition.pathMin.value}`);
+      if (condition.flag) add('เงื่อนไขเนื้อเรื่อง', evaluateCondition(s, { flag: condition.flag }) ? 'ผ่าน' : 'ยังไม่ผ่าน');
+    };
+    visit(choice.conditions);
+    if (String(eventId).startsWith('breakthrough-')) { add('สุขภาพ', `${Math.round(h.health || 0)}/${h.maxHealth}`); add('ปราณ', Math.round(h.qi || 0)); }
+    if (eventId === 'ambush' && /ถอย/.test(choice.text || '')) {
+      add('แผนที่', s.flags?.foundMap ? 'มี' : 'ไม่มี');
+      add('วิชาย่างก้าว', s.flags?.stepLearned ? 'มี' : 'ไม่มี');
+      add('ของแทนใจสหาย', s.flags?.friendKeepsake ? 'มี' : 'ไม่มี');
+      add('ดวงตาเฉียบคม', h.talent === 'keen' ? 'มี' : 'ไม่มี');
+    }
+    if (eventId === 'siege') {
+      if (/หนี|อุโมงค์/.test(choice.text || '')) {
+        add('เส้นทาง', s.flags?.foundMap || s.flags?.stepLearned || s.flags?.escapePrepared || h.talent === 'swift' ? 'พร้อม' : 'ยังไม่พร้อม');
+        if (/ผู้คน/.test(choice.text || '')) add('แผนที่หรือเสบียง', s.flags?.foundMap || s.flags?.escapePrepared ? 'มี' : 'ไม่มี');
+        add('เมตตา', s.paths?.compassion || 0);
+      }
+    }
+    if (choice.requires || choice.conditions) add('เงื่อนไขตัวเลือก', isChoiceAvailable(choice, s) ? 'ผ่าน' : 'ยังไม่ผ่าน');
+    return values.length ? `ค่าปัจจุบัน: ${values.join(' · ')}` : '';
+  }
+
   function triggerEvent(id, event) {
+    if (String(id).startsWith('breakthrough-') && cultivationAtCeiling(state)) {
+      state.pendingEvent = null; state.paused = false;
+      const modal = $('event-modal'); if (modal) modal.hidden = true;
+      addLog(`วิชาบำเพ็ญที่ติดตั้งถึงเพดานแล้ว ต้องเปลี่ยนวิชาก่อนทะลวง`, true);
+      saveGame(); render(); return false;
+    }
     if (event && !eventScopeAllowed(state, event, id)) {
       state.pendingEvent = null; state.paused = false;
       const modal = $('event-modal'); if (modal) modal.hidden = true;
@@ -10098,7 +10466,8 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     event.choices.forEach((choice, i) => {
       const available = isChoiceAvailable(choice, state);
       const btn = document.createElement('button'); btn.className = 'choice-btn'; btn.disabled = !available; if (btn.setAttribute) btn.setAttribute('aria-label', `${i + 1}. ${choice.text || 'ตัวเลือกเหตุการณ์'}`);
-      const note = available ? [visibleChoiceNote(choice.note), choice.check ? `ทดสอบ: ${checkLabel(choice.check)}` : ''].filter(Boolean).join(' · ') : visibleChoiceNote(choice.locked || 'ยังทำไม่ได้');
+      const description = String((typeof choice.dynamicNote === 'function' ? choice.dynamicNote(state) : choice.note) || '').trim();
+      const note = [description, !available ? String(choice.locked || 'ยังทำไม่ได้') : '', choice.check ? `ทดสอบ: ${checkLabel(choice.check)}` : '', choiceDecisionContext(state, choice, id)].filter(Boolean).join(' · ');
       const text = typeof choice.dynamicText === 'function' ? choice.dynamicText(state) : choice.text;
       btn.innerHTML = `<span class="choice-index">${i + 1}</span><span>${text}</span>${note ? `<small>${note}</small>` : ''}`;
       btn.onclick = () => chooseEvent(id, event, choice, i, text);
@@ -10132,7 +10501,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       'hero.health': 'สุขภาพ', 'hero.money': 'เงิน', 'hero.reputation': 'ชื่อเสียง',
       'hero.karma': 'กรรม', 'hero.cultivation': 'ฝึกตน', 'hero.bodyFoundation': 'รากฐานกาย',
       'hero.qi': 'ปราณ', 'hero.powerBonus': 'พลังเสริม',
-      'hero.attributes.body': 'กาย', 'hero.attributes.intellect': 'ปัญญา',
+      'hero.attributes.body': 'พละกำลัง', 'hero.attributes.intellect': 'ปัญญา',
       'hero.attributes.spirit': 'จิตใจ', 'hero.attributes.charm': 'เสน่ห์', 'hero.attributes.luck': 'โชค',
       'paths.compassion': 'เมตตา', 'paths.duty': 'ภักดี', 'paths.freedom': 'อิสระ', 'paths.insight': 'หยั่งรู้'
     };
@@ -10352,7 +10721,6 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     state.legendarySceneHistory = [];
     state.hero.name = state.ruleSet === 'dynasty' ? `${previous.characterId === 'lin-an' ? 'หลินอัน' : state.hero.name} รุ่นถัดไป` : 'ผู้เกิดใหม่';
     state.hero.ageMonths = 0;
-    state.hero.lifespan = 60 + Math.floor(Math.random() * 31);
     state.hero.health = state.hero.maxHealth;
     state.monthsProcessed = 0;
     state.lifeHistory = state.lifeHistory || [];
@@ -10772,7 +11140,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       : characterStory || state.mode === 'free' ? e.story : `${e.story}\n\n${rootEndingNarrative(type)}`;
     const storyEchoes = state.mode === 'story' ? `\n\nร่องรอยจากการตัดสินใจ:\n• ${echoes.join('\n• ')}` : '';
     $('ending-story').textContent = `${storyLead}${storyEchoes}\n\nแนวทางที่เด่นที่สุดของชีวิตนี้คือ “${pathNames[dominant[0]]}” (${dominant[1]}) จากการตัดสินใจสำคัญ ${Object.keys(state.choices || {}).length} ครั้ง${extra.battleScore ? ` · กำลังรบรวมวันศึก ${extra.battleScore.toLocaleString()}` : ''}${simulationText}`;
-    $('ending-stats').innerHTML = `<div><small>อายุ</small><b>${formatAge(state.hero.ageMonths)}</b></div><div><small>ขั้นบำเพ็ญ</small><b>${realmName(state.hero)}</b></div><div><small>รากวิญญาณ</small><b>${state.hero.rootKnown ? (ROOTS[state.hero.root]?.name || 'ไม่ทราบ') : 'ยังไม่เปิดเผย'}</b></div><div><small>พลังรวม</small><b>${state.hero.power.toLocaleString()}</b></div><div><small>โจมตี / ป้องกัน</small><b>${combat.attack} / ${combat.defense}</b></div><div><small>กาย / ว่องไว</small><b>${combat.body} / ${combat.agility}</b></div><div><small>ชื่อเสียง</small><b>${state.hero.reputation}</b></div><div><small>แนวทางเด่น</small><b>${pathNames[dominant[0]]}</b></div>${Object.entries(pathNames).map(([key, label]) => `<div><small>${label}</small><b>${state.paths[key] || 0}</b></div>`).join('')}`;
+    $('ending-stats').innerHTML = `<div><small>อายุ</small><b>${formatAge(state.hero.ageMonths)}</b></div><div><small>ขั้นบำเพ็ญ</small><b>${realmName(state.hero)}</b></div><div><small>รากวิญญาณ</small><b>${state.hero.rootKnown ? (ROOTS[state.hero.root]?.name || 'ไม่ทราบ') : 'ยังไม่เปิดเผย'}</b></div><div><small>พลังรวม</small><b>${state.hero.power.toLocaleString()}</b></div><div><small>โจมตี / ป้องกัน</small><b>${combat.attack} / ${combat.defense}</b></div><div><small>กายา / ว่องไว</small><b>${combat.body} / ${combat.agility}</b></div><div><small>ชื่อเสียง</small><b>${state.hero.reputation}</b></div><div><small>แนวทางเด่น</small><b>${pathNames[dominant[0]]}</b></div>${Object.entries(pathNames).map(([key, label]) => `<div><small>${label}</small><b>${state.paths[key] || 0}</b></div>`).join('')}`;
     const lineage = state.lineageState;
     const simulationReward = extra.simulationResult?.rewards;
     const signature = state.lifeSummary?.deathSignature ? (DEATH_SIGNATURES[state.lifeSummary.deathSignature] || state.lifeSummary.deathSignature) : 'ยังไม่เกิดลายเซ็น';
@@ -11021,7 +11389,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     const lifeRole = character ? character.title : state.mode === 'free' ? 'ชีวิตอิสระ' : 'ผู้พเนจร';
     const generation = state.lineageState?.generation ? ` · รุ่นที่ ${state.lineageState.generation}` : '';
     $('hero-display-name').textContent = h.name || character?.name || 'ผู้พเนจร'; $('hero-subtitle').textContent = `${lifeRole}${generation} · ${realmName(h)}`; $('root-display').textContent = h.rootKnown ? `รากวิญญาณ${ROOTS[h.root]?.name || 'ไม่ทราบ'} · ${TALENTS[h.talent]?.name || 'พรสวรรค์สามัญ'}` : 'รากวิญญาณยังไม่ถูกตรวจพบ · สถานะปกปิด';
-    $('age-stat').textContent = `${formatAge(h.ageMonths)} (${annualLifePhase(state).name})`; $('lifespan-stat').textContent = `${h.lifespan} ปี`;
+    $('age-stat').textContent = `${formatAge(h.ageMonths)} (${annualLifePhase(state).name})`; $('lifespan-stat').textContent = formatAge(Math.round(Number(h.lifespanMonths ?? h.lifespan * 12)));
     const worldMonth = state.world?.worldMonth ?? state.month;
     const worldYr = Math.floor(worldMonth / 12) + 1;
     const worldMo = (worldMonth % 12) + 1;
@@ -11092,20 +11460,20 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     $('health-label').textContent = `${Math.round(h.health)} / ${h.maxHealth}`; $('health-bar').style.width = `${100 * h.health / h.maxHealth}%`;
     const conditionLabel = $('health-conditions'); if (conditionLabel) conditionLabel.textContent = state.conditions?.poison?.monthsLeft ? `ติดพิษ: สุขภาพ -${state.conditions.poison.damage || 3}/เดือน อีก ${state.conditions.poison.monthsLeft} เดือน` : '';
     ensureQiState(state); $('qi-label').textContent = `${Math.round(h.qi)} / ${Math.round(h.qiMax)}`; $('qi-bar').style.width = `${h.qiMax ? 100 * h.qi / h.qiMax : 0}%`;
-    $('cultivation-label').textContent = !h.cultivationAccess ? `ยังไม่เปิดทางบำเพ็ญ · พื้นฐานกาย ${h.bodyFoundation}/100` : h.realm === REALMS.length && h.stage === 9 ? 'บรรลุขั้นสูงสุด' : `${Math.round(h.cultivation)} / 100 → ${h.stage === 9 ? REALMS[h.realm] : `${REALMS[h.realm - 1]} ขั้น ${h.stage + 1}`}`; $('cultivation-bar').style.width = `${h.cultivationAccess ? h.cultivation : h.bodyFoundation}%`;
+    $('cultivation-label').textContent = !h.cultivationAccess ? `ยังไม่เปิดทางบำเพ็ญ · พื้นฐานกาย ${h.bodyFoundation}/100` : cultivationAtCeiling(state) ? `ถึงเพดาน ${cultivationCeilingName(equippedCultivationTechnique(state))} · เปลี่ยนวิชาเพื่อฝึกต่อ` : h.realm === REALMS.length && h.stage === 9 ? 'บรรลุขั้นสูงสุด' : `${Math.round(h.cultivation)} / 100 → ${h.stage === 9 ? REALMS[h.realm] : `${REALMS[h.realm - 1]} ขั้น ${h.stage + 1}`}`; $('cultivation-bar').style.width = `${h.cultivationAccess ? h.cultivation : h.bodyFoundation}%`;
     $('money-stat').textContent = h.money; $('power-stat').textContent = h.power.toLocaleString();
-    $('power-stat').title = `ฐานขั้นบำเพ็ญ ${combat.realmPower.toLocaleString()} + สถิติ ${combat.statsPower.toLocaleString()} + พลังเสริม ${Math.max(0, Number(h.powerBonus) || 0)} · ตัวคูณรากตามวัย ×${Number(combat.rootMultiplier.toFixed(2))} · พลังอุปกรณ์ด้านร่างกายตามวัย ${Math.round(combat.equipmentMaturity * 100)}%`;
-    $('rep-stat').textContent = h.reputation; $('attack-stat').textContent = combat.attack; $('attack-stat').title = combat.compatibility ? `${combat.compatibility.technique} เข้ากับ ${combat.compatibility.weapon} · โจมตี ×1.10` : 'สวมอาวุธที่เข้ากับวิชาจู่โจมเพื่อเพิ่มโจมตี ×1.10'; $('defense-stat').textContent = combat.defense; $('body-stat').textContent = combat.body; $('agility-stat').textContent = combat.agility; $('training-stat').textContent = `${combat.training}%`;
+    $('power-stat').title = `ฐานขั้นบำเพ็ญ ${combat.realmPower.toLocaleString()} + สถิติ ${combat.statsPower.toLocaleString()} + พลังเสริม ${Math.max(0, Number(h.powerBonus) || 0)} · พลังอุปกรณ์ด้านร่างกายตามวัย ${Math.round(combat.equipmentMaturity * 100)}%`;
+    $('rep-stat').textContent = h.reputation; $('attack-stat').textContent = combat.attack; $('attack-stat').title = combat.compatibility ? `${combat.compatibility.technique} เข้ากับ ${combat.compatibility.weapon} · โจมตี ×1.10` : 'สวมอาวุธที่เข้ากับวิชาจู่โจมเพื่อเพิ่มโจมตี ×1.10'; $('defense-stat').textContent = combat.defense; $('body-stat').textContent = combat.body; $('agility-stat').textContent = combat.agility; $('training-stat').textContent = `${combat.training}%`; $('training-stat').title = h.rootKnown ? `รากวิญญาณช่วยเพิ่มความเร็วบำเพ็ญ ×${ROOT_TRAINING_MULTIPLIER[h.root] ?? 1} เมื่อฝึกด้วยวิชาบำเพ็ญ` : 'รากวิญญาณยังไม่ถูกตรวจพบ';
     const attrs = combat.attributes || h.attributes || {};
     $('attr-body-stat').textContent = Math.round(attrs.body || combat.body);
     $('attr-intellect-stat').textContent = Math.round(attrs.intellect || 0);
     $('attr-spirit-stat').textContent = Math.round(attrs.spirit || 0);
     $('attr-charm-stat').textContent = Math.round(attrs.charm || 0);
     $('attr-luck-stat').textContent = Math.round(attrs.luck || 0);
-    $('karma-stat').textContent = Math.round(combat.karma || h.karma || 0);
-    $('body-foundation-stat').textContent = Math.round(h.bodyFoundation || 0);
-    $('martial-skill-stat').textContent = Math.round(h.martialSkill || 0);
-    $('discipline-stat').textContent = Math.round(h.discipline || 0);
+    $('karma-stat').textContent = Math.round(combat.karma ?? h.karma ?? 0);
+    $('body-foundation-stat').textContent = Math.round(h.bodyFoundation || 0); $('body-foundation-stat').title = `พื้นฐานกายช่วยทะลวงขั้น ลดความเสี่ยงบาดเจ็บจากการฝึก และช่วยความก้าวหน้าขั้นหลอมกาย`; 
+    $('martial-skill-stat').textContent = Math.round(h.martialSkill || 0); $('martial-skill-stat').title = `เพิ่มโบนัสโจมตีของวิชาต่อสู้ที่ติดตั้ง ${Math.round(martialSkillBonus(state) * 100)}% (ทุก 10 จุดเพิ่ม 2% สูงสุด 20%)`;
+    $('discipline-stat').textContent = Math.round(h.discipline || 0); $('discipline-stat').title = `วินัยเพิ่มโอกาสทะลวง ${disciplineBenefits(state).breakthroughBonus} จุดเปอร์เซ็นต์ และช่วยการฝึกวิชาเดิมต่อเนื่อง`; 
     const monthsLeftText = state.mode === 'story' && state.characterId === 'lin-an' ? `${Math.max(0, MAX_MONTHS - state.month)} เดือน` : (state.world.worldMonth <= MAX_MONTHS ? `${MAX_MONTHS - state.world.worldMonth} เดือนก่อนศึก` : `หลังศึกเมฆาคราม (${state.world.worldMonth - MAX_MONTHS} เดือน)`); $('months-left').textContent = monthsLeftText; $('weather-text').textContent = `${weather()} · เดือน ${state.month + 1} ปี ${Math.floor(state.month / 12) + 1}`;
     ['compassion', 'duty', 'freedom', 'insight'].forEach(key => { $(`path-${key}`).textContent = state.paths[key] || 0; });
     const actDisplayCurrent = getActivityDisplayName(state, state.activity);
@@ -11262,7 +11630,23 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     renderLog(); renderRelations(); renderQuests(); renderTechniques(); renderCrafting(); renderHousehold(); renderFamily(); renderLegacy();
   }
 
-  function renderLog() { const list = $('life-log'); list.innerHTML = ''; state.log.slice(0, 8).forEach(l => { const d = document.createElement('div'); d.className = `log-entry${l.highlight ? ' highlight' : ''}`; const text = String(l.text || '').replace(/(?:เมตตา|ภักดี|อิสระ|หยั่งรู้)\s*[+-]\d+\s*[·,]?\s*/g, '').replace(/[·,]\s*$/, '').trim(); d.innerHTML = `<time>เดือน ${l.month}</time><div><strong>${l.highlight ? 'จุดเปลี่ยน' : 'กิจวัตร'}</strong><p>${esc(text)}</p></div>`; list.appendChild(d); }); if (!state.log.length) list.innerHTML = '<p class="empty">บันทึกยังว่างเปล่า — เลือกกิจกรรมแล้วปล่อยเวลาเดิน</p>'; }
+  function renderLog() {
+    const list = $('life-log'); list.innerHTML = '';
+    const currentWorldMonth = Number(state.world?.worldMonth ?? state.worldMonth ?? state.month) || 0;
+    const currentLifeMonth = Number(state.month) || 0;
+    const currentAge = Number(state.hero?.ageMonths) || 0;
+    const entries = list.dataset.expanded === 'true' ? state.log : state.log.slice(0, 8);
+    entries.forEach(l => {
+      const d = document.createElement('div'); d.className = `log-entry${l.highlight ? ' highlight' : ''}`;
+      const text = String(l.text || '').replace(/(?:เมตตา|ภักดี|อิสระ|หยั่งรู้)\s*[+-]\d+\s*[·,]?\s*/g, '').replace(/[·,]\s*$/, '').trim();
+      const elapsed = Math.max(0, Number(l.month) || 0);
+      const worldMonth = Math.max(0, Number.isFinite(l.worldMonth) ? l.worldMonth : currentWorldMonth - currentLifeMonth + elapsed);
+      const ageMonths = Math.max(0, Number.isFinite(l.ageMonths) ? l.ageMonths : currentAge - currentLifeMonth + elapsed);
+      d.innerHTML = `<time>ปี ${Math.floor(worldMonth / 12) + 1}<br>เดือน ${worldMonth % 12 + 1}</time><div><strong>${l.highlight ? 'จุดเปลี่ยน' : 'กิจวัตร'} · อายุ ${esc(formatAge(ageMonths))}</strong><p>${esc(text)}</p></div>`;
+      list.appendChild(d);
+    });
+    if (!state.log.length) list.innerHTML = '<p class="empty">บันทึกยังว่างเปล่า — เลือกกิจกรรมแล้วปล่อยเวลาเดิน</p>';
+  }
   function currentLocation() {
     if (state.activity === 'rest') return restRoute(state).location;
     if (state.activity === 'travel') {
@@ -11359,7 +11743,8 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     }
     if (examChoice) examChoice.value = career.examChoice || 'power';
     const rank = career.affiliation === 'sect' ? (SECT_RANKS.find(item => item.id === state.sectCareer.rank) || SECT_RANKS[0]) : officialRank(career);
-    $('official-career-meta').textContent = `${career.affiliation === 'sect' ? 'สำนัก' : career.affiliation === 'border' ? 'ชายแดน' : 'เมือง'} · ${rank.name} · ผลงาน ${career.affiliation === 'sect' ? career.merit : career.cityMerit} · สิทธิ์ ${[...officialRights(state)].join(', ') || 'ยังไม่มี'}${career.pendingDiscipline ? ' · รอสอบสวน' : ''}`;
+    const nextSectRank = career.affiliation === 'sect' ? officialExamTarget(state) : null;
+    $('official-career-meta').textContent = `${career.affiliation === 'sect' ? 'สำนัก' : career.affiliation === 'border' ? 'ชายแดน' : 'เมือง'} · ${rank.name} · ผลงาน ${career.affiliation === 'sect' ? state.sectCareer.merit : career.cityMerit} · สิทธิ์ ${[...officialRights(state)].join(', ') || 'ยังไม่มี'}${nextSectRank ? ` · ตำแหน่งถัดไป ${nextSectRank.name}: ${REALMS[nextSectRank.realm - 1]} ขั้น ${nextSectRank.stage} ขึ้นไป และผลงาน ${nextSectRank.merit}` : ''}${career.pendingDiscipline ? ' · รอสอบสวน' : ''}`;
   }
 
   function renderTravelControls() {
@@ -11383,6 +11768,21 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     $('start-travel-btn').disabled = !!state.travel.active || !estimate.ok;
   }
 
+  function cultivationGuidance(s) {
+    const current = equippedCultivationTechnique(s);
+    const atCeiling = !!current && cultivationAtCeiling(s);
+    const canAdvance = t => { const cap = cultivationTechniqueCeiling(t); return !cap || cap.realm > (s.hero.realm || 0) || (cap.realm === (s.hero.realm || 0) && cap.stage > (s.hero.stage || 0)); };
+    const manuals = availableTechniqueManuals(s).filter(item => item.learningType === 'cultivation' && (!atCeiling || canAdvance(TECHNIQUES.find(t => t.id === item.techniqueId))));
+    const eligible = manuals.find(item => manualLearningRequirement(s, item).eligible);
+    const locked = manuals.find(item => !manualLearningRequirement(s, item).eligible);
+    const alternatives = unlockedTechniques(s).filter(t => techniqueSlot(t) === 'cultivation' && t.id !== current?.id && canAdvance(t));
+    if (current && !atCeiling) return `วิชาที่ใช้: ${current.name} · ฝึกต่อหรือรอจุดทะลวง`;
+    if (alternatives.length) return `ขั้นต่อไป: เปิดแผงวิชาและติดตั้ง ${alternatives[0].name}`;
+    if (eligible) return `ขั้นต่อไป: เลือกเรียนรู้ → คัมภีร์บำเพ็ญ → อ่าน ${eligible.name} แล้วติดตั้งวิชาที่เรียนสำเร็จ`;
+    if (locked) return `${locked.name} ต้องถึง ${manualLearningRequirement(s, locked).name} ก่อนเรียน · มองหาคัมภีร์พื้นฐานที่เหมาะกับขั้นปัจจุบัน`;
+    return `เบาะแส: ลองสำรวจหาคัมภีร์บำเพ็ญ${atCeiling ? 'ที่สูงกว่าวิชาปัจจุบัน' : 'พื้นฐาน'} หรือพบผู้สอนและติดตามโอกาสเข้าสำนัก แล้วเลือกเรียนรู้และติดตั้งวิชา`;
+  }
+
   function renderTrainingControls() {
     const panel = $('training-control'); if (!panel || !state) return;
     const active = state.activity === 'train'; panel.hidden = !active; if (!active) return;
@@ -11393,9 +11793,17 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     const location = trainingLocationKey(state);
     const mastery = techniques.length ? techniques.map(t => `${t.name}: ${techniqueMasteryLevel(state, t.id).name}`).join(' · ') : 'ฝึกร่างกายทั่วไป';
     const status = $('training-status');
+    const bodyBonus = bodyFoundationBenefits(state);
+    const currentMethod = equippedCultivationTechnique(state);
     if (status) status.textContent = state.hero.cultivationAccess
-      ? `${mastery} · สถานที่ ${LOCATION_DEFS[location]?.name || location} · ${!equippedCultivationTechnique(state) ? 'ต้องติดตั้งวิชาบำเพ็ญเพื่อเลื่อนขั้น' : state.breakthroughState.ready ? `จุดตัน · โอกาสทะลวง ${breakthroughChance(state, 'force')}% (เกรดวิชา +${cultivationGradeBreakthroughBonus(state)} จุดเปอร์เซ็นต์)` : `ความก้าวหน้า ${Math.round(state.hero.cultivation)}/100`}`
-      : `${mastery} · ยังไม่มีวิชาหลอมกาย · พื้นฐานกาย ${Math.round(state.hero.bodyFoundation)}/100`;
+      ? `${mastery} · สถานที่ ${LOCATION_DEFS[location]?.name || location} · ${!equippedCultivationTechnique(state) ? 'ต้องติดตั้งวิชาบำเพ็ญเพื่อเลื่อนขั้น' : cultivationAtCeiling(state) ? 'ถึงเพดานวิชา · ติดตั้งวิชาบำเพ็ญที่สูงกว่าก่อนทะลวง' : state.breakthroughState.ready ? `จุดตัน · โอกาสทะลวง ${breakthroughChance(state, 'force')}% (เกรดวิชา +${cultivationGradeBreakthroughBonus(state)} จุดเปอร์เซ็นต์)` : `ความก้าวหน้า ${Math.round(state.hero.cultivation)}/100`}`
+      : `${mastery} · ยังไม่มีวิชาหลอมกาย · พื้นฐานกาย ${Math.round(bodyBonus.value)}/100`;
+    if (status && currentMethod && cultivationCeilingName(currentMethod)) status.textContent += ` · เพดานวิชา ${cultivationCeilingName(currentMethod)}${cultivationAtCeiling(state) ? ' · ถึงเพดานแล้ว ต้องเปลี่ยนวิชาเพื่อฝึกต่อ' : ''}`;
+    const discipline = disciplineBenefits(state);
+    if (status) status.textContent += ` · วินัย ${Math.round(discipline.value)}/100: ทะลวง +${discipline.breakthroughBonus} จุดเปอร์เซ็นต์ · ฝึกต่อเนื่อง ${discipline.months}/5 เดือน +${Math.round((discipline.trainingMultiplier - 1) * 100)}%`;
+    if (status) status.textContent += ` · ชำนาญยุทธ์ ${Math.round(clamp(Number(state.hero.martialSkill) || 0, 0, 100))}/100: โบนัสโจมตีวิชาต่อสู้ +${Math.round(martialSkillBonus(state) * 100)}%`;
+    if (status) status.textContent += ` · พื้นฐานกาย ${Math.round(bodyBonus.value)}/100: ทะลวง +${bodyBonus.breakthroughBonus} จุดเปอร์เซ็นต์ · โอกาสบาดเจ็บเพิ่มจากการฝึก -${Math.round((1 - bodyBonus.injuryChanceMultiplier) * 100)}%${bodyBonus.earlyTrainingMultiplier > 1 ? ` · ฝึกหลอมกาย +${Math.round((bodyBonus.earlyTrainingMultiplier - 1) * 100)}%` : ''}`;
+    if (status) status.textContent += ` · ${cultivationGuidance(state)}`;
   }
   function renderLearningControls() {
     const panel = $('learning-control'); if (!panel || !state) return;
@@ -11406,12 +11814,16 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     if (techniqueSelect) {
       const techniques = TECHNIQUES.filter(technique => technique.id !== 'survival' && technique.unlock(state));
       const manuals = availableTechniqueManuals(state);
-      techniqueSelect.innerHTML = `<option value="">อัตโนมัติตามประเภทความรู้</option>${manuals.map(manual => { const technique = TECHNIQUES.find(t => t.id === manual.techniqueId); const target = MANUAL_STUDY_TARGETS[manual.grade] || 12; return `<option value="manual:${manual.techniqueId}">อ่าน ${technique.name} (${learning.manualProgress[manual.techniqueId] || 0}/${target})</option>`; }).join('')}${techniques.map(technique => `<option value="${technique.id}">${technique.name}</option>`).join('')}`;
+      techniqueSelect.innerHTML = `<option value="">อัตโนมัติตามประเภทความรู้</option>${manuals.map(manual => { const technique = TECHNIQUES.find(t => t.id === manual.techniqueId); const target = manualStudyTarget(manual); const requirement = manualLearningRequirement(state, manual); return `<option value="manual:${esc(manual.techniqueId)}" ${requirement.eligible ? '' : 'disabled'}>${requirement.eligible ? 'อ่าน' : '🔒'} ${esc(technique.name)} · ขั้น ${esc(requirement.name)} (${formatManualProgress(learning.manualProgress[manual.techniqueId])}/${target}${requirement.eligible ? ` · ราว ${manualStudyMonthsLeft(state, manual, route)} เดือน` : ''})</option>`; }).join('')}${techniques.map(technique => `<option value="${technique.id}">${technique.name}</option>`).join('')}`;
       techniqueSelect.value = learning.techniqueFocus || '';
     }
     const auto = $('auto-learning-rule-select'); if (auto) auto.value = learning.autoRule;
     const status = $('learning-status');
-    if (status) status.textContent = `${route.name} · ผู้สอน: ${teacher.name} · ไอเทมเสริม +${learningItemBonus(state)}% · ${Object.entries(LEARNING_TYPES).map(([id, def]) => `${def.name} ${learning.knowledge[id] || 0}`).join(' · ')}`;
+    if (status) {
+      const selectedManual = availableTechniqueManuals(state).find(manual => learning.techniqueFocus === `manual:${manual.techniqueId}`);
+      const estimate = selectedManual && manualLearningRequirement(state, selectedManual).eligible ? ` · เรียนคัมภีร์ราว ${manualStudyMonthsLeft(state, selectedManual, route)} เดือนที่ความเร็วปัจจุบัน` : '';
+      status.textContent = `${route.name} · ผู้สอน: ${teacher.name} · ไอเทมเสริม +${learningItemBonus(state)}%${estimate} · ${Object.entries(LEARNING_TYPES).map(([id, def]) => `${def.name} ${learning.knowledge[id] || 0}`).join(' · ')} · ${cultivationGuidance(state)}`;
+    }
   }
   function renderRelations() {
     const memory = ensureRelationshipState(state);
@@ -11552,7 +11964,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       const gradeClass = `grade-${normalized.grade || 'common'}`;
       const gradeLabel = ROMAN_GRADES[normalized.grade] || `[${normalized.gradeData?.name || 'สามัญ'}]`;
       const stars = '★'.repeat(Math.max(1, Math.min(5, item.quality || 1)));
-      const effectDesc = item.trainingBonus ? `ฝึกบำเพ็ญ +${item.trainingBonus}% (${item.trainingUses} ครั้ง)`
+      const effectDesc = item.karmaBonus || item.luckBonus ? `กรรม +${item.karmaBonus || 0} · โชค +${item.luckBonus || 0} (ใช้ครั้งเดียว)` : item.trainingBonus ? `ฝึกบำเพ็ญ +${item.trainingBonus}% (${item.trainingUses} ครั้ง)`
         : item.cures ? 'ถอนพิษจากการสำรวจทันที'
         : item.fatigueRelief ? `ลดความเหนื่อยล้า ${item.fatigueRelief} หน่วย`
         : item.poisonCoating ? 'ลดความเสียหายและกันพิษ 1 ครั้ง'
@@ -11800,8 +12212,12 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     ];
     unlocks.innerHTML = groups.map(([label, values]) => `<small><b>${label}:</b> ${values.length ? values.slice(-8).map(value => esc(replayMetaLabel(value))).join(' · ') : 'ยังไม่มี'}</small>`).join('');
   }
+  ['item-filter-type', 'item-filter-grade', 'item-filter-realm'].forEach(id => {
+    $(id)?.addEventListener('change', () => { if (state) renderTechniques(); });
+  });
   function renderTechniques() {
-    const statNames = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กาย', agility: 'ว่องไว', spirit: 'ปราณ', charisma: 'เสน่ห์', charm: 'เสน่ห์', comprehension: 'ปัญญา', intellect: 'ปัญญา', luck: 'วาสนา', training: 'ฝึกฝน' };
+    normalizeDiscoveryManuals(state);
+    const statNames = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กายา', agility: 'ว่องไว', spirit: 'จิตใจ', charisma: 'เสน่ห์', charm: 'เสน่ห์', comprehension: 'ปัญญา', intellect: 'ปัญญา', luck: 'วาสนา', karma: 'กรรม', training: 'ฝึกฝน', restHealth: 'ฟื้นสุขภาพเมื่อพัก', restQi: 'ฟื้นปราณเมื่อพัก', healthCost: 'สุขภาพที่เสียเมื่อฝึก', riskReduction: 'ลดโอกาสบาดเจ็บจากการฝึก', breakthroughProtection: 'คุ้มครองการทะลวง', breakthroughBonus: 'โอกาสทะลวง', cultivationRate: 'ความเร็วฝึกตน', masteryRate: 'ความเร็วชำนาญ', learningRate: 'ความเร็วเรียนรู้' };
     const loadout = ensureTechniqueLoadout(state);
     const activeIds = new Set(effectiveTechniques(state).map(t => t.id));
     const techniquePanel = $('technique-loadout-status');
@@ -11842,7 +12258,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     const techniques = TECHNIQUES.filter(t => t.unlock(state)).map(t => {
       const open = t.unlock(state), slot = techniqueSlot(t), active = open && activeIds.has(t.id);
       const action = open && state.loadoutMode ? `<button type="button" class="technique-equip${active ? ' active' : ''}" data-equip-technique="${t.id}">${active ? 'ถอดออก' : 'ติดตั้ง'}</button>` : '';
-      return `<div class="technique ${open ? '' : 'locked'}"><div><strong>${open ? t.name : '???'}</strong><small>${open ? `${t.categoryData?.name || TECHNIQUE_SLOT_LABELS[slot]} · ${t.subtypeName}${active ? ' · ใช้งาน' : ''} · <em class="item-grade grade-${t.grade}">${t.gradeData.name}</em>` : 'ยังไม่ค้นพบ'}</small></div>${open && t.description ? `<p class="technique-description">${esc(t.description)}</p>` : ''}<small>${open ? t.effect : 'เหตุการณ์ เงื่อนไข หรือค่าพลังบางอย่างจะเปิดเผยวิชานี้'}</small>${action}</div>`;
+      return `<div class="technique ${open ? '' : 'locked'}"><div><strong>${open ? t.name : '???'}</strong><small>${open ? `${t.categoryData?.name || TECHNIQUE_SLOT_LABELS[slot]} · ${t.subtypeName}${t.id.startsWith('discovery_') ? ` · ขั้น ${esc(manualRealmName(manualRealmForTechnique(t)))}` : ''}${cultivationCeilingName(t) ? ` · ฝึกสูงสุด ${esc(cultivationCeilingName(t))}` : ''}${active ? ' · ใช้งาน' : ''} · <em class="item-grade grade-${t.grade}">${t.gradeData.name}</em>` : 'ยังไม่ค้นพบ'}</small></div>${open && t.description ? `<p class="technique-description">${esc(t.description)}</p>` : ''}<small>${open ? t.effect : 'เหตุการณ์ เงื่อนไข หรือค่าพลังบางอย่างจะเปิดเผยวิชานี้'}</small>${action}</div>`;
     }).join('');
     const undiscovered = TECHNIQUES.filter(t => !t.unlock(state)).length;
     $('techniques-list').innerHTML = (techniques || '<p class="empty">ยังไม่มีวิชาที่ค้นพบ</p>') + (undiscovered ? `<details class="undiscovered-techniques"><summary>วิชาที่ยังไม่ค้นพบ (${undiscovered})</summary><p>ค้นพบได้จากเหตุการณ์และการเดินทาง</p></details>` : '');
@@ -11877,22 +12293,40 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     const itemLoadout = ensureItemLoadout(state);
     const slotLabels = Object.fromEntries(Object.entries(ITEM_SLOT_DEFS).map(([id, def]) => [id, def.name]));
     const loadoutPanel = $('item-loadout-status');
-    renderSlots(loadoutPanel, 'อุปกรณ์ที่สวมใส่', slotLabels, itemLoadout, state.itemLoadoutMode, id => { const item = findTreasure(state, id); return typeof item === 'object' ? item.name : item; }, beginItemLoadout, id => { const item = findTreasure(state, id); if (!item) return ''; const normalized = typeof item === 'object' ? normalizeItemGrade(item) : normalizeItemGrade({ name: item, bonus: {} }); const b = effectiveTreasureBonus(state, normalized); const parts = Object.entries(b).map(([k, v]) => `${statNames[k] || k} ${v >= 0 ? '+' : ''}${v}${k === 'training' ? '%' : ''}`); return parts.slice(0, 2).join(' · '); });
+    renderSlots(loadoutPanel, 'อุปกรณ์ที่สวมใส่', slotLabels, itemLoadout, state.itemLoadoutMode, id => { const item = findTreasure(state, id); return typeof item === 'object' ? `${item.name}${equipmentRequirement(state, item)?.eligible === false ? ' (ขั้นไม่ถึง · ไม่เกิดผล)' : ''}` : item; }, beginItemLoadout, id => { const item = findTreasure(state, id); if (!item) return ''; const normalized = typeof item === 'object' ? normalizeItemGrade(item) : normalizeItemGrade({ name: item, bonus: {} }); const b = effectiveTreasureBonus(state, normalized); const parts = Object.entries(b).map(([k, v]) => `${statNames[k] || k} ${v >= 0 ? '+' : ''}${v}${k === 'training' ? '%' : ''}`); return parts.slice(0, 2).join(' · '); });
     if (loadoutPanel && state.itemLoadoutMode) { const note = document.createElement('p'); note.className = 'loadout-note'; note.textContent = 'ของสำคัญที่ไม่มีช่องสวมใส่ยังให้ผลติดตัว'; loadoutPanel.appendChild(note); }
     if (loadoutPanel && equipmentMaturityFactor(state) < 1) { const note = document.createElement('p'); note.className = 'loadout-note'; note.textContent = `ตามวัย ใช้ค่าสู้รบจากไอเทมได้ ${Math.round(equipmentMaturityFactor(state) * 100)}% และจะเพิ่มจนเต็มเมื่ออายุ 12 ปี`; loadoutPanel.appendChild(note); }
-    const treasures = (state.treasures || []).map(item => {
+    const typeFilter = $('item-filter-type')?.value || 'all', gradeFilter = $('item-filter-grade')?.value || 'all', realmFilter = $('item-filter-realm')?.value || 'all';
+    const treasureItems = (state.treasures || []).filter(item => {
+      const n = normalizeItemGrade(typeof item === 'object' ? item : { name: item, bonus: {} });
+      const type = n.techniqueId ? 'manual' : n.craftingMaterial || n.category === 'material' ? 'material' : itemSlot(n) || n.subtype === 'ring' ? 'equipment' : 'relic';
+      const req = n.techniqueId ? manualLearningRequirement(state, n)?.required : equipmentRequirement(state, n)?.realm;
+      return (typeFilter === 'all' || type === typeFilter) && (gradeFilter === 'all' || n.grade === gradeFilter) && (realmFilter === 'all' || (realmFilter === 'other' ? req == null || req > 4 : req === Number(realmFilter)));
+    });
+    const treasures = treasureItems.map(item => {
       const normalized = typeof item === 'object' ? normalizeItemGrade(item) : normalizeItemGrade({ name: item, bonus: {} });
-      const name = normalized.name, itemId = normalized.id || name, bonus = effectiveTreasureBonus(state, normalized);
+      const name = normalized.name, itemId = normalized.inventoryUid, bonus = effectiveTreasureBonus(state, normalized);
       const manualTechnique = normalized.techniqueId && TECHNIQUES.find(t => t.id === normalized.techniqueId);
-      const effect = manualTechnique ? (manualTechnique.unlock(state) ? `เรียนรู้ ${manualTechnique.name} แล้ว` : `ใช้กิจกรรมเรียนรู้เพื่อศึกษาวิชา ${manualTechnique.name}`) : (Object.entries(bonus).map(([k, v]) => `${statNames[k] || k} ${v >= 0 ? '+' : ''}${v}${k === 'training' ? '%' : ''}`).join(' · ') || 'วัตถุสำคัญต่อชะตา');
+      const requirement = manualTechnique ? manualLearningRequirement(state, normalized) : null;
+      const effect = normalized.consumable ? 'ไอเท็มใช้สิ้นเปลือง ไม่ให้โบนัสเพียงเพราะเก็บไว้' : normalized.craftingMaterial ? 'วัสดุสำหรับสร้างของ ไม่ให้โบนัสเพียงเพราะเก็บไว้' : manualTechnique ? (manualTechnique.unlock(state) ? `เรียนรู้ ${manualTechnique.name} แล้ว` : requirement.eligible ? `ใช้กิจกรรมเรียนรู้เพื่อศึกษาวิชา ${manualTechnique.name}` : `ยังเรียนไม่ได้ · ต้องมีขั้น ${requirement.name}`) : (Object.entries(bonus).map(([k, v]) => `${statNames[k] || k} ${v >= 0 ? '+' : ''}${v}${k === 'training' ? '%' : ''}`).join(' · ') || 'วัตถุสำคัญต่อชะตา');
       const baseSlot = itemSlot(normalized);
       const equipSlot = normalized.subtype === 'ring' ? (itemLoadout.ring1 === itemId ? 'ring1' : itemLoadout.ring2 === itemId ? 'ring2' : itemLoadout.ring1 ? 'ring2' : 'ring1') : baseSlot;
       const equipped = equipSlot && itemLoadout[equipSlot] === itemId;
       const ageAllowed = itemAllowedByAge(state, normalized);
-      const action = equipSlot && state.itemLoadoutMode ? `<button type="button" class="technique-equip${equipped ? ' active' : ''}" data-equip-item="${encodeURIComponent(itemId)}" data-equip-slot="${equipSlot}" ${ageAllowed ? '' : 'disabled title="เด็กเล็กสวมใส่ได้เฉพาะเครื่องประดับ"'}>${ageAllowed ? (equipped ? 'ถอดออก' : `ใส่${slotLabels[equipSlot]}`) : 'เด็กเล็กยังสวมไม่ได้'}</button>` : '';
-      return `<div class="technique treasure"><div><strong>✦ ${name}</strong><small class="item-grade grade-${normalized.grade}">${normalized.gradeData.name} · ${normalized.categoryData?.name || 'ไอเท็ม'} · ${normalized.subtypeName} · พลัง ×${normalized.gradeData.powerMultiplier}</small></div>${normalized.description ? `<p class="technique-description">${esc(normalized.description)}</p>` : ''}<small>${effect} · มูลค่า ${normalized.value}</small>${action}</div>`;
+      const equipRequirement = equipmentRequirement(state, normalized);
+      const allowed = ageAllowed && (equipRequirement?.eligible !== false);
+      const blockedReason = !ageAllowed ? 'เด็กเล็กสวมใส่ได้เฉพาะเครื่องประดับ' : `ต้องมีขั้น ${equipRequirement?.name}`;
+      const unopened = isUnopenedStoryContainer(normalized);
+      const active = activeTreasures(state).includes(item);
+      const status = unopened ? 'ยังไม่เปิดผนึก · รอเนื้อเรื่อง · ไม่เกิดผล' : manualTechnique ? 'คัมภีร์สำหรับเรียนรู้ · ไม่ใช่วิชาที่ติดตั้ง' : normalized.craftingMaterial ? 'วัตถุดิบ · ไม่ให้ผลติดตัว' : equipSlot ? (!allowed ? `ยังใช้ไม่ได้ · ${blockedReason}` : active ? (state.itemLoadoutMode ? 'สวมใส่และเกิดผล' : 'เกิดผลอัตโนมัติในเซฟเดิม') : 'ต้องสวมใส่จึงเกิดผล') : (equipRequirement?.eligible === false ? `ยังไม่เกิดผล · ต้องมีขั้น ${equipRequirement.name}` : active && Object.keys(bonus).length ? 'พกไว้แล้วเกิดผล' : 'ไม่เกิดผลติดตัว');
+      const current = equipSlot && state.itemLoadoutMode && !equipped ? findTreasure(state, itemLoadout[equipSlot]) : null;
+      const currentBonus = current && activeTreasures(state).includes(current) ? effectiveTreasureBonus(state, normalizeItemGrade(current)) : {};
+      const differences = current ? [...new Set([...Object.keys(bonus), ...Object.keys(currentBonus)])].map(key => { const delta = Math.round(((Number(bonus[key]) || 0) - (Number(currentBonus[key]) || 0)) * 100) / 100; return delta ? `${statNames[key] || key} ${delta > 0 ? '+' : ''}${delta}${key === 'training' ? '%' : ''}` : ''; }).filter(Boolean) : [];
+      const comparison = current ? `<small class="item-comparison">เทียบกับ ${esc(current.name || current)}: ${esc(differences.join(' · ') || 'ค่าสถานะเท่ากัน')}${!allowed ? ' (เมื่อใช้ได้)' : ''}</small>` : '';
+      const action = equipSlot && state.itemLoadoutMode ? `<button type="button" class="technique-equip${equipped ? ' active' : ''}" data-equip-item="${encodeURIComponent(itemId)}" data-equip-slot="${equipSlot}" ${allowed || equipped ? '' : `disabled title="${esc(blockedReason)}"`}>${equipped ? (allowed ? 'ถอดออก' : 'ถอดออก · ไม่เกิดผล') : allowed ? `ใส่${slotLabels[equipSlot]}` : esc(blockedReason)}</button>` : '';
+      return `<div class="technique treasure"><div><strong>✦ ${esc(name)}</strong><small class="item-grade grade-${normalized.grade}">${normalized.gradeData.name} · ${normalized.categoryData?.name || 'ไอเท็ม'} · ${normalized.subtypeName}${requirement ? ` · ขั้นต่ำเรียน ${esc(requirement.name)}${cultivationCeilingName(manualTechnique) ? ` · ฝึกสูงสุด ${esc(cultivationCeilingName(manualTechnique))}` : ''}` : equipRequirement ? ` · ขั้นต่ำ ${esc(equipRequirement.name)}` : ''}</small></div><span class="item-status">${esc(status)}</span>${normalized.description ? `<p class="technique-description">${esc(normalized.description)}</p>` : ''}<small class="item-effect">${unopened ? 'ยังไม่ทราบสิ่งที่อยู่ภายใน' : esc(effect)} · มูลค่า ${normalized.value}</small>${comparison}${action}</div>`;
     }).join('');
-    $('treasures-list').innerHTML = treasures || '<p class="empty">ยังไม่พบของวิเศษ</p>';
+    $('treasures-list').innerHTML = treasures || `<p class="empty">${state.treasures?.length ? 'ไม่มีไอเท็มที่ตรงกับตัวกรอง' : 'ยังไม่มีไอเท็มในคลัง'}</p>`;
     $('treasures-list').querySelectorAll('[data-equip-item]').forEach(button => {
       button.onclick = () => { if (!state || state.pendingEvent) return; equipItem(state, decodeURIComponent(button.dataset.equipItem), button.dataset.equipSlot); syncCombat(state); saveGame(); render(); };
     });
@@ -12467,7 +12901,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   $('training-goal-select').onchange = e => { if (!state) return; ensureTrainingState(state); if (TRAINING_GOALS[e.target.value]) { state.trainingGoal = e.target.value; saveGame(); render(); } };
   $('auto-training-rule-select').onchange = e => { if (!state) return; ensureTrainingState(state); if (['stop', 'auto-item', 'auto-foundation'].includes(e.target.value)) { state.autoTrainingRule = e.target.value; saveGame(); render(); } };
   $('learning-focus-select').onchange = e => { if (!state) return; const learning = ensureLearningState(state); if (learningTypeAvailable(state, e.target.value)) { learning.focus = e.target.value; saveGame(); render(); } };
-  $('learning-technique-select').onchange = e => { if (!state) return; const learning = ensureLearningState(state); learning.techniqueFocus = e.target.value || null; if (learning.techniqueFocus?.startsWith('manual:')) { const manual = availableTechniqueManuals(state).find(item => item.techniqueId === learning.techniqueFocus.slice(7)); learning.focus = manual?.learningType || 'martial'; } saveGame(); render(); };
+  $('learning-technique-select').onchange = e => { if (!state) return; const learning = ensureLearningState(state); learning.techniqueFocus = e.target.value || null; if (learning.techniqueFocus?.startsWith('manual:')) { const manual = availableTechniqueManuals(state).find(item => item.techniqueId === learning.techniqueFocus.slice(7)); if (!manual || !manualLearningRequirement(state, manual).eligible) { learning.techniqueFocus = null; toast('ขั้นบำเพ็ญยังไม่ถึงขั้นต่ำของคัมภีร์'); } else learning.focus = manual.learningType || 'martial'; } saveGame(); render(); };
   $('auto-learning-rule-select').onchange = e => { if (!state) return; if (setAutoLearningRule(state, e.target.value)) { saveGame(); render(); } };
   $('craft-auto-mode').onchange = e => { if (!state) return; setCraftAutoRule(state, e.target.value, state.crafting?.auto?.recipeId || null); saveGame(); render(); };
   $('craft-auto-recipe').onchange = e => { if (!state) return; setCraftAutoRule(state, state.crafting?.auto?.mode || 'stop', e.target.value || null); saveGame(); render(); };
@@ -12516,7 +12950,7 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   $('replay-btn').onclick = () => { if (!isGuestSession()) localStorage.removeItem(SAVE_KEY); openSetup('story'); };
   $('motion-toggle').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); document.body.classList.toggle('reduce-motion', on); };
   $('font-toggle').onclick = e => { const on = !document.body.classList.contains('large-text'); document.body.classList.toggle('large-text', on); e.currentTarget.textContent = on ? 'ใหญ่' : 'ปกติ'; };
-  $('expand-log-btn').onclick = () => { const el = $('life-log'); el.style.maxHeight = el.style.maxHeight ? '' : '520px'; $('expand-log-btn').textContent = el.style.maxHeight ? 'ย่อ' : 'ดูทั้งหมด'; };
+  $('expand-log-btn').onclick = () => { const el = $('life-log'); const expanded = el.dataset.expanded !== 'true'; el.dataset.expanded = String(expanded); el.style.maxHeight = expanded ? '520px' : ''; $('expand-log-btn').textContent = expanded ? 'ย่อ' : 'ดูทั้งหมด'; renderLog(); };
   window.addEventListener('beforeunload', saveGame); document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
   window.__game__ = { getState: () => state, render, beginTechniqueLoadout, processMonth, continueLife, createLifeSummary, advanceAgePhase, applyOfflineProgress, showOfflineSummary, setAutoMedicineRule, applyAutoMedicine, EVENTS, saveGame, continueGame, setActivity, craftItem, studyCraft, planCraft, planStudyCraft, executeCraft, executeStudyCraft, selectChoice: (i) => {
     if (state.pendingEvent) {
