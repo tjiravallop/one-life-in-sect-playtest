@@ -1632,9 +1632,9 @@
   function annualLifePhase(s) {
     ensureLifespanState(s);
     const ageMonths = Math.max(0, Number(s.hero?.ageMonths || 0));
-    if (ageMonths <= 24) return AGE_PHASES.find(phase => phase.id === 'infant');
-    if (ageMonths <= 60) return AGE_PHASES.find(phase => phase.id === 'young-child');
-    if (ageMonths <= 144) return AGE_PHASES.find(phase => phase.id === 'child');
+    if (ageMonths < 24) return AGE_PHASES.find(phase => phase.id === 'infant');
+    if (ageMonths < 60) return AGE_PHASES.find(phase => phase.id === 'young-child');
+    if (ageMonths < 144) return AGE_PHASES.find(phase => phase.id === 'child');
     const lifespanMonths = Math.max(ageMonths + 1, Number(s.hero?.lifespanMonths || (Number(s.hero?.lifespan || 74) * 12)));
     const ratio = ageMonths / lifespanMonths;
     if (ratio < .35) return AGE_PHASES.find(phase => phase.id === 'youth');
