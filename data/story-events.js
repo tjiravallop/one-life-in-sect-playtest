@@ -16,6 +16,7 @@
     finishBattle,
     finishEscape,
     resolveAmbush,
+    revealRoot,
     siegeBattleOmen,
     updateFactionReputation
   }) => {
@@ -525,6 +526,13 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   });
 
   const ALTERNATE_ROUTE_EVENTS = {
+    lin_an_root_inspection: {
+      id: 'lin_an_root_inspection', characterId: 'lin-an', activity: 'any', month: 85, route: 'sect',
+      requires: s => s.flags?.metSect && !s.hero?.rootKnown,
+      title: 'พิธีตรวจรากวิญญาณ',
+      text: 'หลังหลินอันเข้าสำนัก อาจารย์เหวินนำผลึกตรวจรากมาให้เขาทดลอง แสงในผลึกจะเปิดเผยรากวิญญาณที่เคยถูกปกปิด',
+      choices: [{ text: 'ยื่นมือแตะผลึกตรวจราก', note: 'เปิดเผยรากวิญญาณของหลินอันในหน้าต่างตัวละคร', effect: s => { revealRoot(s, 'พิธีตรวจราก ณ สำนักเมฆาคราม'); s.flags.linAnRootInspected = true; } }]
+    },
     // ==========================================
     // 1. เส้นทางชีวิตสงบใต้ชายคา (Mortal Peace)
     // ==========================================

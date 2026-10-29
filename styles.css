@@ -566,3 +566,189 @@ html,body{max-width:100%;overflow-x:hidden}
   #game-screen[data-mobile-view="activities"] .activity-card small{font-size:.62rem;line-height:1.3}
   #game-screen[data-mobile-view="activities"] .activity-card>b{font-size:.6rem}
 }
+
+/* RPG-style character management: clear tabs, equipment slots, and readable loot cards. */
+.techniques-panel,.treasures-panel,.management-nav-panel,.crafting-panel{background:linear-gradient(155deg,#f2e8d2 0%,#e6d8bb 100%)}
+.codex-heading{align-items:center;gap:12px}
+.codex-heading h2{color:#273c31;text-shadow:0 1px #fff2d4}
+.codex-heading>span{flex:0 0 auto;padding:4px 9px;border:1px solid #aa8848;background:#393d32;color:#f5dda0;border-radius:14px;font-size:.68rem}
+.management-intro{margin:9px 0;color:#665c4b;font-size:.78rem;line-height:1.55}
+.management-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0 15px;padding:5px;border:1px solid #5e604f;border-radius:8px;background:linear-gradient(135deg,#242a24,#3c4035);box-shadow:inset 0 1px rgba(255,255,255,.1),0 3px 8px rgba(35,29,19,.16)}
+.management-tabs button{display:grid;align-content:center;gap:3px;min-width:0;min-height:52px;padding:7px 9px;border:1px solid transparent;border-radius:5px;background:transparent;color:#e7dfcb;text-align:left;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.management-tabs button:hover{background:rgba(255,255,255,.08)}
+.management-tabs button.active{border-color:#c5a35c;background:linear-gradient(180deg,#f4dfaa,#d8b96e);color:#302719;box-shadow:inset 0 1px rgba(255,255,255,.65),0 2px 5px rgba(0,0,0,.2)}
+.management-tabs button>span{font-weight:800;font-size:.8rem}
+.management-tabs button>small{color:inherit;opacity:.78;font-size:.63rem;line-height:1.2}
+.management-section{min-width:0}
+.management-section[hidden],.crafting-panel[hidden]{display:none!important}
+.loadout-panel,.item-loadout-status{border-radius:8px;background:linear-gradient(150deg,#eee2c8,#d9c8a5);box-shadow:inset 0 1px rgba(255,255,255,.72),0 3px 9px rgba(52,41,24,.12)}
+.loadout-panel>strong,.item-loadout-status>strong{font-family:"Sriracha","Noto Serif Thai",serif;font-size:1.02rem;color:#324b3b}
+.loadout-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.loadout-slot{position:relative;min-height:82px;padding:10px;border-radius:6px;background:linear-gradient(145deg,#fff8e8,#e6d7b8);border:1px solid #aa986f;box-shadow:inset 0 1px rgba(255,255,255,.9),0 2px 4px rgba(41,33,20,.08)}
+.loadout-slot:not(:disabled):hover{border-color:#98712d;background:linear-gradient(145deg,#fff7dc,#f0dfae);transform:translateY(-1px)}
+.loadout-slot:disabled{border-radius:6px}
+.loadout-slot small{font-size:.68rem;font-weight:700;color:#726142}
+.loadout-slot .slot-item-name{font-size:.82rem;color:#302b21}
+.slot-bonus-tag{padding:2px 5px;border:1px solid #b7c8a6;border-radius:9px;background:#dce8d3;font-size:.62rem}
+.techniques-panel #techniques-list,.treasures-panel #treasures-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch;gap:10px}
+.technique-card,.inventory-card{position:relative;display:flex;flex-direction:column;gap:8px;min-width:0;padding:12px 13px 13px 16px;overflow:hidden;border:1px solid #a99b7c;border-left:4px solid #897548;border-radius:7px;background:linear-gradient(145deg,#f8f0df,#e6dac1);box-shadow:0 3px 9px rgba(51,39,22,.11),inset 0 1px rgba(255,255,255,.8)}
+.technique-card:before,.inventory-card:before{content:"";position:absolute;inset:0 auto 0 0;width:2px;background:linear-gradient(180deg,transparent,#d3b568,transparent);opacity:.7}
+.technique-card.rarity-common,.inventory-card.rarity-common{border-left-color:#82765d}
+.technique-card.rarity-uncommon,.inventory-card.rarity-uncommon{border-left-color:#43834d}
+.technique-card.rarity-rare,.inventory-card.rarity-rare{border-left-color:#3977a6}
+.technique-card.rarity-epic,.inventory-card.rarity-epic{border-left-color:#8651a5}
+.technique-card.rarity-legendary,.inventory-card.rarity-legendary{border-left-color:#bf852b}
+.technique-card.equipped,.inventory-card.equipped{box-shadow:0 0 0 1px #55815d,0 4px 10px rgba(43,70,48,.16),inset 0 1px rgba(255,255,255,.8)}
+.technique-card.locked{filter:none;opacity:.72;background:linear-gradient(145deg,#e4ddcf,#d4ccbd)}
+.technique-card-heading,.inventory-card-heading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:4px 8px}
+.technique-card-heading>strong,.inventory-card-heading>strong{min-width:0;color:#302b21;font-size:.9rem;line-height:1.45;overflow-wrap:anywhere}
+.technique-card-heading>small,.inventory-card-heading>small{grid-column:1/-1;color:#70664f;font-size:.69rem;line-height:1.45}
+.technique-slot-badge{padding:3px 7px;border:1px solid #b39a5e;border-radius:10px;background:#efe1b9;color:#624b1d;font-size:.63rem;white-space:nowrap}
+.technique-card .item-grade,.inventory-card .item-grade{justify-self:start;width:max-content;padding:3px 8px;border-radius:12px;font-style:normal;font-size:.67rem}
+.technique-card .technique-effect,.inventory-card .item-effect{color:#514a3d;font-size:.74rem;line-height:1.55}
+.inventory-card .item-status{align-self:flex-start;padding:3px 8px;border:1px solid #c4ad78;border-radius:12px;background:#f3e6c2;color:#685421;font-size:.65rem}
+.technique-card .technique-description,.inventory-card .technique-description{margin:0;color:#655c4e;font-size:.75rem;line-height:1.55}
+.inventory-card .item-comparison{padding:6px 8px;border-radius:4px;background:#e4eadc;color:#385440;font-size:.67rem;line-height:1.5}
+.technique-card .technique-equip,.inventory-card .technique-equip{align-self:flex-start;min-width:104px;min-height:38px;margin-top:auto;padding:7px 12px;border:1px solid #355844;border-radius:5px;background:linear-gradient(180deg,#4f7659,#31543d);color:#fff7e4;font-size:.73rem;font-weight:700;box-shadow:inset 0 1px rgba(255,255,255,.2)}
+.technique-card .technique-equip:hover:not(:disabled),.inventory-card .technique-equip:hover:not(:disabled){background:linear-gradient(180deg,#638c6c,#3c6749)}
+.technique-card .technique-equip.active,.inventory-card .technique-equip.active{border-color:#947733;background:linear-gradient(180deg,#f1d68b,#c29c48);color:#332813}
+.technique-card .technique-equip:disabled{opacity:.5}
+.inventory-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0;padding:10px;border:1px solid #baaa85;border-radius:7px;background:rgba(255,250,235,.55)}
+.inventory-filters label{display:grid;gap:4px;min-width:0;color:#63583f;font-size:.68rem;font-weight:700}
+.inventory-filters select,.inventory-filters input{width:100%;min-width:0;min-height:40px;padding:7px 9px;border:1px solid #a89a7a;border-radius:4px;background:#fff9eb;color:#302b21;font:inherit;font-size:.75rem}
+.inventory-search-label{grid-column:1/-1}
+.inventory-help{padding:8px 10px;border-left:3px solid #7a8b63;background:rgba(244,238,217,.7);color:#5f594b;font-size:.72rem;line-height:1.55}
+.management-nav-panel{padding:15px 18px}
+.management-nav-panel .management-tabs{margin:10px 0 0}
+
+@media(max-width:760px){
+  .management-tabs{gap:4px;margin:10px 0 12px;padding:4px}
+  .management-tabs button{min-height:48px;padding:6px 5px;text-align:center}
+  .management-tabs button>span{font-size:.73rem}
+  .management-tabs button>small{font-size:.57rem}
+  .loadout-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .techniques-panel #techniques-list,.treasures-panel #treasures-list{grid-template-columns:1fr;gap:8px}
+  .technique-card,.inventory-card{padding:11px 11px 12px 14px}
+  .inventory-filters{grid-template-columns:1fr 1fr;gap:7px;padding:8px}
+  .inventory-search-label{grid-column:1/-1}
+  .management-nav-panel{padding:12px}
+}
+
+@media(max-width:360px){
+  .management-tabs button>small{display:none}
+  .management-tabs button{min-height:42px}
+}
+
+/* Clear story setup and a layered, readable character status card. */
+#setup-screen .setup-card{width:min(900px,96vw);border-color:#786742;background:linear-gradient(145deg,#272820,#1c1e19);box-shadow:0 18px 50px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.06)}
+#setup-title{padding-bottom:10px;border-bottom:1px solid rgba(215,168,75,.42)}
+#setup-description{max-width:68ch;line-height:1.65}
+.setup-identity-fields{display:grid;grid-template-columns:1fr;gap:4px}
+.setup-identity-fields>div{display:grid;grid-template-columns:1fr;gap:4px}
+.setup-identity-fields label{margin:10px 0 3px!important}
+.free-destiny-section{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:14px;margin:20px 0;padding:16px;border:1px solid #887343;border-radius:8px;background:radial-gradient(ellipse at 15% 50%,rgba(215,168,75,.2),transparent 55%),linear-gradient(145deg,#282a22,#191b18);box-shadow:inset 0 1px rgba(255,255,255,.05),0 8px 22px rgba(0,0,0,.22)}
+.destiny-seal{display:grid;place-items:center;width:48px;height:48px;border:1px solid #d0ae5d;border-radius:50%;background:radial-gradient(circle,#514329,#24251e);color:#e6c876;font-family:serif;font-size:1.5rem;box-shadow:0 0 18px rgba(215,168,75,.14)}
+.destiny-copy{display:grid;gap:4px}.destiny-copy strong{color:#f0dfbb;font-size:.95rem}.destiny-copy small{max-width:54ch;color:#b9ac8f;font-size:.72rem;line-height:1.5}
+#setup-screen #random-destiny-btn{min-height:46px;border-color:#b39451;color:#f1dfb8;background:linear-gradient(145deg,#47402e,#29271f);white-space:nowrap}
+.hero-info .talent-display{display:inline-flex;align-items:center;padding:4px 8px;border:1px solid #8e9b74;border-radius:12px;background:#e8eadb;color:#43533a;font-size:.67rem}
+.hero-info .root-display[data-revealed="false"]{border-style:dashed;background:#e6dece;color:#746f64}
+.system-guide{margin:8px 0 12px;padding:10px 12px;border:1px solid rgba(161,133,74,.35);border-left:3px solid #a98b4d;border-radius:5px;background:linear-gradient(110deg,rgba(236,219,177,.55),rgba(255,255,255,.34));color:#3b3d31}
+.system-guide>strong{display:block;margin-bottom:3px;color:#354837;font-size:.78rem}
+.system-guide>small{display:block;color:#655d4c;font-size:.68rem;line-height:1.55}
+.system-guide ol{margin:5px 0 6px;padding-left:20px;color:#514b3e;font-size:.7rem;line-height:1.55}
+.system-guide li+li{margin-top:2px}
+.household-controls>label{display:grid;gap:4px;color:#594f3e;font-size:.69rem;font-weight:700}
+.rest-location-meta{white-space:pre-line;line-height:1.6}
+.center-column>.scene{order:0}
+.center-column>.log-panel{order:1;padding:18px 20px;border-color:#8a784d;background:linear-gradient(155deg,#f3ead6,#e6d8ba);box-shadow:0 8px 22px rgba(39,30,19,.2)}
+.center-column>.activity-panel{order:2}
+.log-panel .section-title{align-items:center}
+.log-panel .section-title>div>small{color:#826e46;font-size:.68rem}
+.log-panel .section-title h2{font-size:1.35rem;color:#293d31}
+.log-panel .text-btn{color:#526d59;font-weight:800;text-decoration:none}
+.life-log{max-height:360px;overscroll-behavior:contain;scrollbar-color:#a38a54 #e2d4b7;scrollbar-width:thin}
+.life-log.is-expanded{max-height:min(66vh,680px)}
+.life-log .log-entry{grid-template-columns:74px minmax(0,1fr);gap:12px;padding:12px 8px;font-size:.94rem;line-height:1.6}
+.life-log .log-entry time{font-size:.78rem;line-height:1.4}
+.life-log .log-entry strong{color:#3b4338;font-size:.77rem}
+.life-log .log-entry p{color:#514b40;font-size:.9rem;line-height:1.65}
+.talent-selection-section{margin-top:22px;padding:16px;border:1px solid #685b3b;border-radius:8px;background:linear-gradient(145deg,rgba(215,168,75,.08),rgba(0,0,0,.15))}
+#setup-screen .talent-selection-section .choice-label{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0 0 12px;color:#f0dfbb;font-size:1rem}
+#setup-screen .talent-selection-section .choice-label small{color:#b9ac8f;font-size:.68rem;font-weight:400}
+#setup-screen .talent-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+#setup-screen .talent-card{position:relative;min-height:108px;padding:12px 13px;border-radius:6px;background:linear-gradient(145deg,#20221d,#151713);transition:transform .15s,border-color .15s,background .15s}
+#setup-screen .talent-card:hover{transform:translateY(-2px);border-color:#8d794e}
+#setup-screen .talent-card.selected{border-color:#e1ba60;background:linear-gradient(145deg,#403a28,#2b2a22);box-shadow:inset 0 0 0 1px #c99b3f,0 0 16px rgba(215,168,75,.13)}
+#setup-screen .talent-card.selected:after{content:"✓";position:absolute;right:9px;top:8px;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#d7a84b;color:#211b10;font-weight:900}
+#setup-screen .talent-card strong{padding-right:18px;color:#f0e4c9}
+#setup-screen .talent-card small{font-size:.72rem;line-height:1.4}
+#setup-screen .setup-summary{border-left-color:var(--gold);border-radius:4px;background:#2e392f;color:#eee2c5}
+#setup-screen .setup-actions .btn{min-height:46px;border-radius:4px}
+
+.hero-card{display:grid;gap:13px;padding:15px;background:linear-gradient(155deg,#f0e5ce,#dfd0af)}
+.hero-info{padding:2px 2px 11px;border-bottom:1px solid rgba(87,71,42,.25)}
+.hero-title-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hero-info h2{margin:0;color:#273d31;font-size:1.35rem}
+.hero-info .hero-title-row p{margin-top:3px;color:#746143;font-size:.72rem}
+.realm-emblem{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border:1px solid #a58a51;border-radius:50%;background:radial-gradient(circle,#fff1c4,#d2b56d);color:#4b3c1b;font-family:serif;font-size:1.2rem;box-shadow:0 2px 6px rgba(55,42,17,.2)}
+.hero-identity-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px}
+.hero-age-pill,.hero-info .root-display{display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border:1px solid #c3b28b;border-radius:12px;background:rgba(255,250,233,.64);color:#62583f;font-size:.67rem}
+.hero-age-pill b{color:#322d22}
+.hero-info .root-display{border-color:#a98d50;background:#f4e7c6;color:#745516}
+.hero-info .root-display[data-revealed="false"]{border-style:dashed;background:#e6dece;color:#746f64}
+.status-chips-bar{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+.status-chip{border-radius:12px;padding:4px 8px;font-size:.64rem}
+.hero-status-section,.hero-combat-section{padding:10px;border:1px solid rgba(124,102,58,.26);border-radius:6px;background:rgba(255,250,235,.44)}
+.hero-status-heading{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px;color:#334b3b}
+.hero-status-heading strong{font-size:.8rem}
+.hero-status-heading small{color:#81765f;font-size:.61rem;text-align:right}
+.hero-vitals-grid{display:grid;gap:7px}
+.hero-vital{padding:7px 8px;border:1px solid rgba(128,107,69,.2);border-radius:4px;background:#f5ecd9}
+.hero-vital .bar-label{font-size:.67rem}
+.hero-vital .bar{height:9px;margin-top:4px;border-radius:5px;overflow:hidden;background:#c6b99e}
+.hero-vital .bar i{border-radius:5px}
+.hero-vital>small{display:block;margin-top:3px;color:#8c493d;font-size:.62rem;line-height:1.35}
+.bar.qi i{background:#4f83a2}
+.combat-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:0}
+.combat-stats div{min-height:50px;align-content:center;gap:3px;padding:6px;border:1px solid rgba(109,91,56,.16);border-radius:4px;background:#e5d8bd}
+.combat-stats span{font-size:.64rem;color:#6b604b}
+.combat-stats b{font-size:.92rem;color:#29271f}
+.combat-stats .training-efficiency-stat{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;min-height:40px;padding:7px 10px;background:#e2eadc}
+.combat-stats .training-efficiency-stat b{color:#315e43}
+.secondary-attributes-details,.power-formula-details{border-top:1px solid rgba(87,71,42,.2);padding-top:8px}
+.secondary-attributes-summary,.power-formula-details summary{cursor:pointer;color:#56654e;font-size:.71rem;font-weight:700}
+.resource-row{gap:5px;margin-top:0;padding-top:10px}
+.resource-row div{padding:5px 2px;border-right:1px solid rgba(90,73,44,.2)}
+.resource-row small{font-size:.63rem}
+.resource-row b{font-size:.9rem;color:#30291d}
+.power-formula-details .power-formula{margin:6px 0 0;text-align:left;font-size:.67rem}
+
+@media(max-width:760px){
+  .center-column>.log-panel{order:.5;margin:0 8px;padding:12px 13px}
+  .log-panel .section-title h2{font-size:1.05rem}
+  .log-panel .section-title>div>small{font-size:.62rem}
+  .log-panel .text-btn{padding:7px 4px;font-size:.72rem}
+  .life-log{max-height:250px}
+  .life-log.is-expanded{max-height:min(56vh,520px)}
+  .life-log .log-entry{grid-template-columns:58px minmax(0,1fr);gap:8px;padding:9px 4px;font-size:.84rem;line-height:1.55}
+  .life-log .log-entry time{font-size:.68rem}
+  .life-log .log-entry p{font-size:.84rem}
+  #setup-screen .setup-card{padding:22px 18px}
+  .free-destiny-section{grid-template-columns:auto 1fr;gap:10px;padding:12px}
+  #setup-screen #random-destiny-btn{grid-column:1/-1;width:100%}
+  #setup-screen .talent-selection-section{padding:12px}
+  #setup-screen .talent-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  #setup-screen .talent-card{min-height:94px;padding:10px}
+  #setup-screen .talent-icon{font-size:1.2rem}
+  #setup-screen .talent-selection-section .choice-label{align-items:flex-start;flex-direction:column;gap:2px}
+  .hero-card{gap:10px}
+  .hero-status-section,.hero-combat-section{padding:9px}
+  .hero-vitals-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hero-vital:last-child{grid-column:1/-1}
+}
+
+@media(max-width:360px){
+  #setup-screen .talent-grid{grid-template-columns:1fr}
+  .hero-vitals-grid{grid-template-columns:1fr}
+  .hero-vital:last-child{grid-column:auto}
+}

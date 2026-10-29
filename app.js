@@ -28,6 +28,7 @@
     finishBattle,
     finishEscape,
     resolveAmbush,
+    revealRoot,
     siegeBattleOmen,
     updateFactionReputation
   });
@@ -6174,6 +6175,7 @@
   let state = null;
   let mobileView = 'summary';
   let activeInfoPanelTab = 'overview';
+  const managementTabs = { techniques: 'loadout', items: 'equipment' };
   let mobileUnlockState = null;
   let knownMobileActivities = new Set();
   let newlyUnlockedMobileActivities = new Set();
@@ -8135,7 +8137,7 @@
     const character = STORY_CHARACTERS[state.characterId];
     const lifeRole = character ? character.title : state.mode === 'free' ? 'ชีวิตอิสระ' : 'ผู้พเนจร';
     const generation = state.lineageState?.generation ? ` · รุ่นที่ ${state.lineageState.generation}` : '';
-    $('hero-display-name').textContent = h.name || character?.name || 'ผู้พเนจร'; $('hero-subtitle').textContent = `${lifeRole}${generation} · ${realmName(h)}`; $('root-display').textContent = h.rootKnown ? `รากวิญญาณ${ROOTS[h.root]?.name || 'ไม่ทราบ'} · ${TALENTS[h.talent]?.name || 'พรสวรรค์สามัญ'}` : 'รากวิญญาณยังไม่ถูกตรวจพบ · สถานะปกปิด';
+    $('hero-display-name').textContent = h.name || character?.name || 'ผู้พเนจร'; $('hero-subtitle').textContent = `${lifeRole}${generation} · ${realmName(h)}`; $('talent-display').textContent = `พรสวรรค์: ${TALENTS[h.talent]?.name || 'พรสวรรค์สามัญ'}`; $('root-display').textContent = h.rootKnown ? `รากวิญญาณ: ${ROOTS[h.root]?.name || 'ไม่ทราบ'}` : 'รากวิญญาณยังไม่ถูกตรวจพบ · สถานะปกปิด'; $('root-display').dataset.revealed = String(!!h.rootKnown);
     $('age-stat').textContent = `${formatAge(h.ageMonths)} (${annualLifePhase(state).name})`; $('lifespan-stat').textContent = formatAge(Math.round(Number(h.lifespanMonths ?? h.lifespan * 12)));
     const worldMonth = state.world?.worldMonth ?? state.month;
     const worldYr = Math.floor(worldMonth / 12) + 1;
@@ -8387,16 +8389,34 @@
       if (topbar) gameScreen.style.setProperty('--mobile-topbar-height', `${topbar.offsetHeight}px`);
       gameScreen.dataset.mobileView = mobileView;
       document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
-        panel.hidden = panel.dataset.mobilePanel !== mobileView;
+        const managementHidden = panel.dataset.managementGroup && managementTabs[panel.dataset.managementGroup] !== panel.dataset.managementPanel;
+        panel.hidden = panel.dataset.mobilePanel !== mobileView || !!managementHidden;
       });
+      applyManagementTabs();
       return;
     }
     gameScreen.style.removeProperty('--mobile-topbar-height');
     gameScreen.removeAttribute('data-mobile-view');
     document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
-      panel.hidden = panel.hasAttribute('data-tab-panel')
-        ? panel.dataset.tabPanel !== activeInfoPanelTab
-        : false;
+      const tabHidden = panel.hasAttribute('data-tab-panel') && panel.dataset.tabPanel !== activeInfoPanelTab;
+      const managementHidden = panel.dataset.managementGroup && managementTabs[panel.dataset.managementGroup] !== panel.dataset.managementPanel;
+      panel.hidden = !!tabHidden || !!managementHidden;
+    });
+    applyManagementTabs();
+  }
+
+  function applyManagementTabs() {
+    document.querySelectorAll('[data-management-group][data-management-panel]').forEach(panel => {
+      if (panel.hasAttribute('data-mobile-panel') || panel.hasAttribute('data-tab-panel')) return;
+      panel.hidden = managementTabs[panel.dataset.managementGroup] !== panel.dataset.managementPanel;
+    });
+    document.querySelectorAll('[data-management-nav]').forEach(nav => {
+      const group = nav.dataset.managementNav;
+      nav.querySelectorAll('[data-management-tab]').forEach(button => {
+        const active = managementTabs[group] === button.dataset.managementValue;
+        button.classList.toggle('active', active);
+        button.setAttribute('aria-selected', String(active));
+      });
     });
   }
 
@@ -8498,7 +8518,10 @@
   }
 
   function renderLog() {
-    const list = $('life-log'); list.innerHTML = '';
+    const list = $('life-log');
+    const previousScrollTop = list.scrollTop, previousScrollHeight = list.scrollHeight;
+    const wasReadingHistory = previousScrollTop > 0;
+    list.innerHTML = '';
     const currentWorldMonth = Number(state.world?.worldMonth ?? state.worldMonth ?? state.month) || 0;
     const currentLifeMonth = Number(state.month) || 0;
     const currentAge = Number(state.hero?.ageMonths) || 0;
@@ -8513,6 +8536,7 @@
       list.appendChild(d);
     });
     if (!state.log.length) list.innerHTML = '<p class="empty">บันทึกยังว่างเปล่า — เลือกกิจกรรมแล้วปล่อยเวลาเดิน</p>';
+    if (wasReadingHistory) list.scrollTop = previousScrollTop + list.scrollHeight - previousScrollHeight;
   }
   function currentLocation() {
     if (state.activity === 'rest') return restRoute(state).location;
@@ -8626,11 +8650,31 @@
     const selected = destinations.value; const estimate = selected ? calculateTravel(state, selected, { vehicle: vehicle.value }) : { ok: false, reason: 'destination-locked' };
     const reasonText = { 'route-closed': 'เส้นทางถูกปิด', 'insufficient-funds': 'เงินไม่พอสำหรับค่าเดินทาง', 'insufficient-supplies': 'เสบียงไม่พอสำหรับเส้นทางนี้', 'insufficient-time': 'อายุขัยไม่พอถึงปลายทาง', 'missed-deadline': 'ไปไม่ทันกำหนด', 'vehicle-locked': 'ยังใช้พาหนะนี้ไม่ได้', 'destination-locked': 'ปลายทางยังไม่เปิด' }[estimate.reason];
     const supplyLabels = { herb: 'สมุนไพร', iron: 'แร่เหล็ก', spiritStone: 'หินปราณ' };
-    const supplyText = estimate.resources ? Object.entries(estimate.resources).map(([key, value]) => `${supplyLabels[key] || key} ${value}`).join(' · ') : '';
     const deadlineText = estimate.deadlineMonth == null ? '' : ` · กำหนดเดือน ${estimate.deadlineMonth}`;
-    $('travel-meta').textContent = state.travel.active
-      ? `กำลังเดินทาง · เหลือ ${state.travel.active.monthsLeft} เดือน · ถึงเดือน ${state.travel.active.etaMonth} · อายุขัยลด ${state.travel.active.lifespan} เดือน · เสบียง ${supplyText || 'ไม่มี'}`
-      : (estimate.ok ? `ใช้เวลา ${estimate.months} เดือน · ค่าใช้จ่าย ${estimate.cost} · ปลอดภัย ${estimate.safety}% · สุขภาพ -${estimate.health} · อายุขัย -${estimate.lifespan} เดือน · เสบียง ${supplyText || 'ไม่มี'}${deadlineText}` : reasonText || 'เลือกปลายทางและพาหนะ');
+    if (state.travel.active) {
+      const trip = state.travel.active;
+      const remainingPayments = Math.ceil(trip.cost / Math.max(1, trip.totalMonths)) * trip.monthsLeft;
+      const remainingHealth = trip.health * trip.monthsLeft;
+      const remainingLifespan = trip.lifespan * trip.monthsLeft;
+      const remainingSupplies = Object.entries(trip.resources || {}).map(([key, value]) => `${supplyLabels[key] || key} ${value * trip.monthsLeft}`).join(' · ');
+      $('travel-meta').textContent = `กำลังเดินทางไป${TRAVEL_DESTINATIONS[trip.destination]?.name || trip.destination}\nเหลือ ${trip.monthsLeft} เดือน · ถึงเดือน ${trip.etaMonth}\nที่ต้องใช้ต่อจากนี้โดยประมาณ: เงิน ${remainingPayments} ตำลึง · สุขภาพ ${remainingHealth} · อายุขัย ${remainingLifespan} เดือน · เสบียง ${remainingSupplies || 'ไม่มี'}`;
+    } else if (estimate.ok) {
+      const monthlyPayment = Math.ceil(estimate.cost / Math.max(1, estimate.months));
+      const totalPayment = monthlyPayment * estimate.months;
+      const totalHealth = estimate.health * estimate.months;
+      const totalLifespan = estimate.lifespan * estimate.months;
+      const monthlySupplies = estimate.resources ? Object.entries(estimate.resources).map(([key, value]) => `${supplyLabels[key] || key} ${value}`).join(' · ') : 'ไม่มี';
+      const totalSupplies = estimate.resources ? Object.entries(estimate.resources).map(([key, value]) => `${supplyLabels[key] || key} ${value * estimate.months}`).join(' · ') : 'ไม่มี';
+      const journeyWarnings = [];
+      if (state.hero.money < totalPayment) journeyWarnings.push('เงินที่มีอาจไม่พอจ่ายจนถึงปลายทาง');
+      if (Object.entries(estimate.resources || {}).some(([key, value]) => Number(state.materials?.[key] || 0) < value * estimate.months)) journeyWarnings.push('เสบียงที่มีอาจไม่พอตลอดเส้นทาง');
+      if (state.hero.health <= totalHealth) journeyWarnings.push('สุขภาพอาจหมดก่อนถึงปลายทาง');
+      const remainingLife = Math.max(0, ensureLifespanState(state) - Number(state.hero.ageMonths || 0));
+      if (remainingLife < totalLifespan) journeyWarnings.push('อายุขัยที่เหลืออาจไม่พอสำหรับการเดินทางนี้');
+      $('travel-meta').textContent = `แผนไป${TRAVEL_DESTINATIONS[selected]?.name || selected}\nระยะเวลา ${estimate.months} เดือน · ความปลอดภัย ${estimate.safety}%${deadlineText}\nจ่ายเดือนละประมาณ ${monthlyPayment} ตำลึง (รวม ${totalPayment})\nใช้ต่อเดือน: สุขภาพ ${estimate.health} · อายุขัย ${estimate.lifespan} เดือน · เสบียง ${monthlySupplies}\nรวมตลอดทาง: สุขภาพ ${totalHealth} · อายุขัย ${totalLifespan} เดือน · เสบียง ${totalSupplies}${journeyWarnings.length ? `\n⚠ ${journeyWarnings.join(' · ')}` : ''}`;
+    } else {
+      $('travel-meta').textContent = reasonText || 'เลือกปลายทางและพาหนะ';
+    }
     $('auto-travel-rule-select').value = state.autoTravelRule;
     $('start-travel-btn').disabled = !!state.travel.active || !estimate.ok;
   }
@@ -9082,6 +9126,7 @@
   ['item-filter-type', 'item-filter-grade', 'item-filter-realm'].forEach(id => {
     $(id)?.addEventListener('change', () => { if (state) renderTechniques(); });
   });
+  $('item-filter-search')?.addEventListener('input', () => { if (state) renderTechniques(); });
   function renderTechniques() {
     normalizeDiscoveryManuals(state);
     const statNames = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กายา', agility: 'ว่องไว', spirit: 'จิตใจ', charisma: 'เสน่ห์', charm: 'เสน่ห์', comprehension: 'ปัญญา', intellect: 'ปัญญา', luck: 'วาสนา', karma: 'กรรม', training: 'ฝึกฝน', restHealth: 'ฟื้นสุขภาพเมื่อพัก', restQi: 'ฟื้นปราณเมื่อพัก', healthCost: 'สุขภาพที่เสียเมื่อฝึก', riskReduction: 'ลดโอกาสบาดเจ็บจากการฝึก', breakthroughProtection: 'คุ้มครองการทะลวง', breakthroughBonus: 'โอกาสทะลวง', cultivationRate: 'ความเร็วฝึกตน', masteryRate: 'ความเร็วชำนาญ', learningRate: 'ความเร็วเรียนรู้' };
@@ -9125,7 +9170,7 @@
     const techniques = TECHNIQUES.filter(t => t.unlock(state)).map(t => {
       const open = t.unlock(state), slot = techniqueSlot(t), active = open && activeIds.has(t.id);
       const action = open && state.loadoutMode ? `<button type="button" class="technique-equip${active ? ' active' : ''}" data-equip-technique="${t.id}">${active ? 'ถอดออก' : 'ติดตั้ง'}</button>` : '';
-      return `<div class="technique ${open ? '' : 'locked'}"><div><strong>${open ? t.name : '???'}</strong><small>${open ? `${t.categoryData?.name || TECHNIQUE_SLOT_LABELS[slot]} · ${t.subtypeName}${t.id.startsWith('discovery_') ? ` · ขั้น ${esc(manualRealmName(manualRealmForTechnique(t)))}` : ''}${cultivationCeilingName(t) ? ` · ฝึกสูงสุด ${esc(cultivationCeilingName(t))}` : ''}${active ? ' · ใช้งาน' : ''} · <em class="item-grade grade-${t.grade}">${t.gradeData.name}</em>` : 'ยังไม่ค้นพบ'}</small></div>${open && t.description ? `<p class="technique-description">${esc(t.description)}</p>` : ''}<small>${open ? t.effect : 'เหตุการณ์ เงื่อนไข หรือค่าพลังบางอย่างจะเปิดเผยวิชานี้'}</small>${action}</div>`;
+      return `<article class="technique technique-card rarity-${t.grade}${active ? ' equipped' : ''}${open ? '' : ' locked'}"><div class="technique-card-heading"><strong>${open ? t.name : '???'}</strong><span class="technique-slot-badge">${open ? esc(t.categoryData?.name || TECHNIQUE_SLOT_LABELS[slot]) : 'ยังไม่ค้นพบ'}</span><small>${open ? `${t.subtypeName}${t.id.startsWith('discovery_') ? ` · ขั้น ${esc(manualRealmName(manualRealmForTechnique(t)))}` : ''}${cultivationCeilingName(t) ? ` · ฝึกสูงสุด ${esc(cultivationCeilingName(t))}` : ''}${active ? ' · ติดตั้งแล้ว' : ''}` : 'ค้นพบได้จากเหตุการณ์และเส้นทางชีวิต'}</small></div>${open && t.description ? `<p class="technique-description">${esc(t.description)}</p>` : ''}<small class="technique-effect">${open ? t.effect : 'เงื่อนไขและพลังของวิชาจะเปิดเผยเมื่อค้นพบ'}</small>${open ? `<span class="item-grade grade-${t.grade}">${t.gradeData.name}</span>` : ''}${action}</article>`;
     }).join('');
     const undiscovered = TECHNIQUES.filter(t => !t.unlock(state)).length;
     $('techniques-list').innerHTML = (techniques || '<p class="empty">ยังไม่มีวิชาที่ค้นพบ</p>') + (undiscovered ? `<details class="undiscovered-techniques"><summary>วิชาที่ยังไม่ค้นพบ (${undiscovered})</summary><p>ค้นพบได้จากเหตุการณ์และการเดินทาง</p></details>` : '');
@@ -9164,12 +9209,16 @@
     if (loadoutPanel && state.itemLoadoutMode) { const note = document.createElement('p'); note.className = 'loadout-note'; note.textContent = 'ของสำคัญที่ไม่มีช่องสวมใส่ยังให้ผลติดตัว'; loadoutPanel.appendChild(note); }
     if (loadoutPanel && equipmentMaturityFactor(state) < 1) { const note = document.createElement('p'); note.className = 'loadout-note'; note.textContent = `ตามวัย ใช้ค่าสู้รบจากไอเทมได้ ${Math.round(equipmentMaturityFactor(state) * 100)}% และจะเพิ่มจนเต็มเมื่ออายุ 12 ปี`; loadoutPanel.appendChild(note); }
     const typeFilter = $('item-filter-type')?.value || 'all', gradeFilter = $('item-filter-grade')?.value || 'all', realmFilter = $('item-filter-realm')?.value || 'all';
+    const searchFilter = ($('item-filter-search')?.value || '').trim().toLocaleLowerCase('th');
     const treasureItems = (state.treasures || []).filter(item => {
       const n = normalizeItemGrade(typeof item === 'object' ? item : { name: item, bonus: {} });
       const type = n.techniqueId ? 'manual' : n.craftingMaterial || n.category === 'material' ? 'material' : itemSlot(n) || n.subtype === 'ring' ? 'equipment' : 'relic';
       const req = n.techniqueId ? manualLearningRequirement(state, n)?.required : equipmentRequirement(state, n)?.realm;
-      return (typeFilter === 'all' || type === typeFilter) && (gradeFilter === 'all' || n.grade === gradeFilter) && (realmFilter === 'all' || (realmFilter === 'other' ? req == null || req > 4 : req === Number(realmFilter)));
+      const searchable = [n.name, n.description, n.categoryData?.name, n.subtypeName, n.gradeData?.name].join(' ').toLocaleLowerCase('th');
+      return (!searchFilter || searchable.includes(searchFilter)) && (typeFilter === 'all' || type === typeFilter) && (gradeFilter === 'all' || n.grade === gradeFilter) && (realmFilter === 'all' || (realmFilter === 'other' ? req == null || req > 4 : req === Number(realmFilter)));
     });
+    const inventoryCount = $('inventory-count-label');
+    if (inventoryCount) inventoryCount.textContent = `${treasureItems.length} รายการ`;
     const treasures = treasureItems.map(item => {
       const normalized = typeof item === 'object' ? normalizeItemGrade(item) : normalizeItemGrade({ name: item, bonus: {} });
       const name = normalized.name, itemId = normalized.inventoryUid, bonus = effectiveTreasureBonus(state, normalized);
@@ -9191,7 +9240,7 @@
       const differences = current ? [...new Set([...Object.keys(bonus), ...Object.keys(currentBonus)])].map(key => { const delta = Math.round(((Number(bonus[key]) || 0) - (Number(currentBonus[key]) || 0)) * 100) / 100; return delta ? `${statNames[key] || key} ${delta > 0 ? '+' : ''}${delta}${key === 'training' ? '%' : ''}` : ''; }).filter(Boolean) : [];
       const comparison = current ? `<small class="item-comparison">เทียบกับ ${esc(current.name || current)}: ${esc(differences.join(' · ') || 'ค่าสถานะเท่ากัน')}${!allowed ? ' (เมื่อใช้ได้)' : ''}</small>` : '';
       const action = equipSlot && state.itemLoadoutMode ? `<button type="button" class="technique-equip${equipped ? ' active' : ''}" data-equip-item="${encodeURIComponent(itemId)}" data-equip-slot="${equipSlot}" ${allowed || equipped ? '' : `disabled title="${esc(blockedReason)}"`}>${equipped ? (allowed ? 'ถอดออก' : 'ถอดออก · ไม่เกิดผล') : allowed ? `ใส่${slotLabels[equipSlot]}` : esc(blockedReason)}</button>` : '';
-      return `<div class="technique treasure"><div><strong>✦ ${esc(name)}</strong><small class="item-grade grade-${normalized.grade}">${normalized.gradeData.name} · ${normalized.categoryData?.name || 'ไอเท็ม'} · ${normalized.subtypeName}${requirement ? ` · ขั้นต่ำเรียน ${esc(requirement.name)}${cultivationCeilingName(manualTechnique) ? ` · ฝึกสูงสุด ${esc(cultivationCeilingName(manualTechnique))}` : ''}` : equipRequirement ? ` · ขั้นต่ำ ${esc(equipRequirement.name)}` : ''}</small></div><span class="item-status">${esc(status)}</span>${normalized.description ? `<p class="technique-description">${esc(normalized.description)}</p>` : ''}<small class="item-effect">${unopened ? 'ยังไม่ทราบสิ่งที่อยู่ภายใน' : esc(effect)} · มูลค่า ${normalized.value}</small>${comparison}${action}</div>`;
+      return `<article class="technique treasure inventory-card rarity-${normalized.grade}${equipped ? ' equipped' : ''}"><div class="inventory-card-heading"><strong>✦ ${esc(name)}</strong><span class="item-grade grade-${normalized.grade}">${normalized.gradeData.name}</span><small>${normalized.categoryData?.name || 'ไอเท็ม'} · ${normalized.subtypeName}${requirement ? ` · ขั้นต่ำเรียน ${esc(requirement.name)}${cultivationCeilingName(manualTechnique) ? ` · ฝึกสูงสุด ${esc(cultivationCeilingName(manualTechnique))}` : ''}` : equipRequirement ? ` · ขั้นต่ำ ${esc(equipRequirement.name)}` : ''}</small></div><span class="item-status">${esc(status)}</span>${normalized.description ? `<p class="technique-description">${esc(normalized.description)}</p>` : ''}<small class="item-effect">${unopened ? 'ยังไม่ทราบสิ่งที่อยู่ภายใน' : esc(effect)} · มูลค่า ${normalized.value}</small>${comparison}${action}</article>`;
     }).join('');
     $('treasures-list').innerHTML = treasures || `<p class="empty">${state.treasures?.length ? 'ไม่มีไอเท็มที่ตรงกับตัวกรอง' : 'ยังไม่มีไอเท็มในคลัง'}</p>`;
     $('treasures-list').querySelectorAll('[data-equip-item]').forEach(button => {
@@ -9346,7 +9395,7 @@
       || EXPLORATION_EVENTS.find(e => e.id === id)
       || LEARNING_EVENTS.find(e => e.id === id)
       || SOCIAL_EVENTS.find(e => e.id === id)
-      || REST_EVENTS.find(e => e.id === id) || CRAFT_EVENTS.find(e => e.id === id) || FAMILY_EVENTS.find(e => e.id === id) || TRAVEL_EVENTS.find(e => e.id === id) || FREE_LIFE_EVENTS.find(e => e.id === id) || buildLibraryDiscoveryEvents().find(e => e.id === id) || buildUniqueGradedEvents(s, annualLifePhase(s)).find(e => e.id === id) || buildAnnualEventPool(s).find(e => e.id === id) || null;
+      || REST_EVENTS.find(e => e.id === id) || CRAFT_EVENTS.find(e => e.id === id) || FAMILY_EVENTS.find(e => e.id === id) || TRAVEL_EVENTS.find(e => e.id === id) || OFFICIAL_EVENTS.find(e => e.id === id) || FREE_LIFE_EVENTS.find(e => e.id === id) || buildLibraryDiscoveryEvents().find(e => e.id === id) || buildUniqueGradedEvents(s, annualLifePhase(s)).find(e => e.id === id) || buildAnnualEventPool(s).find(e => e.id === id) || null;
   }
   function showOfflineSummary(summary) {
     const content = $('offline-summary-content');
@@ -9613,14 +9662,40 @@
 
   function toggleAutoMode(s) { if (!s) return false; s.autoMode = !s.autoMode; if (s.autoMode) s.autoActivity = s.activity; return s.autoMode; }
 
+  function randomizeFreeDestiny() {
+    const talents = Object.keys(TALENTS);
+    const roots = Object.keys(ROOTS).filter(id => id !== 'none');
+    selectedTalent = talents[Math.floor(Math.random() * talents.length)];
+    selectedRoot = roots[Math.floor(Math.random() * roots.length)];
+    document.querySelectorAll('.talent-card').forEach(button => {
+      const active = button.dataset.talent === selectedTalent;
+      button.classList.toggle('selected', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    document.querySelectorAll('.root-card').forEach(button => button.classList.toggle('selected', button.dataset.root === selectedRoot));
+    updateSetupSummary();
+  }
+
   function updateSetupSummary() {
     const summary = $('setup-summary');
     if (!summary) return;
-    const name = selectedMode === 'story' ? (STORY_CHARACTERS[selectedCharacter]?.name || 'หลินอัน') : ($('hero-name').value.trim() || 'ผู้พเนจร');
     const rule = document.querySelector(`.mode-card[data-rule="${selectedRule}"] strong`)?.textContent || 'กฎพื้นฐาน · เกิดใหม่';
     const talent = document.querySelector(`.talent-card[data-talent="${selectedTalent}"] strong`)?.textContent || '';
-    const root = document.querySelector(`.root-card[data-root="${selectedRoot}"] strong`)?.textContent || '';
-    summary.textContent = `สรุปชีวิต · ${selectedMode === 'story' ? 'เนื้อเรื่อง' : 'อิสระ'} · ${name}${selectedMode === 'free' ? ` · ${rule}` : ''} · ${talent} · ราก${root}`;
+    summary.textContent = selectedMode === 'story'
+      ? `เริ่มเรื่องของหลินอัน · พรสวรรค์: ${talent}`
+      : `สรุปชีวิตอิสระ · ${rule} · เพศ: ${$('hero-gender').selectedOptions[0]?.textContent || 'ไม่ระบุ'} · ชะตาพรสวรรค์และรากวิญญาณถูกสุ่มไว้แล้ว (รากปกปิดจนกว่าจะตรวจพบ)`;
+  }
+
+  function syncSetupModeOptions() {
+    const story = selectedMode === 'story';
+    $('hero-identity-fields').hidden = story;
+    $('hero-name-fields').hidden = !story;
+    $('root-choice-section').hidden = true;
+    $('talent-choices').closest('.talent-selection-section').hidden = !story;
+    $('free-destiny-section').hidden = story;
+    const hasAlternateCharacter = [...document.querySelectorAll('.mode-card[data-character]')]
+      .some(button => button.dataset.character !== 'lin-an' && !button.disabled);
+    $('story-character-choices').hidden = !story || !hasAlternateCharacter;
   }
 
   // ผูกปุ่มการทำงานและ Codex Modal
@@ -9628,6 +9703,7 @@
     selectedMode = mode;
     document.querySelector(`.mode-card[data-mode="${mode}"]`)?.click();
     refreshCharacterUnlocks();
+    syncSetupModeOptions();
     const rootHint = $('root-choice-hint');
     if (rootHint) {
       rootHint.textContent = mode === 'story'
@@ -9669,13 +9745,16 @@
   $('new-game-btn').onclick = () => openSetup('story');
   $('back-title-btn').onclick = () => { refreshModeMenu(); showScreen('mode-screen'); };
   $('begin-btn').onclick = startNewGame;
+  $('random-destiny-btn').onclick = randomizeFreeDestiny;
   $('continue-btn').onclick = continueGame;
 
   document.querySelectorAll('.mode-card[data-mode]').forEach(button => button.onclick = () => {
     selectedMode = button.dataset.mode;
     document.querySelectorAll('.mode-card[data-mode]').forEach(item => item.classList.toggle('selected', item === button));
     $('free-rule-choices').hidden = selectedMode !== 'free';
-    $('story-character-choices').hidden = selectedMode !== 'story';
+    refreshCharacterUnlocks();
+    syncSetupModeOptions();
+    if (selectedMode === 'free') randomizeFreeDestiny();
     $('hero-name').readOnly = selectedMode === 'story'; $('hero-name').setAttribute('aria-readonly', String(selectedMode === 'story'));
     $('hero-gender').disabled = selectedMode === 'story';
     $('hero-gender').value = selectedMode === 'story' ? (STORY_CHARACTERS[selectedCharacter]?.gender || 'unspecified') : ($('hero-gender').value || 'unspecified');
@@ -9683,7 +9762,7 @@
     if (selectedMode === 'free') selectedRule = document.querySelector('.mode-card[data-rule].selected')?.dataset.rule || 'one-life';
     $('story-lock-note').textContent = selectedMode === 'story' ? 'ชื่อนี้ถูกกำหนดโดยเนื้อเรื่องและไม่สามารถเปลี่ยนได้' : 'โหมดอิสระตั้งชื่อตัวละครเองได้';
     $('setup-description').textContent = selectedMode === 'story' ? 'เรื่องราวเริ่มเมื่ออายุ 5 ขวบ ในคืนที่บ้านถูกเผา—ก่อนเจ้าจะรู้จักคำว่าสำนักหรือยุทธภพ' : 'สร้างตัวละครของเจ้า เริ่มชีวิตตั้งแต่เกิดในโลกเดียวกับตัวละครเนื้อเรื่อง';
-    document.querySelector('#setup-screen .setup-card h2').textContent = selectedMode === 'story' ? 'ทายาทคนสุดท้ายของตระกูลหลิน' : 'สร้างชีวิตของเจ้า';
+    $('setup-title').textContent = selectedMode === 'story' ? 'ทายาทคนสุดท้ายของตระกูลหลิน' : 'สร้างชีวิตของเจ้า';
     const rootHint = $('root-choice-hint');
     if (rootHint) {
       rootHint.textContent = selectedMode === 'story'
@@ -9718,7 +9797,7 @@
     $('hero-name').value = character.name;
     $('hero-gender').value = character.gender || 'unspecified';
     $('setup-description').textContent = `${character.title} · ${character.ruleSet === LIFE_RULES.oneLife.id ? 'ทุกการตัดสินใจนำไปสู่บทจบหลายรูปแบบ' : 'กฎเฉพาะของตัวละครจะเปลี่ยนวิธีที่ความตายและอนาคตทำงาน'}`;
-    document.querySelector('#setup-screen .setup-card h2').textContent = character.title;
+    $('setup-title').textContent = character.title;
     updateSetupSummary();
   });
   document.querySelectorAll('.mode-card[data-rule]').forEach(button => button.onclick = () => {
@@ -9753,14 +9832,21 @@
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
   });
 
-  document.querySelectorAll('.talent-card').forEach(b => b.onclick = () => { selectedTalent = b.dataset.talent; document.querySelectorAll('.talent-card').forEach(x => x.classList.toggle('selected', x === b)); updateSetupSummary(); });
+  document.querySelectorAll('.talent-card').forEach(b => b.onclick = () => { selectedTalent = b.dataset.talent; document.querySelectorAll('.talent-card').forEach(x => { const active = x === b; x.classList.toggle('selected', active); x.setAttribute('aria-pressed', String(active)); }); updateSetupSummary(); });
   document.querySelectorAll('.root-card').forEach(b => b.onclick = () => { if (b.disabled || b.classList.contains('root-locked')) return; selectedRoot = b.dataset.root; document.querySelectorAll('.root-card').forEach(x => x.classList.toggle('selected', x === b)); updateSetupSummary(); });
   $('hero-name').addEventListener('input', updateSetupSummary);
+  $('hero-gender').addEventListener('change', updateSetupSummary);
   document.querySelectorAll('[data-panel-tab]').forEach(button => button.onclick = () => {
     const tab = button.dataset.panelTab;
     activeInfoPanelTab = tab;
     document.querySelectorAll('[data-panel-tab]').forEach(item => { const active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-selected', String(active)); });
     document.querySelectorAll('[data-tab-panel]').forEach(panel => { panel.hidden = tab !== panel.dataset.tabPanel; });
+  });
+  document.querySelectorAll('[data-management-nav] [data-management-tab]').forEach(button => button.onclick = () => {
+    const group = button.closest('[data-management-nav]')?.dataset.managementNav;
+    if (!group || !Object.hasOwn(managementTabs, group)) return;
+    managementTabs[group] = button.dataset.managementValue;
+    applyMobileSections();
   });
   const activateActivity = activity => {
     if (!state || state.pendingEvent || !ACTIVITY[activity]) return;
@@ -9840,7 +9926,7 @@
   $('replay-btn').onclick = () => { if (!isGuestSession()) localStorage.removeItem(SAVE_KEY); openSetup('story'); };
   $('motion-toggle').onclick = e => { const on = e.currentTarget.getAttribute('aria-pressed') !== 'true'; e.currentTarget.setAttribute('aria-pressed', on); document.body.classList.toggle('reduce-motion', on); };
   $('font-toggle').onclick = e => { const on = !document.body.classList.contains('large-text'); document.body.classList.toggle('large-text', on); e.currentTarget.textContent = on ? 'ใหญ่' : 'ปกติ'; };
-  $('expand-log-btn').onclick = () => { const el = $('life-log'); const expanded = el.dataset.expanded !== 'true'; el.dataset.expanded = String(expanded); el.style.maxHeight = expanded ? '520px' : ''; $('expand-log-btn').textContent = expanded ? 'ย่อ' : 'ดูทั้งหมด'; renderLog(); };
+  $('expand-log-btn').onclick = () => { const el = $('life-log'); const expanded = el.dataset.expanded !== 'true'; el.dataset.expanded = String(expanded); el.classList.toggle('is-expanded', expanded); el.scrollTop = 0; $('expand-log-btn').textContent = expanded ? 'ย่อบันทึก' : 'อ่านย้อนหลัง'; $('expand-log-btn').setAttribute('aria-expanded', String(expanded)); renderLog(); };
   window.addEventListener('beforeunload', saveGame); document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
   ({ TRAINING_EVENTS, TRAVEL_EVENTS, QUEST_EVENTS, CRAFT_EVENTS, WORLD_EVENTS, OFFICIAL_EVENTS, LEARNING_EVENTS, FAMILY_EVENTS, FREE_LIFE_EVENTS, MIDDLE_GAME_EVENTS, DEBT_EVENTS, SOCIAL_EVENTS, INFANT_LEGENDARY_EVENTS, INFANT_EPIC_EVENTS, SCOPED_EPIC_EVENTS, RANDOM_EVENTS, EXPLORATION_EVENTS, REST_EVENTS, EXPLORATION_DISCOVERIES } = window.OneLifeEventPoolCatalog.createEventPools({ $: $, addFamilyChronicle: addFamilyChronicle, addLog: addLog, addTreasure: addTreasure, advanceCultivationStage: advanceCultivationStage, canCraft: canCraft, clamp: clamp, cultivationAtCeiling: cultivationAtCeiling, effectiveCraftCost: effectiveCraftCost, endGame: endGame, ensureExplorationState: ensureExplorationState, ensureFamilyState: ensureFamilyState, ensureHousehold: ensureHousehold, ensureLifespanState: ensureLifespanState, ensureQuestState: ensureQuestState, ensureRelationshipState: ensureRelationshipState, ensureSocialState: ensureSocialState, equippedCultivationTechnique: equippedCultivationTechnique, explorationRoute: explorationRoute, extendTravel: extendTravel, familyAllowed: familyAllowed, freeLifeLocationWeight: freeLifeLocationWeight, getAvailableExplorationAreas: getAvailableExplorationAreas, hasLearningItem: hasLearningItem, learningLocationKey: learningLocationKey, learningTeacher: learningTeacher, restLocationKey: restLocationKey, restRoute: restRoute, revealRoot: revealRoot, scopedEpicEvent: scopedEpicEvent, socialRoute: socialRoute }));
   EXPLORATION_DISCOVERIES.push(...EXTRA_MANUAL_SCENES);
