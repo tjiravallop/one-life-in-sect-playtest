@@ -1,0 +1,74 @@
+1367:    if (s.locationState.currentAreaId !== shop.areaId) return { ok: false, reason: `ร้านอยู่${AREA_DEFS[shop.areaId].name} ปัจจุบันอยู่${AREA_DEFS[s.locationState.currentAreaId].name}` };
+2491:        actor.areaId = null; actor.pointId = null; actor.travel = { fromAreaId: s.travel.active.fromAreaId, toAreaId: s.travel.active.toAreaId }; return;
+4223:    if (String(id).startsWith('travel_') && s.travel?.active?.eventIds && !s.travel.active.eventIds.includes(id)) return false;
+4280:    s.travel.destination = TRAVEL_DESTINATIONS[s.travel.destination] ? s.travel.destination : null;
+4282:    s.travel.active = s.travel.active && typeof s.travel.active === 'object' ? s.travel.active : null;
+4285:    s.travel.lastArrival = s.travel.lastArrival || null;
+4362:      if (canonicalRouteId(s.travel.active?.routeId) === route.id) {
+4364:        s.travel.active.status = 'stranded'; s.travel.active.blockedReason = 'route-closed';
+4382:    if (s.ending || s.pendingEvent || s.travel.active) return false;
+4385:    s.travel.destination = destination; s.travel.vehicle = estimate.vehicle; s.travel.deadlineMonth = options.deadlineMonth ?? null;
+4386:    s.travel.active = { routeId: estimate.route.id, destination, vehicle: estimate.vehicle, monthsLeft: estimate.months, totalMonths: estimate.months, cost: estimate.cost, health: estimate.health, lifespan: estimate.lifespan, resources: estimate.resources, startedMonth: s.month, etaMonth: estimate.arrivalMonth };
+4387:    s.travel.active.fromAreaId = estimate.route.fromAreaId;
+4388:    s.travel.active.toAreaId = estimate.route.toAreaId;
+4389:    s.travel.active.status = 'traveling';
+4390:    s.travel.active.eventIds = estimate.route.eventIds;
+4391:    s.travel.active.budgetVersion = 1;
+4392:    s.travel.active.paid = { cost: 0, health: 0, lifespan: 0, resources: {} };
+4415:    travel.lastArrival = { destination, kind, month: s.month };
+4421:    return travel.lastArrival;
+4445:    s.travel.active = { ...rule, routeId: rule.id, destination, fromAreaId: position.currentAreaId, toAreaId: destinationAreaId, monthsLeft: rule.months, totalMonths: rule.months, etaMonth: s.month + rule.months, status: 'traveling', emergency: true, returning: true, budgetVersion: 1, paid: { cost: 0, health: 0, lifespan: 0, resources: {} } };
+4476:    if (!elapsed) { s.travel.active = null; relocateToArea(s, trip.fromAreaId, 'ยกเลิกก่อนออกจากต้นทาง'); setActivity(s, 'rest'); return true; }
+4491:    const travel = ensureTravelState(s), active = travel.active;
+4511:      s.travel.destination = active.destination; relocateToArea(s, active.toAreaId || DESTINATION_AREA_MAP[active.destination]);
+4512:      travel.active = null; s.hero.reputation += 1; s.materials.herb += 1;
+5297:    if (available.some(location => location.id === s.locations.current)) return s.locations.current;
+5314:    if (s.locations?.selected && available.some(item => item.id === s.locations.selected)) return s.locations.selected;
+5315:    if (s.locations?.current && available.some(item => item.id === s.locations.current)) return s.locations.current;
+5474:    const preferred = [s.locations.forced, s.locations.selected, s.locations.current];
+5475:    return preferred.find(id => available.some(point => point.id === id)) || available[0]?.id || s.locationState.currentPointId;
+5480:    if (locations.work && available.some(location => location.id === locations.work)) return locations.work;
+5481:    if (available.some(location => location.id === locations.current)) return locations.current;
+5538:        get: () => s.locationState.currentPointId,
+5539:        set: id => { const point = POINT_DEFS[id]; if (point) { s.locationState.currentAreaId = point.areaId; s.locationState.currentPointId = id; } }
+5563:    s.locations.selected = null; s.locations.work = null; s.locations.forced = null;
+5581:    if (!point || s.travel?.active || point.areaId !== s.locationState.currentAreaId || s.locationState.closedAreaIds.includes(point.areaId) || s.locations.destroyed.includes(pointId) || (point.requires && !point.requires(s))) return false;
+5582:    if (['rented', 'owned', 'estate', 'retainer', 'inn'].includes(pointId) && !s.locations.owned.includes(pointId)) return false;
+5583:    s.locationState.currentPointId = pointId;
+5588:    s.locations.owned = Array.isArray(s.locations.owned) ? s.locations.owned : ['roadside'];
+5590:    s.locations.selected = LOCATION_DEFS[s.locations.selected] ? s.locations.selected : null;
+5591:    s.locations.work = LOCATION_DEFS[s.locations.work] ? s.locations.work : null;
+5592:    s.locations.forced = LOCATION_DEFS[s.locations.forced] ? s.locations.forced : null;
+5594:    if (!s.locations.owned.includes('roadside')) s.locations.owned.unshift('roadside');
+5597:    if (householdLocation && !s.locations.owned.includes(householdLocation)) s.locations.owned.push(householdLocation);
+5598:    if (s.flags?.retainerAlive && !s.locations.owned.includes('retainer')) s.locations.owned.push('retainer');
+5599:    if (s.family?.buildings?.includes('home_hall') && !s.locations.owned.includes('estate')) s.locations.owned.push('estate');
+5600:    if (s.flags?.metSect && !s.locations.owned.includes('sect')) s.locations.owned.push('sect');
+5601:    if (hasOfficialRight(s, 'หอคัมภีร์ชั้นต้น') && !s.locations.owned.includes('sect_archive')) s.locations.owned.push('sect_archive');
+5602:    if (hasOfficialRight(s, 'ทะเบียนคดีและเขตสอบสวน') && !s.locations.owned.includes('city_records')) s.locations.owned.push('city_records');
+5603:    if ((s.flags?.foundMap || s.flags?.escapePrepared) && !s.locations.owned.includes('hidden_cave')) s.locations.owned.push('hidden_cave');
+5614:      if (['rented', 'owned', 'estate', 'retainer', 'inn'].includes(id) && !locations.owned.includes(id)) return false;
+5632:    locations.work = id;
+5648:    if (!locations.owned.includes(id)) locations.owned.push(id);
+5670:    locations.owned = locations.owned.filter(locationId => locationId !== id);
+5671:    if (locations.selected === id) locations.selected = null;
+5676:        return point.areaId === position.currentAreaId && !locations.destroyed.includes(pointId) && (!point.requires || point.requires(s)) && (!['rented', 'owned', 'estate', 'retainer', 'inn'].includes(pointId) || locations.owned.includes(pointId));
+5819:      if (workLocations.length && !workLocations.some(location => location.id === s.locations.work)) s.locations.work = s.locations.current;
+5925:    else if (s.locations.forced) clearForcedRest(s);
+6966:    if (state.travel?.active && state.activity !== 'travel') state.travel.active.etaMonth = state.month + state.travel.active.monthsLeft;
+6988:      if (!state.travel.active && state.autoMode) {
+6990:        const preferred = state.travel.destination && destinations.some(item => item.id === state.travel.destination)
+6991:          ? state.travel.destination : (destinations.find(item => item.id === (state.mode === 'free' ? 'market' : 'npc'))?.id || destinations[0]?.id);
+7228:    if (travelHandled && !state.travel.active) setActivity(state, 'rest');
+7422:      s.travel.storyInterruptions.push({ ...s.travel.active, interruptedBy: id, month: s.month });
+7424:      s.travel.active = null;
+7544:    if (id === 'arrival' && index < 3) { state.travel.active = null; relocateToArea(state, 'cloud_sect', 'เรื่องราวพาเจ้าผ่านประตูสำนักเมฆาคราม', 'sect'); state.flags.metSect = true; state.flags.sectDeclined = false; setStoryRoute(state, 'sect'); addRouteSkill(state, 'sectMerit', 1); markRouteTutorial(state, 'sect'); openCultivation(state, 'สำนักเมฆาครามมอบเคล็ดรวบรวมปราณพื้นฐาน'); addLog('หลินอันจึงเปิดทางจากผู้ฝึกกายเข้าสู่เส้นทางผู้บำเพ็ญ', true); }
+7545:    if (id === 'arrival' && index >= 3) { state.travel.active = null; relocateToArea(state, 'border_market', 'เจ้าปฏิเสธเข้าสำนักและกลับมาตั้งหลักที่เมืองตลาด'); state.flags.metSect = false; state.flags.sectDeclined = true; state.hero.cultivationAccess = false; state.activity = "work"; state.hero.cultivation = 0; state.hero.qi = 0; const routeId = index === 3 ? 'mortal-peace' : index === 4 ? 'nameless-martial' : index === 5 ? 'new-land' : 'underworld'; setStoryRoute(state, routeId); addRouteSkill(state, routeId === 'mortal-peace' ? 'householdSkill' : routeId === 'nameless-martial' ? 'martialReputation' : 'travelKnowledge', 1); markRouteTutorial(state, routeId); addLog('หลินอันยังไม่เปิดทางปราณ เพราะไม่ได้รับวิชาบำเพ็ญจากสำนัก', true); }
+8586:    $('scene').className = `scene ${state.travel?.active || state.locationState.currentAreaId === 'forest_caves' ? 'scene-forest' : state.locationState.currentAreaId === 'cloud_sect' ? 'scene-sect' : 'scene-village'}`;
+8861:        const owned = !['rented', 'owned', 'estate', 'retainer', 'inn'].includes(id) || state.locations.owned.includes(id);
+8917:    const innButton = $('rent-inn-btn'); if (innButton) { innButton.hidden = state.locations.owned.includes('inn') || state.hero.money < (LOCATION_DEFS.inn.cost || 0); innButton.textContent = `เช่าโรงเตี๊ยม ${LOCATION_DEFS.inn.cost} ตำลึง`; }
+8950:    $('exploration-area-meta').textContent = `${route.name} · เชื่อมจาก${AREA_DEFS[state.locationState.currentAreaId].name} · ใช้ 1 เดือน · สุขภาพพื้นฐาน -${route.health} (มี ${Math.round(state.hero.health)}) · ความเสี่ยง ${Math.round(route.risk)}% · โอกาสพบสิ่งสำคัญ ${Math.round(route.findChance)}% · อาจพบ ${Object.keys(route.yield || {}).map(key => MATERIAL_NAMES[key] || ({money:'ตำลึง', reputation:'ชื่อเสียง', qi:'ปราณ'})[key] || key).join(', ')} · สำรวจแล้วกลับจุดเดิม · ${route.log}${state.conditions?.poison?.monthsLeft ? ` · ติดพิษอีก ${state.conditions.poison.monthsLeft} เดือน` : ''}${state.poisonCoating?.usesLeft ? ' · ยาสลบพร้อมป้องกันตัว' : ''}`;
+9000:    destinations.value = state.travel.destination && availableIds.has(state.travel.destination) ? state.travel.destination : (available[0]?.id || '');
+9006:    const trip = state.travel.active;
+9664:      if (!data.locations || !LEGACY_LOCATION_MAP[data.locations.current]) data.locationMigrationAmbiguous = true;
+9671:    if (migrated.travel.active) travelBudget(migrated.travel.active);

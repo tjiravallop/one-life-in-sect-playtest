@@ -1,0 +1,18 @@
+[
+  {
+    "name": "location: mobile 320px location and shops",
+    "passed": true,
+    "detail": {
+      "width": 320,
+      "scrollWidth": 320
+    }
+  },
+  {
+    "name": "location: mobile 390px location and shops",
+    "passed": true,
+    "detail": {
+      "width": 390,
+      "scrollWidth": 390
+    }
+  }
+]

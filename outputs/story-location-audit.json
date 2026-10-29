@@ -1,0 +1,791 @@
+[
+  {
+    "id": "fallenHouse",
+    "title": "คืนตระกูลหลินล่มสลาย",
+    "month": 0,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "starting_village",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 0
+    }
+  },
+  {
+    "id": "firstRoad",
+    "title": "ทางแยกใต้ฝนหนาว",
+    "month": 12,
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "growingStep",
+    "title": "ก้าวแรกของชีวิตใหม่",
+    "month": 24,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "starting_village",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 24
+    }
+  },
+  {
+    "id": "winterChild",
+    "title": "ข้าวหนึ่งชามกับชีวิตหนึ่งคน",
+    "month": 36,
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "caravanBeacon",
+    "title": "คาราวานแห่งทิศประจิม",
+    "month": 48,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 48
+    }
+  },
+  {
+    "id": "oldDebt",
+    "title": "จดหมายที่รอมาห้าปี",
+    "month": 60,
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "foothills",
+    "title": "ข่าวลือใต้เงาเมฆา",
+    "month": 72,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 72
+    }
+  },
+  {
+    "id": "arrival",
+    "title": "ก้าวแรกใต้เมฆาคราม",
+    "month": 84,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 84
+    }
+  },
+  {
+    "id": "wounded",
+    "title": "ศิษย์ร่วมรุ่นผู้บาดเจ็บ",
+    "month": 88,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 88
+    }
+  },
+  {
+    "id": "manual",
+    "title": "คัมภีร์ในหอฝุ่น",
+    "month": 93,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 93
+    }
+  },
+  {
+    "id": "sectSparring",
+    "title": "มิตรภาพใต้เงาไผ่",
+    "month": 100,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 100
+    }
+  },
+  {
+    "id": "trader",
+    "title": "พ่อค้าใต้แสงตะเกียง",
+    "month": 98,
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "council",
+    "title": "เงางูดำในที่ประชุม",
+    "month": 104,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 104
+    }
+  },
+  {
+    "id": "vow",
+    "title": "คำถามของอาจารย์",
+    "month": 110,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 110
+    }
+  },
+  {
+    "id": "ambush",
+    "title": "ลูกศรกลางป่าสน",
+    "month": 116,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "forest_caves",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 116
+    }
+  },
+  {
+    "id": "refugees",
+    "title": "ผู้ลี้ภัยใต้กำแพง",
+    "month": 122,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 122
+    }
+  },
+  {
+    "id": "pilgrimage",
+    "title": "ผาไร้นาม",
+    "month": 128,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "forest_caves",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 128
+    }
+  },
+  {
+    "id": "betrayal",
+    "title": "คืนหน้ากากหลุด",
+    "month": 196,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 196
+    }
+  },
+  {
+    "id": "lanternVow",
+    "title": "คำมั่นใต้แสงตะเกียง",
+    "month": 210,
+    "locationPolicy": {
+      "kind": "deadline",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 210
+    }
+  },
+  {
+    "id": "lastwinter",
+    "title": "หนึ่งคำสั่งก่อนหิมะละลาย",
+    "month": 212,
+    "locationPolicy": {
+      "kind": "deadline",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 212
+    }
+  },
+  {
+    "id": "siege",
+    "title": "คืนสำนักแตก",
+    "month": 216,
+    "locationPolicy": {
+      "kind": "deadline",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 216
+    }
+  },
+  {
+    "id": "years_of_service",
+    "title": "สิ่งที่สำนักขาด",
+    "month": 150,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 150
+    }
+  },
+  {
+    "id": "years_of_choice",
+    "title": "เมื่อการฝึกไม่ใช่ทุกอย่าง",
+    "month": 174,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 174
+    }
+  },
+  {
+    "id": "border_preparation",
+    "title": "คนที่อยู่หลังแนวหน้า",
+    "month": 186,
+    "locationPolicy": {
+      "kind": "local",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 186
+    }
+  },
+  {
+    "id": "before_the_storm",
+    "title": "ก่อนเสียงระฆัง",
+    "month": 204,
+    "locationPolicy": {
+      "kind": "deadline",
+      "areaId": "cloud_sect",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 204
+    }
+  },
+  {
+    "id": "lin_an_root_inspection",
+    "title": "พิธีตรวจรากวิญญาณ",
+    "month": 85,
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "route_mortal_peace_m90",
+    "title": "เพิงเช่ากับงานแรก",
+    "month": 90,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 90
+    }
+  },
+  {
+    "id": "route_mortal_peace_m108",
+    "title": "สัญญาเช่าห้องแถวไม้",
+    "month": 108,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 108
+    }
+  },
+  {
+    "id": "route_mortal_peace_m126",
+    "title": "ไข้หวัดป่าลามตลาด",
+    "month": 126,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 126
+    }
+  },
+  {
+    "id": "route_mortal_peace_m144",
+    "title": "ลมฝนกระหน่ำหลังคา",
+    "month": 144,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 144
+    }
+  },
+  {
+    "id": "route_mortal_peace_m162",
+    "title": "คนคุ้นเคยแวะเยือน",
+    "month": 162,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 162
+    }
+  },
+  {
+    "id": "route_mortal_peace_m180",
+    "title": "ข่าวไฟสงครามจากยอดเขา",
+    "month": 180,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 180
+    }
+  },
+  {
+    "id": "route_mortal_peace_m198",
+    "title": "คลื่นผู้อพยพใต้ชายคา",
+    "month": 198,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 198
+    }
+  },
+  {
+    "id": "route_mortal_peace_m216",
+    "title": "รุ่งอรุณหลังสงคราม — ชีวิตใต้ชายคา",
+    "month": 216,
+    "locationPolicy": {
+      "kind": "deadline",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 216
+    }
+  },
+  {
+    "id": "route_nameless_martial_m90",
+    "title": "ลานดินกับเสาไม้",
+    "month": 90,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "starting_village",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 90
+    }
+  },
+  {
+    "id": "route_nameless_martial_m108",
+    "title": "คมดาบแรกคุ้มกันคาราวาน",
+    "month": 108,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "starting_village",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 108
+    }
+  },
+  {
+    "id": "route_nameless_martial_m126",
+    "title": "ยอดคนพเนจรในโรงเตี๊ยม",
+    "month": 126,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "starting_village",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 126
+    }
+  },
+  {
+    "id": "route_nameless_martial_m144",
+    "title": "งานประลองลานเปิดเมืองชายแดน",
+    "month": 144,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "starting_village",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 144
+    }
+  },
+  {
+    "id": "route_nameless_martial_m162",
+    "title": "โจรเข้างูดำปล้นเสบียง",
+    "month": 162,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "starting_village",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 162
+    }
+  },
+  {
+    "id": "route_nameless_martial_m180",
+    "title": "คำชวนจากสำนักเมฆาคราม",
+    "month": 180,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "starting_village",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 180
+    }
+  },
+  {
+    "id": "route_nameless_martial_m198",
+    "title": "ดาบเล่มสุดท้ายหน้าช่องแคบ",
+    "month": 198,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "starting_village",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 198
+    }
+  },
+  {
+    "id": "route_nameless_martial_m216",
+    "title": "เพลงดาบใต้จันทรา — บทสรุปของนักยุทธ์ไร้นาม",
+    "month": 216,
+    "locationPolicy": {
+      "kind": "deadline",
+      "areaId": "starting_village",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 216
+    }
+  },
+  {
+    "id": "route_new_land_m90",
+    "title": "ก้าวแรกพ้นประตูด่าน",
+    "month": 90,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "distant_land",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 90
+    }
+  },
+  {
+    "id": "route_new_land_m110",
+    "title": "พายุทรายแห่งช่องเขาหมาป่า",
+    "month": 110,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "distant_land",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 110
+    }
+  },
+  {
+    "id": "route_new_land_m130",
+    "title": "เมืองโอเอซิสศิลาทอง",
+    "month": 130,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "distant_land",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 130
+    }
+  },
+  {
+    "id": "route_new_land_m150",
+    "title": "ขบวนเกวียนเหยี่ยวดำ",
+    "month": 150,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "distant_land",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 150
+    }
+  },
+  {
+    "id": "route_new_land_m170",
+    "title": "จดหมายจากแดนไกล",
+    "month": 170,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "distant_land",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 170
+    }
+  },
+  {
+    "id": "route_new_land_m186",
+    "title": "ด่านชายแดนปิดตาย",
+    "month": 186,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "distant_land",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 186
+    }
+  },
+  {
+    "id": "route_new_land_m202",
+    "title": "พายุหมุนแห่งทิศประจิม",
+    "month": 202,
+    "locationPolicy": {
+      "kind": "deadline",
+      "areaId": "distant_land",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 202
+    }
+  },
+  {
+    "id": "route_new_land_m216",
+    "title": "ขอบฟ้าใหม่ที่ไม่มีป้ายหลิน — บทสรุปแห่งดินแดนใหม่",
+    "month": 216,
+    "locationPolicy": {
+      "kind": "deadline",
+      "areaId": "distant_land",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 216
+    }
+  },
+  {
+    "id": "route_underworld_m90",
+    "title": "ตรอกจันทร์ดับกับสัญลักษณ์ลับ",
+    "month": 90,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 90
+    }
+  },
+  {
+    "id": "route_underworld_m108",
+    "title": "ราคาของข่าวสาร",
+    "month": 108,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 108
+    }
+  },
+  {
+    "id": "route_underworld_m126",
+    "title": "หนี้เลือดในโรงน้ำชา",
+    "month": 126,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 126
+    }
+  },
+  {
+    "id": "route_underworld_m144",
+    "title": "การประมูลในห้องใต้ดิน",
+    "month": 144,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 144
+    }
+  },
+  {
+    "id": "route_underworld_m162",
+    "title": "ข้อตกลงกับอสรพิษ",
+    "month": 162,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 162
+    }
+  },
+  {
+    "id": "route_underworld_m180",
+    "title": "เครือข่ายใต้ดินแผ่ขยาย",
+    "month": 180,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 180
+    }
+  },
+  {
+    "id": "route_underworld_m198",
+    "title": "กำไรก่อนสงครามหรือทางรอดของผู้คน",
+    "month": 198,
+    "locationPolicy": {
+      "kind": "story-move",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 198
+    }
+  },
+  {
+    "id": "route_underworld_m216",
+    "title": "ราตรีแห่งการชำระแค้น — ผู้คุมตลาดมืดในคืนไฟสงคราม",
+    "month": 216,
+    "locationPolicy": {
+      "kind": "deadline",
+      "areaId": "border_market",
+      "outside": "escorted",
+      "inTransit": "story-interruption",
+      "deadlineMonth": 216
+    }
+  },
+  {
+    "id": "story_dream_intro",
+    "title": "ห้องจำลองใต้หอคัมภีร์",
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "story_revenge_intro",
+    "title": "คำสาบานก่อนสิ้นใจ",
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "story_dynasty_intro",
+    "title": "ทารกใต้ธงตระกูล",
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "story_isekai_intro",
+    "title": "เกิดใหม่ในร่างสวะ",
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "story_revenge_trial",
+    "title": "เงาของศัตรูในชีวิตก่อน",
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "story_dynasty_council",
+    "title": "สภาทายาท",
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "story_isekai_awakening",
+    "title": "วันที่สวะลุกขึ้น",
+    "locationPolicy": {
+      "kind": "portable",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "story_dream_final",
+    "title": "อนาคตที่เลือกเอง",
+    "month": 120,
+    "locationPolicy": {
+      "kind": "deadline",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "story_revenge_final",
+    "title": "บัญชีแค้นหน้าสุดท้าย",
+    "month": 120,
+    "locationPolicy": {
+      "kind": "deadline",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "story_dynasty_final",
+    "title": "ธงตระกูลเหนือเมือง",
+    "month": 120,
+    "locationPolicy": {
+      "kind": "deadline",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  },
+  {
+    "id": "story_isekai_final",
+    "title": "เหนือคำว่าสวะ",
+    "month": 120,
+    "locationPolicy": {
+      "kind": "deadline",
+      "outside": "messenger",
+      "inTransit": "deliver-news"
+    }
+  }
+]

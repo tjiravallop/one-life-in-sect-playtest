@@ -1,0 +1,22 @@
+{
+  "TRAVEL_DESTINATIONS": {
+    "sha256": "9945e0194b1935ca09011d4dd876ac075df83a8ab40a64e750212f6f13a913b2",
+    "literalPreserved": true
+  },
+  "TRAVEL_ROUTES": {
+    "sha256": "68f256aec934e68fc5ee9cd68de181d2c7b1cf3fd93277062e5ecb7c3b21696a",
+    "literalPreserved": true
+  },
+  "TRAVEL_VEHICLES": {
+    "sha256": "ab9c81b405e437377c51653ce7b564dcfed1df8b9c65857dc5ebb37ca7e6fd9a",
+    "literalPreserved": true
+  },
+  "LOCATION_DEFS": {
+    "sha256": "ec23d9bf619ab8785a2164065dc90b34f5020360c62bcbe750e18be661db2481",
+    "literalPreserved": true
+  },
+  "EXPLORATION_AREA_DEFS": {
+    "sha256": "cf91e84474a697b47107fefbfe59b6618a2f6865f246d34331c3c66a5243bfd1",
+    "literalPreserved": true
+  }
+}

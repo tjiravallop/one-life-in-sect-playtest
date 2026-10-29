@@ -1,0 +1,295 @@
+[
+  {
+    "name": "save import escapes family text and rejects unsafe structures",
+    "passed": true,
+    "detail": {
+      "literalText": true,
+      "malformedRejected": true
+    }
+  },
+  {
+    "name": "lineage balances and transfers conserve money",
+    "passed": true
+  },
+  {
+    "name": "dynasty without a living heir terminates",
+    "passed": true
+  },
+  {
+    "name": "existing heir retains identity, age, and surviving parent",
+    "passed": true
+  },
+  {
+    "name": "reload resumes saved rebirth exactly once",
+    "passed": true
+  },
+  {
+    "name": "travel charges exactly the quoted total and stays at market",
+    "passed": true,
+    "detail": {
+      "ok": true,
+      "reason": null,
+      "route": {
+        "id": "village_to_market",
+        "destination": "market",
+        "months": 2,
+        "cost": 4,
+        "danger": 18,
+        "health": 2,
+        "lifespan": 1,
+        "resources": {
+          "herb": 1
+        },
+        "fromAreaId": "starting_village",
+        "toAreaId": "border_market",
+        "legacyRoute": "market",
+        "reversible": true,
+        "eventIds": [
+          "travel_bandits",
+          "travel_storm",
+          "travel_wayfarer",
+          "travel_secret"
+        ]
+      },
+      "vehicle": "foot",
+      "mount": null,
+      "destination": "market",
+      "months": 2,
+      "arrivalMonth": 2,
+      "deadlineMonth": null,
+      "cost": 4,
+      "health": 2,
+      "lifespan": 1,
+      "resources": {
+        "herb": 1
+      },
+      "safety": 82
+    }
+  },
+  {
+    "name": "travel rounding, delay, and old trip migration",
+    "passed": true
+  },
+  {
+    "name": "quest mode scope, auto preference, and deadline completion",
+    "passed": true
+  },
+  {
+    "name": "uncompleted quest fails once at the deadline",
+    "passed": true
+  },
+  {
+    "name": "auto craft stop pauses; auto learning pays normal cost",
+    "passed": true
+  },
+  {
+    "name": "faction reward survives recomputation and save migration",
+    "passed": true
+  },
+  {
+    "name": "secret discovery only on success: moonwell",
+    "passed": true
+  },
+  {
+    "name": "secret discovery only on success: serpent_tunnel",
+    "passed": true
+  },
+  {
+    "name": "small debt amortizes; arrears never improve negative reputation",
+    "passed": true
+  },
+  {
+    "name": "story quest rewards complete at the deadline and persist",
+    "passed": true
+  },
+  {
+    "name": "actual dynasty death without heirs shows a terminal ending",
+    "passed": true
+  },
+  {
+    "name": "legacy pending dynasty with no heir recovers to summary",
+    "passed": true
+  },
+  {
+    "name": "travel pause updates ETA and resume respects remaining budget",
+    "passed": true
+  },
+  {
+    "name": "extended free life and old-version save roundtrip",
+    "passed": true,
+    "detail": {
+      "month": 240,
+      "ending": null
+    }
+  },
+  {
+    "name": "extended story life and old-version save roundtrip",
+    "passed": true,
+    "detail": {
+      "month": 216,
+      "ending": "war_shadow_survivor"
+    }
+  },
+  {
+    "name": "location: origin routes and activity changes never teleport",
+    "passed": true
+  },
+  {
+    "name": "location: market persists across months and reload; preview stays put",
+    "passed": true
+  },
+  {
+    "name": "location: stranded travel denies shops and has camp recovery",
+    "passed": true
+  },
+  {
+    "name": "location: migration preserves active budget and ignores arrival history",
+    "passed": true
+  },
+  {
+    "name": "location: manual shop buys once then normal learning/equip/train works",
+    "passed": true
+  },
+  {
+    "name": "location: local material trade has no immediate roundtrip profit",
+    "passed": true
+  },
+  {
+    "name": "location: destroyed and closed areas retain an evacuation exit",
+    "passed": true
+  },
+  {
+    "name": "location: NPC and teachers require local living presence",
+    "passed": true
+  },
+  {
+    "name": "location: offline progress respects pause and pending events",
+    "passed": true
+  },
+  {
+    "name": "location: complete Lin An route sect",
+    "passed": true,
+    "detail": {
+      "route": "sect",
+      "month": 216,
+      "ending": "sect_fall",
+      "area": "cloud_sect",
+      "scriptedScenes": 25
+    }
+  },
+  {
+    "name": "location: complete Lin An route mortal-peace",
+    "passed": true,
+    "detail": {
+      "route": "mortal-peace",
+      "month": 216,
+      "ending": "war_shadow_survivor",
+      "area": "border_market",
+      "scriptedScenes": 16
+    }
+  },
+  {
+    "name": "location: complete Lin An route nameless-martial",
+    "passed": true,
+    "detail": {
+      "route": "nameless-martial",
+      "month": 216,
+      "ending": "nameless_martial",
+      "area": "starting_village",
+      "scriptedScenes": 16
+    }
+  },
+  {
+    "name": "location: complete Lin An route new-land",
+    "passed": true,
+    "detail": {
+      "route": "new-land",
+      "month": 216,
+      "ending": "new_land_wanderer",
+      "area": "distant_land",
+      "scriptedScenes": 16
+    }
+  },
+  {
+    "name": "location: complete Lin An route underworld",
+    "passed": true,
+    "detail": {
+      "route": "underworld",
+      "month": 216,
+      "ending": "outlaw",
+      "area": "border_market",
+      "scriptedScenes": 16
+    }
+  },
+  {
+    "name": "location: free worker starts at birth and cultivates without sect",
+    "passed": true,
+    "detail": {
+      "profile": "worker",
+      "ageMonths": 153,
+      "money": 73,
+      "area": "border_market",
+      "stage": 1
+    }
+  },
+  {
+    "name": "location: free explorer starts at birth and cultivates without sect",
+    "passed": true,
+    "detail": {
+      "profile": "explorer",
+      "ageMonths": 152,
+      "money": 45,
+      "area": "border_market",
+      "stage": 1
+    }
+  },
+  {
+    "name": "location: closing canonical and legacy routes supports return and reopen",
+    "passed": true
+  },
+  {
+    "name": "location: travel preview shows denied quote, possessions and exact installments",
+    "passed": true
+  },
+  {
+    "name": "location: all traded materials and basic manuals have no immediate arbitrage",
+    "passed": true
+  },
+  {
+    "name": "location: pending story choice survives reload without duplicate effects",
+    "passed": true
+  },
+  {
+    "name": "location: Auto cannot perform sect work from the market",
+    "passed": true
+  },
+  {
+    "name": "location: risky free profile remains a valid life or death outcome",
+    "passed": true,
+    "detail": {
+      "ageMonths": 178,
+      "ending": "death_early",
+      "cause": "บาดแผลและการตรากตรำเกินกำลังของวัยเยาว์ พรากชีวิตไปก่อนจะเติบโตเป็นยอดคน"
+    }
+  },
+  {
+    "name": "location: in-transit characters cannot intervene as local residents",
+    "passed": true
+  },
+  {
+    "name": "location: mobile 320px location and shops",
+    "passed": true,
+    "detail": {
+      "width": 320,
+      "scrollWidth": 320
+    }
+  },
+  {
+    "name": "location: mobile 390px location and shops",
+    "passed": true,
+    "detail": {
+      "width": 390,
+      "scrollWidth": 390
+    }
+  }
+]

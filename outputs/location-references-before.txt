@@ -1,0 +1,98 @@
+134:  const TRAVEL_DESTINATIONS = {
+141:  const TRAVEL_ROUTES = {
+156:  const LOCATION_DEFS = {
+172:  const EXPLORATION_AREA_DEFS = {
+1397:    return current === 'sect' || current === 'market' || (s.travel?.lastArrival?.kind === 'trade' && s.travel.lastArrival.month === s.month && !s.travel.active);
+4258:    s.travel.destination = TRAVEL_DESTINATIONS[s.travel.destination] ? s.travel.destination : null;
+4260:    s.travel.active = s.travel.active && typeof s.travel.active === 'object' ? s.travel.active : null;
+4263:    s.travel.lastArrival = s.travel.lastArrival || null;
+4289:    return Object.entries(TRAVEL_DESTINATIONS).filter(([id, destination]) =>
+4295:    const route = TRAVEL_ROUTES[destination];
+4296:    if (!route || !TRAVEL_DESTINATIONS[destination]) return null;
+4332:    const route = Object.values(TRAVEL_ROUTES).find(item => item.id === routeId) || travelRouteFor(s, routeId);
+4336:      if (s.travel.active?.routeId === route.id) {
+4338:        s.travel.active.status = 'route-closed';
+4339:        s.travel.active = null;
+4356:    if (s.ending || s.pendingEvent || s.travel.active) return false;
+4359:    s.travel.destination = destination; s.travel.vehicle = estimate.vehicle; s.travel.deadlineMonth = options.deadlineMonth ?? null;
+4360:    s.travel.active = { routeId: estimate.route.id, destination, vehicle: estimate.vehicle, monthsLeft: estimate.months, totalMonths: estimate.months, cost: estimate.cost, health: estimate.health, lifespan: estimate.lifespan, resources: estimate.resources, startedMonth: s.month, etaMonth: estimate.arrivalMonth };
+4361:    s.travel.active.budgetVersion = 1;
+4362:    s.travel.active.paid = { cost: 0, health: 0, lifespan: 0, resources: {} };
+4364:    addLog(`ออกเดินทางไป${TRAVEL_DESTINATIONS[destination].name} ใช้เวลา ${estimate.months} เดือน`, true);
+4384:    const travel = ensureTravelState(s), kind = TRAVEL_DESTINATIONS[destination]?.kind;
+4385:    travel.lastArrival = { destination, kind, month: s.month };
+4391:    return travel.lastArrival;
+4410:    const travel = ensureTravelState(s), active = travel.active;
+4421:      s.travel.active = null; addLog('การเดินทางหยุดลงเพราะเสบียงหรือค่าใช้จ่ายไม่พอ', true); return false;
+4429:      s.travel.destination = active.destination; s.locations.current = active.destination; if (!s.locations.owned.includes(active.destination)) s.locations.owned.push(active.destination);
+4430:      travel.active = null; s.hero.reputation += 1; s.materials.herb += 1;
+4432:      addLog(`ถึง${TRAVEL_DESTINATIONS[active.destination].name} แล้ว`, true);
+4433:    } else addLog(`เดินทางต่อไปยัง${TRAVEL_DESTINATIONS[active.destination].name} เหลือ ${active.monthsLeft} เดือน`);
+5215:    if (available.some(location => location.id === s.locations.current)) return s.locations.current;
+5232:    if (s.locations?.selected && available.some(item => item.id === s.locations.selected)) return s.locations.selected;
+5233:    if (s.locations?.current && available.some(item => item.id === s.locations.current)) return s.locations.current;
+5391:    if (s.locations.forced) return s.locations.forced;
+5392:    if (s.locations.selected && getAvailableLocations(s).some(location => location.id === s.locations.selected)) return s.locations.selected;
+5398:    if (s.locations.current && getAvailableLocations(s).some(location => location.id === s.locations.current)) return s.locations.current;
+5405:    if (locations.work && available.some(location => location.id === locations.work)) return locations.work;
+5406:    if (available.some(location => location.id === locations.current)) return locations.current;
+5425:    const location = LOCATION_DEFS[key] || LOCATION_DEFS.roadside;
+5426:    const rest = location.rest || LOCATION_DEFS.roadside.rest;
+5443:    s.locations.owned = Array.isArray(s.locations.owned) ? s.locations.owned : ['roadside'];
+5445:    s.locations.current = LOCATION_DEFS[s.locations.current] ? s.locations.current : 'roadside';
+5446:    s.locations.selected = LOCATION_DEFS[s.locations.selected] ? s.locations.selected : null;
+5447:    s.locations.work = LOCATION_DEFS[s.locations.work] ? s.locations.work : null;
+5448:    s.locations.forced = LOCATION_DEFS[s.locations.forced] ? s.locations.forced : null;
+5450:    if (!s.locations.owned.includes('roadside')) s.locations.owned.unshift('roadside');
+5453:    if (householdLocation && !s.locations.owned.includes(householdLocation)) s.locations.owned.push(householdLocation);
+5454:    if (s.flags?.retainerAlive && !s.locations.owned.includes('retainer')) s.locations.owned.push('retainer');
+5455:    if (s.family?.buildings?.includes('home_hall') && !s.locations.owned.includes('estate')) s.locations.owned.push('estate');
+5456:    if (s.flags?.metSect && !s.locations.owned.includes('sect')) s.locations.owned.push('sect');
+5457:    if (hasOfficialRight(s, 'หอคัมภีร์ชั้นต้น') && !s.locations.owned.includes('sect_archive')) s.locations.owned.push('sect_archive');
+5458:    if (hasOfficialRight(s, 'ทะเบียนคดีและเขตสอบสวน') && !s.locations.owned.includes('city_records')) s.locations.owned.push('city_records');
+5459:    if ((s.flags?.foundMap || s.flags?.escapePrepared) && !s.locations.owned.includes('hidden_cave')) s.locations.owned.push('hidden_cave');
+5465:    return Object.entries(LOCATION_DEFS).filter(([id, def]) => {
+5467:      if (id !== 'roadside' && !locations.owned.includes(id)) return false;
+5477:    addLog(`เลือกสถานที่พัก: ${LOCATION_DEFS[id].name}`);
+5484:    locations.work = id;
+5485:    locations.current = id;
+5486:    addLog(`เลือกสถานที่ทำงาน: ${LOCATION_DEFS[id].name}`);
+5498:    if (!LOCATION_DEFS[id]) return false;
+5500:    if (!locations.owned.includes(id)) locations.owned.push(id);
+5505:    const def = LOCATION_DEFS[id];
+5518:    if (!LOCATION_DEFS[id]) return false;
+5522:    locations.owned = locations.owned.filter(locationId => locationId !== id);
+5523:    if (locations.selected === id) locations.selected = null;
+5524:    addLog(`${LOCATION_DEFS[id].name}ใช้การไม่ได้: ${reason}`, true);
+5658:    if (available.length && !available.some(location => location.id === s.locations.current)) s.locations.current = available[0].id;
+5661:      if (workLocations.length && !workLocations.some(location => location.id === s.locations.work)) s.locations.work = s.locations.current;
+5668:    s.exploration.selectedArea = EXPLORATION_AREA_DEFS[s.exploration.selectedArea] ? s.exploration.selectedArea : 'village_trails';
+5677:    return Object.entries(EXPLORATION_AREA_DEFS).filter(([id, area]) =>
+5685:    addLog(`เลือกเส้นทางสำรวจ: ${EXPLORATION_AREA_DEFS[id].name}`);
+5692:    const area = available.find(item => item.id === exploration.selectedArea) || available[0] || EXPLORATION_AREA_DEFS.village_trails;
+5754:    if (!LOCATION_DEFS[id] || !getAvailableLocations(s, 'rest').some(location => location.id === id)) return false;
+5757:    addLog(`เรื่องราวบังคับให้พักที่${LOCATION_DEFS[id].name}${reason ? ` (${reason})` : ''}`, true);
+5767:    else if (s.locations.forced) clearForcedRest(s);
+6805:    if (state.travel?.active && state.activity !== 'travel') state.travel.active.etaMonth = state.month + state.travel.active.monthsLeft;
+6826:      if (!state.travel.active) {
+6828:        const preferred = state.travel.destination && destinations.some(item => item.id === state.travel.destination)
+6829:          ? state.travel.destination : (destinations.find(item => item.id === (state.mode === 'free' ? 'market' : 'npc'))?.id || destinations[0]?.id);
+6930:      const area = EXPLORATION_AREA_DEFS[route.areaId]; const exposure = Number.isFinite(state.testExplorationRoll) ? state.testExplorationRoll : Math.random() * 100;
+8559:    const activityLocation = LOCATION_DEFS[state.locations?.current]?.name || ACTIVITY[state.activity]?.location || '';
+8651:      if (state.travel.active) return `เส้นทางไป${TRAVEL_DESTINATIONS[state.travel.active.destination]?.name || state.travel.active.destination}`;
+8652:      if (state.travel.lastArrival) return TRAVEL_DESTINATIONS[state.travel.lastArrival.destination]?.name || ACTIVITY.travel.location;
+8657:    if (state.activity === 'work') return LOCATION_DEFS[workLocationKey(state)]?.name || 'สถานที่ทำงาน';
+8670:    const innButton = $('rent-inn-btn'); if (innButton) { innButton.hidden = state.locations.owned.includes('inn') || state.hero.money < (LOCATION_DEFS.inn.cost || 0); innButton.textContent = `เช่าโรงเตี๊ยม ${LOCATION_DEFS.inn.cost} ตำลึง`; }
+8690:    $('work-location-meta').textContent = `${LOCATION_DEFS[key]?.name || key} · ${job.name} · รายได้พื้นฐาน ${job.income} ตำลึง · ความเสี่ยงตามเส้นทางงาน`;
+8705:    const visited = Object.entries(exploration.visited).map(([id, count]) => `${EXPLORATION_AREA_DEFS[id]?.name || id} ×${esc(count)}`).join(' · ');
+8709:    $('exploration-journal-last').textContent = last ? `ผลล่าสุด: เดือน ${last.month} · ${EXPLORATION_AREA_DEFS[last.area]?.name || last.area} · ${last.outcome === 'enemy' ? 'พบศัตรู' : last.outcome === 'lost' ? 'หลงทาง' : 'ได้ทรัพยากร'}` : 'ผลล่าสุด: ยังไม่มี';
+8753:    destinations.innerHTML = Object.entries(TRAVEL_DESTINATIONS).map(([id, item]) => `<option value="${id}" ${availableIds.has(id) ? '' : 'disabled'}>${esc(item.name)}${availableIds.has(id) ? '' : ' · ยังไม่เปิด'}</option>`).join('');
+8754:    destinations.value = state.travel.destination && availableIds.has(state.travel.destination) ? state.travel.destination : (available[0]?.id || '');
+8760:    if (state.travel.active) {
+8761:      const trip = state.travel.active;
+8767:      $('travel-meta').textContent = `กำลังเดินทางไป${TRAVEL_DESTINATIONS[trip.destination]?.name || trip.destination}\nเหลือ ${trip.monthsLeft} เดือน · ถึงเดือน ${trip.etaMonth}\nที่ต้องใช้ต่อจากนี้โดยประมาณ: เงิน ${remainingPayments} ตำลึง · สุขภาพ ${remainingHealth} · อายุขัย ${remainingLifespan} เดือน · เสบียง ${remainingSupplies || 'ไม่มี'}`;
+8780:      $('travel-meta').textContent = `แผนไป${TRAVEL_DESTINATIONS[selected]?.name || selected}\nระยะเวลา ${estimate.months} เดือน · ความปลอดภัย ${estimate.safety}%${deadlineText}\nแบ่งจ่ายค่าเดินทางไม่เกินเดือนละ ${monthlyPayment} ตำลึง (รวม ${totalPayment})\nรวมตลอดทาง: สุขภาพ ${totalHealth} · อายุขัย ${totalLifespan} เดือน · เสบียง ${totalSupplies}${journeyWarnings.length ? `\n⚠ ${journeyWarnings.join(' · ')}` : ''}`;
+8785:    $('start-travel-btn').disabled = !!state.travel.active || !estimate.ok;
+8816:      ? `${mastery} · สถานที่ ${LOCATION_DEFS[location]?.name || location} · ${!equippedCultivationTechnique(state) ? 'ต้องติดตั้งวิชาบำเพ็ญเพื่อเลื่อนขั้น' : cultivationAtCeiling(state) ? 'ถึงเพดานวิชา · ติดตั้งวิชาบำเพ็ญที่สูงกว่าก่อนทะลวง' : state.breakthroughState.ready ? `จุดตัน · โอกาสทะลวง ${breakthroughChance(state, 'force')}% (เกรดวิชา +${cultivationGradeBreakthroughBonus(state)} จุดเปอร์เซ็นต์)` : `ความก้าวหน้า ${Math.round(state.hero.cultivation)}/100`}`
+8963:      const req = craftRequirements(state, recipe); const profile = craftingProfile(state, recipe); const location = recipe.locations?.map(id => LOCATION_DEFS[id]?.name || id).join(' / ') || 'ทุกสถานที่'; const equipment = ({ forge: 'เตาตีเหล็ก', workbench: 'โต๊ะช่าง', alchemy_stove: 'เตาปรุงยา' })[recipe.equipment] || 'ไม่กำหนด'; const teacher = recipe.teacher ? (RELATIONSHIP_DEFS[recipe.teacher]?.name || recipe.teacher) : 'ไม่กำหนด';
+9426:    if (migrated.travel.active) travelBudget(migrated.travel.active);

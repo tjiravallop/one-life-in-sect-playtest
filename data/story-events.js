@@ -1654,7 +1654,32 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     }
   };
 
-    return { STORY_CHARACTER_EVENTS, EVENTS, ALTERNATE_ROUTE_EVENTS };
+    // Each scripted scene declares how location is handled. The engine performs
+    // relocations and records interruptions; callbacks remain narrative records.
+    const STORY_LOCAL_SCENES = {
+      fallenHouse: 'starting_village', growingStep: 'starting_village', caravanBeacon: 'border_market',
+      foothills: 'cloud_sect', arrival: 'cloud_sect', wounded: 'cloud_sect', manual: 'cloud_sect',
+      sectSparring: 'cloud_sect', council: 'cloud_sect', vow: 'cloud_sect', ambush: 'forest_caves',
+      refugees: 'border_market', pilgrimage: 'forest_caves', betrayal: 'cloud_sect', lanternVow: 'cloud_sect',
+      lastwinter: 'cloud_sect', siege: 'cloud_sect', years_of_service: 'cloud_sect', years_of_choice: 'cloud_sect',
+      border_preparation: 'cloud_sect', before_the_storm: 'cloud_sect', lin_an_root_inspection: 'cloud_sect'
+    };
+    for (const [id, event] of Object.entries(EVENTS)) {
+      event.locationPolicy = STORY_LOCAL_SCENES[id]
+        ? { kind: event.month >= 200 ? 'deadline' : ['fallenHouse', 'growingStep', 'caravanBeacon', 'foothills', 'arrival'].includes(id) ? 'story-move' : 'local', areaId: STORY_LOCAL_SCENES[id], outside: 'escorted', inTransit: 'story-interruption', deadlineMonth: event.month }
+        : { kind: 'portable', outside: 'messenger', inTransit: 'deliver-news' };
+    }
+    for (const [id, event] of Object.entries(ALTERNATE_ROUTE_EVENTS)) {
+      const areaId = id.includes('new_land') ? 'distant_land' : id.includes('nameless_martial') ? 'starting_village' : id.includes('mortal_peace') || id.includes('underworld') ? 'border_market' : null;
+      event.locationPolicy = areaId ? { kind: event.month >= 200 ? 'deadline' : 'story-move', areaId, outside: 'escorted', inTransit: 'story-interruption', deadlineMonth: event.month } : { kind: 'portable', outside: 'messenger', inTransit: 'deliver-news' };
+    }
+    Object.values(STORY_CHARACTER_EVENTS).forEach(event => { event.locationPolicy = { kind: event.month >= 120 ? 'deadline' : 'portable', outside: 'messenger', inTransit: 'deliver-news' }; });
+    const STORY_NPC_PLACEMENTS = {
+      master: { id: 'wen-zhong', name: 'อาจารย์เหวินจง', areaId: 'cloud_sect', pointId: 'sect', livingFlag: 'masterDead' },
+      senior: { id: 'xia-lan', name: 'ศิษย์พี่เซี่ยหลัน', areaId: 'cloud_sect', pointId: 'sect_courtyard', livingFlag: 'seniorDead' },
+      friend: { id: 'chen-yu', name: 'เฉินหยู', areaId: 'cloud_sect', pointId: 'sect_gate', livingFlag: 'friendDead' }
+    };
+    return { STORY_CHARACTER_EVENTS, EVENTS, ALTERNATE_ROUTE_EVENTS, STORY_NPC_PLACEMENTS };
   };
 
   Object.defineProperty(window, 'OneLifeStoryEventCatalog', { value: createStoryEventCatalog });
