@@ -7,6 +7,30 @@
   let SAVE_KEY = SAVE_KEY_BASE;
   let CORRUPTED_SAVE_BACKUP_KEY = `${SAVE_KEY}_corrupted_backup`;
   let META_KEY = META_KEY_BASE;
+  // data/items.js is loaded before this engine entry.
+  const {
+    RECIPES, MATERIAL_NAMES, MATERIAL_GRADE_IDS, MATERIAL_SHOP_PRICES,
+    ITEM_GRADES, ITEM_CATEGORY_DEFS, WEAPON_TYPE_LABELS, ITEM_SLOT_DEFS,
+    ITEM_LIBRARY, ITEM_LIBRARY_BY_ID,
+    MATERIAL_LIBRARY, MATERIAL_LIBRARY_BY_ID
+  } = window.OneLifeItemCatalog({ addTreasure });
+  const { STORY_CHARACTER_EVENTS, EVENTS, ALTERNATE_ROUTE_EVENTS } = window.OneLifeStoryEventCatalog({
+    adaptiveDialogue,
+    addHerb,
+    addLog,
+    addMaterial,
+    addTreasure,
+    endGame,
+    ensureCraftingState,
+    ensureHousehold,
+    ensureInventory,
+    ensureLifespanState,
+    finishBattle,
+    finishEscape,
+    resolveAmbush,
+    siegeBattleOmen,
+    updateFactionReputation
+  });
   const VERSION = 10;
   const MAX_MONTHS = 216;
   const $ = (id) => document.getElementById(id);
@@ -126,18 +150,8 @@
     horse: { name: 'ม้าเร็ว', timeMultiplier: .55, costMultiplier: 2.5, dangerMultiplier: .8, healthMultiplier: .45, requires: s => (s.hero?.attributes?.body || 0) >= 14 || s.flags?.horseOwned },
     cloudstep: { name: 'ย่างก้าวเมฆา', timeMultiplier: .35, costMultiplier: 3, dangerMultiplier: .35, healthMultiplier: .2, requires: s => s.flags?.stepLearned || s.flags?.cloudstepLearned }
   };
-  const TRAVEL_EVENTS = [
-    { id: 'travel_bandits', activity: 'travel', rarity: 'uncommon', tag: 'ภัยระหว่างทาง', title: 'เงาโจรบนสันเขา', text: 'โจรดักทางเรียกค่าผ่านแดนจากขบวนของเจ้า', unlock: s => !!s.travel?.active, choices: [
-      { text: 'ฝ่าวงล้อม', check: { stat: 'body', difficulty: 22 }, effects: [{ type: 'stat', path: 'hero.reputation', value: 3 }, { type: 'path', key: 'freedom', value: 2 }], failureEffects: [{ type: 'stat', path: 'hero.health', value: -12 }] },
-      { text: 'จ่ายเงินและเก็บแรงไว้เดินทางต่อ', requires: s => s.hero.money >= 8, locked: 'ต้องมีเงินอย่างน้อย 8 ตำลึง', effects: [{ type: 'stat', path: 'hero.money', value: -8 }, { type: 'path', key: 'compassion', value: 1 }] }
-    ] },
-    { id: 'travel_storm', activity: 'travel', rarity: 'extraordinary', tag: 'ภัยธรรมชาติ', title: 'พายุปิดช่องเขา', text: 'ฝนหล่มและก้อนหินถล่มทำให้เส้นทางเดิมใช้เวลาเพิ่มขึ้น', unlock: s => !!s.travel?.active, choices: [
-      { text: 'อ้อมเขาและรักษาขบวน', requires: s => s.hero.money >= 4, locked: 'ต้องมีเงินอย่างน้อย 4 ตำลึงสำหรับการอ้อมทาง', effects: [{ type: 'stat', path: 'hero.health', value: -5 }, { type: 'stat', path: 'hero.money', value: -4 }], effect: s => extendTravel(s, 1, 'พายุปิดช่องเขา') },
-      { text: 'เสี่ยงฝ่าช่องเขา', check: { stat: 'luck', difficulty: 25 }, effects: [{ type: 'path', key: 'freedom', value: 4 }], failureEffects: [{ type: 'stat', path: 'hero.health', value: -18 }] }
-    ] },
-    { id: 'travel_wayfarer', activity: 'travel', rarity: 'normal', tag: 'ผู้เดินทาง', title: 'ผู้เดินทางร่วมทาง', text: 'คนแปลกหน้าขอร่วมขบวนและแลกข่าวสารจากปลายทาง', unlock: s => !!s.travel?.active, choices: [{ text: 'รับฟังข่าวสารระหว่างร่วมทาง', effects: [{ type: 'relation', key: 'acquaintance', value: 2 }, { type: 'path', key: 'insight', value: 2 }] }] },
-    { id: 'travel_secret', activity: 'travel', rarity: 'epic', tag: 'โอกาสลับ', title: 'ตราประทับใต้หลักหิน', text: 'แผนที่เก่าชี้ทางลับที่อาจย่นระยะทางและเปิดเรื่องราวใหม่', unlock: s => !!s.travel?.active && (s.flags?.foundMap || s.hero?.talent === 'keen'), choices: [{ text: 'จดจำเส้นทางไว้', effects: [{ type: 'flag', key: 'secretRouteKnown', value: true }, { type: 'path', key: 'insight', value: 4 }, { type: 'stat', path: 'hero.attributes.luck', value: 1 }] }] }
-  ];
+  let TRAVEL_EVENTS;
+  let TRAINING_EVENTS;
   const LOCATION_DEFS = {
     roadside: { name: 'ที่พักชั่วคราว', kind: 'temporary', safety: 25, activities: ['rest', 'work', 'free', 'travel'], cost: 0, rest: { health: 10, qi: 8, healthMultiplier: 1, qiMultiplier: 1 } },
     retainer: { name: 'ที่พักของผู้ดูแล', kind: 'personal', safety: 70, activities: ['rest', 'work', 'family', 'social'], cost: 0, rest: { health: 16, qi: 6, healthMultiplier: 1, qiMultiplier: 1 } },
@@ -169,9 +183,7 @@
     { id: 'herbal_supplier', title: 'ส่งสมุนไพรให้หมอประจำเมือง', minAgeMonths: 144, text: 'ทำงานเป็นชาวนาหรือดูแลสวนสมุนไพรสะสมประสบการณ์ 3 เดือน แล้วรับสมุนไพรชั้นดีและสมุนไพรทั่วไป', startMonth: 24, duration: 72, complete: s => (s.materialLife?.farmMonths || 0) >= 3, reward: [{ type: 'gradedMaterial', key: 'herb', grade: 'uncommon', value: 2 }, { type: 'material', key: 'herb', value: 3 }] },
     { id: 'local_hunter', title: 'ช่วยหาเสบียงให้คนเดินทาง', minAgeMonths: 144, text: 'ทำงานล่าสัตว์ครบ 3 เดือนเพื่อช่วยจัดหาเสบียง', startMonth: 24, duration: 72, complete: s => (s.materialLife?.huntMonths || 0) >= 3, reward: [{ type: 'gradedMaterial', key: 'beast', grade: 'uncommon', value: 1 }, { type: 'material', key: 'beast', value: 2 }] }
   );
-  const QUEST_EVENTS = [
-    { id: 'quest_board_whisper', activity: 'quest', minMonth: 12, title: 'เสียงกระซิบบนกระดานประกาศ', text: 'หมึกบนใบประกาศเปลี่ยนเป็นชื่อภารกิจที่เหมาะกับเส้นทางของเจ้า', conditions: s => ensureQuestState(s).active.length > 0, choices: [{ text: 'อ่านเบาะแสและจัดลำดับความสำคัญ', effects: [{ type: 'path', key: 'insight', value: 1 }], effect: s => { const q = ensureQuestState(s); q.active.forEach(item => { item.progress = Math.min(99, (item.progress || 0) + 5); }); addLog('จัดลำดับเบาะแสของภารกิจสำเร็จ', true); } }, { text: 'พักหมึกไว้ก่อน', effects: [{ type: 'stat', path: 'hero.health', value: 2 }] }] }
-  ];
+  let QUEST_EVENTS;
   QUEST_DEFS.find(def => def.id === 'trace_serpent_shadow').oath = 'uncover_truth';
   QUEST_DEFS.find(def => def.id === 'prepare_cloud_sect').oath = 'uphold_sect';
   const RELATIONSHIP_DEFS = {
@@ -244,33 +256,6 @@
     if ((s.hero?.reputation || 0) >= 8) return { ...SOCIAL_TARGETS.market, key: 'market', log: 'เดินตลาด พูดคุยกับพ่อค้าและคนรู้จักใหม่' };
     return { ...SOCIAL_TARGETS.city, key: 'city', log: 'เดินในเมือง ทำความรู้จักผู้คนและฟังความเป็นไปของชุมชน' };
   }
-  const RECIPES = [
-    { id: 'basic_pill', name: 'ยาฟื้นปราณพื้นฐาน', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 1, cost: { herb: 2, money: 2 }, time: 1, chance: 100, quality: 'healing', effect: 'ใช้พักฟื้นแล้วฟื้นสุขภาพเพิ่ม', craft: (s, item) => { s.consumables.push({ ...item, id: 'basic_pill', name: 'ยาฟื้นปราณพื้นฐาน', heal: item.stats.heal, category: 'consumable', subtype: 'pill' }); } },
-    { id: 'iron_charm', name: 'ยันต์เหล็กคุ้มกาย', kind: 'ตีเหล็ก', category: 'talisman', subtype: 'ward', knowledge: 'smithing', knowledgeMin: 1, equipment: 'forge', locations: ['owned', 'estate', 'sect'], cost: { iron: 2, spiritStone: 1 }, time: 1, chance: 78, quality: 'defense', effect: 'ป้องกัน +3', craft: (s, item) => addTreasure(s, item.name, item.stats, { category: 'talisman', subtype: 'ward', recipeId: item.recipeId }) },
-    { id: 'spirit_pill', name: 'โอสถรวมปราณ', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 2, teacher: 'master', cost: { herb: 3, spiritStone: 2, money: 5 }, time: 1, chance: 68, quality: 'training', effect: 'ฝึกปราณ +10% เป็นเวลา 3 ครั้งที่ฝึก', craft: (s, item) => s.consumables.push({ ...item, id: 'spirit_pill', name: 'โอสถรวมปราณ', category: 'consumable', subtype: 'pill', trainingBonus: 10, trainingUses: 3 }) },
-    { id: 'field_tool', name: 'ชุดเครื่องมือเดินทาง', kind: 'สร้างเครื่องมือ', category: 'consumable', subtype: 'tool', knowledge: 'tools', knowledgeMin: 1, equipment: 'workbench', locations: ['owned', 'estate', 'sect'], cost: { iron: 2, herb: 1, money: 3 }, time: 1, chance: 84, quality: 'utility', effect: 'สำรวจและสร้างของมีประสิทธิภาพขึ้น', craft: (s, item) => addTreasure(s, item.name, item.stats, { category: 'consumable', subtype: 'tool', recipeId: item.recipeId }) },
-    { id: 'support_kit', name: 'ชุดสนับสนุนภาคสนาม', kind: 'ของสนับสนุน', category: 'consumable', subtype: 'tool', knowledge: 'support', knowledgeMin: 1, teacher: 'friend', cost: { herb: 2, iron: 1, money: 2 }, time: 1, chance: 82, quality: 'support', effect: 'พักฟื้นและเดินทางดีขึ้น', craft: (s, item) => addTreasure(s, item.name, item.stats, { category: 'consumable', subtype: 'tool', recipeId: item.recipeId }) }
-  ];
-  // เกรดวัตถุดิบใช้ชุดชื่อและสีเดียวกับไอเทม ส่วนคุณภาพการปรุงเป็นอีกค่าหนึ่ง
-  const MATERIAL_NAMES = { herb: 'สมุนไพร', iron: 'แร่เหล็ก', spiritStone: 'หินปราณ', beast: 'วัตถุดิบสัตว์', spiritSpring: 'น้ำพุวิญญาณ' };
-  const MATERIAL_GRADE_IDS = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-  RECIPES.push(
-    { id: 'beast_tonic', name: 'ยาบำรุงกาย', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 1, cost: { herb: 2, beast: 1, money: 2 }, chance: 82, quality: 'healing', effect: 'ฟื้นสุขภาพ เหมาะกับผู้ฝึกกาย', grade: 'common', craft: (s, item) => s.consumables.push({ ...item, id: 'beast_tonic', name: 'ยาบำรุงกาย', heal: item.stats.heal + 6, category: 'consumable', subtype: 'pill' }) },
-    { id: 'refined_spirit_pill', name: 'โอสถปราณชั้นดี', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 2, cost: { herb: 2, spiritStone: 1, money: 4 }, gradedCost: [{ material: 'herb', grade: 'uncommon', amount: 1 }], chance: 75, quality: 'training', effect: 'ฝึกปราณ +15% เป็นเวลา 3 ครั้งที่ฝึก', grade: 'uncommon', craft: (s, item) => s.consumables.push({ ...item, id: 'refined_spirit_pill', name: 'โอสถปราณชั้นดี', trainingBonus: 15, trainingUses: 3, category: 'consumable', subtype: 'pill' }) },
-    { id: 'moon_pill', name: 'โอสถจันทรา', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 3, cost: { herb: 2, spiritSpring: 1, spiritStone: 2, money: 6 }, gradedCost: [{ material: 'herb', grade: 'rare', amount: 1 }], chance: 65, quality: 'training', effect: 'ฝึกปราณ +25% เป็นเวลา 3 ครั้งที่ฝึก', grade: 'rare', craft: (s, item) => s.consumables.push({ ...item, id: 'moon_pill', name: 'โอสถจันทรา', trainingBonus: 25, trainingUses: 3, category: 'consumable', subtype: 'pill' }) },
-    { id: 'refined_iron_charm', name: 'ยันต์เหล็กชั้นดี', kind: 'ตีเหล็ก', category: 'talisman', subtype: 'ward', knowledge: 'smithing', knowledgeMin: 2, equipment: 'forge', locations: ['owned', 'estate', 'sect'], cost: { iron: 2, spiritStone: 1, money: 3 }, gradedCost: [{ material: 'iron', grade: 'uncommon', amount: 1 }], chance: 70, quality: 'defense', effect: 'เครื่องรางป้องกัน', grade: 'uncommon', craft: (s, item) => addTreasure(s, item.name, { defense: item.stats.defense + 2 }, { category: 'talisman', subtype: 'ward', grade: item.grade, gradeExplicit: false, recipeId: item.recipeId }) },
-    { id: 'herb_soup', name: 'ซุปสมุนไพร', kind: 'ทำอาหาร', category: 'consumable', subtype: 'food', knowledge: 'tools', knowledgeMin: 1, cost: { herb: 1, beast: 1, money: 1 }, chance: 95, quality: 'healing', effect: 'ฟื้นสุขภาพอย่างน้อย 12 จุดตามคุณภาพ', craft: (s, item) => s.consumables.push({ ...item, id: 'herb_soup', name: 'ซุปสมุนไพร', heal: 12 + (item.quality - 1) * 2, category: 'consumable', subtype: 'food' }) },
-    { id: 'travel_sword', name: 'กระบี่เดินทาง', kind: 'ตีเหล็ก', category: 'weapon', subtype: 'jian', knowledge: 'smithing', knowledgeMin: 1, equipment: 'forge', locations: ['owned', 'estate', 'sect'], cost: { iron: 3, money: 3 }, chance: 85, quality: 'defense', effect: 'โจมตี +5 · ว่องไว +1 เมื่อสวมใส่', craft: (s, item) => addTreasure(s, item.name, { attack: 5, agility: 1 }, { category: 'weapon', subtype: 'jian', recipeId: item.recipeId }) },
-    { id: 'hunter_vest', name: 'เสื้อหนังนายพราน', kind: 'สร้างเครื่องมือ', category: 'armor', subtype: 'body', knowledge: 'tools', knowledgeMin: 2, equipment: 'workbench', locations: ['owned', 'estate', 'sect'], cost: { beast: 2, money: 4 }, gradedCost: [{ material: 'beast', grade: 'uncommon', amount: 1 }], chance: 78, quality: 'defense', effect: 'ป้องกัน +5 เมื่อสวมใส่', craft: (s, item) => addTreasure(s, item.name, { defense: 5 }, { category: 'armor', subtype: 'body', recipeId: item.recipeId }) },
-    { id: 'stone_lantern', name: 'โคมหินปราณ', kind: 'สร้างเครื่องมือ', category: 'talisman', subtype: 'relic', knowledge: 'tools', knowledgeMin: 2, equipment: 'workbench', locations: ['owned', 'estate', 'sect'], cost: { iron: 1, money: 3 }, gradedCost: [{ material: 'spiritStone', grade: 'uncommon', amount: 1 }], chance: 80, quality: 'utility', effect: 'เพิ่มโอกาสสร้างของ 4% เมื่อพกไว้', craft: (s, item) => addTreasure(s, item.name, { craftChance: 4 }, { category: 'talisman', subtype: 'relic', recipeId: item.recipeId }) },
-    { id: 'clearwater_pill', name: 'ยาน้ำค้างฟื้นกาย', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 2, cost: { herb: 2, money: 2 }, gradedCost: [{ material: 'spiritSpring', grade: 'uncommon', amount: 1 }], chance: 80, quality: 'healing', effect: 'ฟื้นสุขภาพอย่างน้อย 28 จุดตามคุณภาพ', grade: 'uncommon', craft: (s, item) => s.consumables.push({ ...item, id: 'clearwater_pill', name: 'ยาน้ำค้างฟื้นกาย', heal: 28 + (item.quality - 1) * 3, category: 'consumable', subtype: 'pill' }) },
-    { id: 'antidote', name: 'ยาแก้พิษพื้นฐาน', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 1, cost: { herb: 3, money: 2 }, chance: 90, quality: 'healing', effect: 'รักษาพิษจากการสำรวจ ไม่ใช้เมื่อไม่มีพิษ', craft: (s, item) => s.consumables.push({ ...item, id: 'antidote', name: 'ยาแก้พิษพื้นฐาน', cures: 'poison', category: 'consumable', subtype: 'pill' }) },
-    { id: 'fatigue_salve', name: 'ยาทาคลายเมื่อย', kind: 'ปรุงยา', category: 'consumable', subtype: 'potion', knowledge: 'alchemy', knowledgeMin: 1, cost: { herb: 2, beast: 1, money: 1 }, chance: 85, quality: 'healing', effect: 'ลดความเหนื่อยจากงาน 3 หน่วย ไม่ใช้เมื่อไม่เหนื่อย', craft: (s, item) => s.consumables.push({ ...item, id: 'fatigue_salve', name: 'ยาทาคลายเมื่อย', fatigueRelief: 3, category: 'consumable', subtype: 'potion' }) },
-    { id: 'sleeping_poison', name: 'ยาสลบเคลือบอาวุธ', kind: 'ปรุงยา', category: 'consumable', subtype: 'poison', knowledge: 'alchemy', knowledgeMin: 2, cost: { herb: 2, beast: 1, money: 3 }, chance: 75, quality: 'utility', effect: 'เคลือบไว้ป้องกันตัวจากศัตรูขณะสำรวจ 1 ครั้ง ลดบาดเจ็บ 6 และป้องกันพิษจากงู ซ้อนกันไม่ได้', craft: (s, item) => s.consumables.push({ ...item, id: 'sleeping_poison', name: 'ยาสลบเคลือบอาวุธ', poisonCoating: true, category: 'consumable', subtype: 'poison' }) },
-    { id: 'home_repair_kit', name: 'ชุดซ่อมเรือน', kind: 'สร้างเครื่องมือ', category: 'consumable', subtype: 'tool', knowledge: 'tools', knowledgeMin: 1, equipment: 'workbench', locations: ['owned', 'estate', 'sect'], cost: { iron: 1, herb: 1, money: 1 }, chance: 90, quality: 'utility', effect: 'ลดค่าดูแลบ้าน 1 ตำลึงต่อเดือน เป็นเวลา 3 เดือน ใช้ได้กับบ้านที่มีค่าใช้จ่ายและใช้ซ้อนไม่ได้', craft: (s, item) => s.consumables.push({ ...item, id: 'home_repair_kit', name: 'ชุดซ่อมเรือน', homeRepair: 3, category: 'consumable', subtype: 'tool' }) },
-    { id: 'cloud_pill', name: 'โอสถเมฆาพิสุทธิ์', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 4, equipment: 'alchemy_stove', locations: ['owned', 'estate', 'sect'], cost: { spiritSpring: 2, spiritStone: 3, money: 10 }, gradedCost: [{ material: 'herb', grade: 'epic', amount: 1 }], chance: 52, quality: 'training', effect: 'ฝึกปราณ +35% เป็นเวลา 3 ครั้งที่ฝึก', grade: 'epic', craft: (s, item) => s.consumables.push({ ...item, id: 'cloud_pill', name: 'โอสถเมฆาพิสุทธิ์', trainingBonus: 35, trainingUses: 3, category: 'consumable', subtype: 'pill' }) },
-    { id: 'heaven_pill', name: 'โอสถฟ้าประทาน', kind: 'ปรุงยา', category: 'consumable', subtype: 'pill', knowledge: 'alchemy', knowledgeMin: 5, equipment: 'alchemy_stove', locations: ['owned', 'estate', 'sect'], cost: { spiritSpring: 3, spiritStone: 4, money: 15 }, gradedCost: [{ material: 'herb', grade: 'legendary', amount: 1 }], chance: 40, quality: 'training', effect: 'ฝึกปราณ +50% เป็นเวลา 3 ครั้งที่ฝึก', grade: 'legendary', craft: (s, item) => s.consumables.push({ ...item, id: 'heaven_pill', name: 'โอสถฟ้าประทาน', trainingBonus: 50, trainingUses: 3, category: 'consumable', subtype: 'pill' }) }
-  );
   function ensureGradedMaterials(s) {
     s.gradedMaterials = s.gradedMaterials && typeof s.gradedMaterials === 'object' ? s.gradedMaterials : {};
     for (const key of Object.keys(MATERIAL_NAMES)) {
@@ -311,20 +296,7 @@
     if (areaId === 'moonwell') { s.materialLife = s.materialLife || {}; s.materialLife.springVisits = (s.materialLife.springVisits || 0) + 1; if (s.materialLife.springVisits % 4 === 0) { addGradedMaterial(s, 'spiritSpring', 'uncommon'); found.push('น้ำพุวิญญาณ ชั้นดี'); } }
     if (found.length) addLog(`พบวัตถุดิบเพิ่มเติม: ${found.join(' · ')}`);
   }
-  const CRAFT_EVENTS = [
-    { id: 'craft_lost_formula', minAge: 12, activity: 'craft', rarity: 'uncommon', minMonth: 12, title: 'สูตรที่หายไป', text: 'ระหว่างจัดชั้นตำรา เจ้าพบเศษสูตรเก่าที่อาจต่อยอดความรู้ได้ แต่ต้องแลกกับเวลาตามหาส่วนที่ขาด', choices: [
-      { text: 'รื้อค้นจนพบเค้าสูตร', effects: [{ type: 'craftKnowledge', key: 'alchemy', value: 1 }, { type: 'path', key: 'insight', value: 1 }], effect: s => addLog('เจ้าต่อเศษสูตรที่หายไปกลับมาได้ ความรู้ปรุงยาเพิ่มขึ้น', true) },
-      { text: 'ขายข่าวเรื่องสูตรให้คนรู้จัก', effects: [{ type: 'stat', path: 'hero.money', value: 2 }], effect: s => addLog('เจ้าขายข่าวเรื่องสูตรให้คนรู้จักแทน') }
-    ] },
-    { id: 'craft_spoiled_materials', minAge: 12, activity: 'craft', rarity: 'uncommon', minMonth: 6, unlock: s => (s.materials?.herb || 0) >= 1, title: 'วัตถุดิบเริ่มเสีย', text: 'ความชื้นทำให้วัตถุดิบชุดหนึ่งเสื่อมสภาพ เจ้าต้องตัดสินใจว่าจะคัดทิ้งหรือเสี่ยงใช้ต่อ', choices: [
-      { text: 'คัดทิ้งและรักษาเตาให้ปลอดภัย', effects: [{ type: 'material', key: 'herb', value: -1 }, { type: 'stat', path: 'hero.health', value: 2 }], effect: s => addLog('เจ้าคัดวัตถุดิบเสียออกจากคลังอย่างระมัดระวัง') },
-      { text: 'เสี่ยงใช้วัตถุดิบต่อ', effects: [{ type: 'material', key: 'herb', value: -1 }, { type: 'stat', path: 'hero.health', value: -5 }, { type: 'craftKnowledge', key: 'alchemy', value: 1 }], effect: s => addLog('กลิ่นพิษทำให้เจ้าบาดเจ็บ แต่ได้บทเรียนราคาแพง', true) }
-    ] },
-    { id: 'craft_special_customer', minAge: 12, activity: 'craft', rarity: 'rare', minMonth: 24, title: 'ลูกค้าพิเศษหน้าร้าน', text: 'ผู้เดินทางปิดบังตัวตนมาขอของสนับสนุน เขาจ่ายดี แต่การรับงานอาจทำให้ความสัมพันธ์บางสายเปลี่ยนไป', choices: [
-      { text: 'ทำชุดสนับสนุนและส่งให้ลูกค้า', requires: s => canCraft(s, RECIPES.find(r => r.id === 'support_kit')), locked: 'ต้องมีวัตถุดิบและความรู้สำหรับชุดสนับสนุน', note: 'ใช้วัตถุดิบและเงินตามต้นทุนสูตร รับค่าจ้าง 6 ตำลึง', effects: [{ type: 'money', value: 6 }, { type: 'craftKnowledge', key: 'support', value: 1 }, { type: 'relation', key: 'acquaintance', value: 2 }], effect: s => { const cost = effectiveCraftCost(s, RECIPES.find(r => r.id === 'support_kit')); Object.entries(cost).forEach(([key, amount]) => { if (key === 'money') s.hero.money -= amount; else s.materials[key] -= amount; }); s.lastCraftMonth = s.month; addLog('เจ้าทำชุดสนับสนุนส่งให้ลูกค้า ผู้ว่าจ้างจ่ายเงินและฝากช่องทางติดต่อไว้', true); } },
-      { text: 'ปฏิเสธเพื่อไม่เสี่ยง', effects: [{ type: 'path', key: 'freedom', value: 1 }], effect: s => addLog('เจ้าไม่รับงานที่ไม่รู้ที่มา') }
-    ] }
-  ];
+  let CRAFT_EVENTS;
   const JOB_DEFS = [
     { id: 'odd_jobs', name: 'แรงงานรับจ้าง', income: 3, requirement: 'เริ่มต้นได้', minMonth: 0, workload: 1 },
     { id: 'farmer', name: 'ชาวนาเชิงเขา', income: 4, requirement: 'พละกำลัง 12', minMonth: 0, workload: 2 },
@@ -1397,7 +1369,6 @@
     const current = s.locations?.current;
     return current === 'sect' || current === 'market' || (s.travel?.lastArrival?.kind === 'trade' && s.travel.lastArrival.month === s.month && !s.travel.active);
   }
-  const MATERIAL_SHOP_PRICES = { herb: 3, iron: 4, spiritStone: 8, beast: 6, spiritSpring: 10 };
   function buyMaterial(s, material) {
     if (!canSellItems(s) || !MATERIAL_SHOP_PRICES[material]) return false;
     ensureInventory(s);
@@ -2432,84 +2403,7 @@
 
   // A shared calendar is the bridge between Lin An, other Story characters, and Free Mode.
   // worldMonth 0 is Lin An's age five opening scene; the Free player starts at age zero.
-  const WORLD_EVENTS = [
-    { id: 'lin_house_falls', worldMonth: 0, region: 'north-city', duration: 1, title: 'คืนตระกูลหลินล่มสลาย', news: 'ข่าวจากเมืองเหนือ: ตระกูลหลินถูกทำลาย เด็กทายาทหายสาบสูญ', importance: 'major' },
-    {
-      id: 'world_caravan_beacon', worldMonth: 48, region: 'border-town', duration: 1, title: 'คาราวานทิศประจิมมาถึงเมืองหน้าด่าน',
-      news: 'คาราวานจากทิศประจิมนำข่าวเส้นทางใหม่และเสบียงเข้ามา แต่มีคนตามหาหีบสินค้าหายจากขบวน', importance: 'major', intervention: true,
-      interventionChoices: [
-        { outcome: 'escort_caravan', text: 'ช่วยคุ้มกันคาราวาน', note: 'เมืองได้เสบียง ราคาสมุนไพรลดลง และเส้นทางปลอดภัยขึ้น', hero: { money: 4, reputation: 3 }, paths: { compassion: 1 } },
-        { outcome: 'take_caravan_map', text: 'ขอแลกแผนที่กับแรงงาน', note: 'ได้ความรู้เส้นทาง แต่คาราวานเสียเวลาจัดขบวน', hero: { money: 2 }, paths: { freedom: 1 } },
-        { outcome: 'ignore_caravan', text: 'ไม่เข้าไปยุ่ง', note: 'ข่าวยังแพร่ไปตามตลาด แต่ไม่มีใครช่วยคุ้มกันขบวน', hero: {}, paths: {} }
-      ],
-      outcomes: {
-        escort_caravan: { news: 'คาราวานทิศประจิมเดินทางถึงเมืองอย่างปลอดภัย เสบียงเริ่มกลับมาและทางตะวันตกเปิดกว้างขึ้น', modifiers: { herbPrice: -.2, travelRisk: -2, guardPresence: -1 } },
-        take_caravan_map: { news: 'แผนที่เส้นทางใหม่ถูกแลกเปลี่ยนในเมือง ทำให้ผู้เดินทางเริ่มกระจายออกจากถนนหลัก', modifiers: { herbPrice: -.1, travelRisk: -1 } },
-        ignore_caravan: { news: 'คาราวานทิศประจิมผ่านเมืองไปโดยไร้ผู้คุ้มกัน ข่าวโจรบนถนนเริ่มแพร่กระจาย', modifiers: { travelRisk: 2 } }
-      }
-    },
-    {
-      id: 'world_sect_rival_council', worldMonth: 100, region: 'cloud-sect', duration: 1, title: 'สภาศิษย์เก่าแตกเป็นสองฝ่าย',
-      news: 'สำนักเมฆาครามถกเถียงเรื่องเสบียงและแนวป้องกัน ฝ่ายเก่ากับฝ่ายศิษย์ใหม่เริ่มไม่ไว้ใจกัน', importance: 'major', intervention: true,
-      interventionChoices: [
-        { outcome: 'support_sect_council', text: 'ช่วยประสานศิษย์สองฝ่าย', note: 'ความขัดแย้งลดลงและสำนักมีกำลังคุ้มกันเพิ่ม', hero: { reputation: 4 }, relations: { senior: 3 }, paths: { duty: 1 } },
-        { outcome: 'expose_sect_shortage', text: 'เปิดบัญชีเสบียงต่อหน้าสภา', note: 'ความจริงถูกเปิดเผย ราคาของสมุนไพรสูงขึ้นชั่วคราว', hero: { reputation: 2 }, paths: { insight: 2 } },
-        { outcome: 'ignore_sect_council', text: 'เก็บตัวฝึกต่อ', note: 'ไม่เสียศัตรู แต่ปล่อยให้ความแตกแยกสะสม', hero: {}, relations: {}, paths: {} }
-      ],
-      outcomes: {
-        support_sect_council: { news: 'ศิษย์สองฝ่ายยอมจับมือชั่วคราว สำนักเมฆาครามเริ่มเสริมเวรยามก่อนฤดูศึก', modifiers: { guardPresence: -2, travelRisk: -1 } },
-        expose_sect_shortage: { news: 'บัญชีเสบียงสำนักถูกเปิดเผย พ่อค้ากักสมุนไพรและรอดูท่าทีของสงคราม', modifiers: { herbPrice: .35, guardPresence: 1, travelRisk: 1 } },
-        ignore_sect_council: { news: 'สภาศิษย์เก่ายังไม่ลงรอย คำสั่งเวรยามของสำนักเริ่มล่าช้า', modifiers: { guardPresence: 2, travelRisk: 3 } }
-      }
-    },
-    {
-      id: 'world_pine_road_ambush', worldMonth: 116, region: 'western-border', duration: 1, title: 'ลูกศรกลางป่าสนปิดถนนตะวันตก',
-      news: 'ขบวนเดินทางหลายสายถูกซุ่มโจมตีในป่าสน ผู้ลี้ภัยจากหมู่บ้านชายแดนเริ่มหาทางเข้าสู่เมือง', importance: 'major', intervention: true,
-      interventionChoices: [
-        { outcome: 'clear_pine_road', text: 'ช่วยเปิดทางให้ขบวนผู้ลี้ภัย', note: 'เสียสุขภาพเล็กน้อย แต่ลดความเสี่ยงบนเส้นทางและช่วยคนได้', hero: { health: -6, reputation: 5 }, paths: { compassion: 2 } },
-        { outcome: 'warn_pine_road', text: 'ส่งข่าวเตือนเมืองล่วงหน้า', note: 'ไม่ต้องปะทะโดยตรง แต่เมืองจะกักเสบียงและขึ้นราคา', hero: { money: -2 }, paths: { insight: 1 } },
-        { outcome: 'cross_pine_road', text: 'ผ่านทางลับคนเดียว', note: 'รักษาแรงของตนเอง แต่โจรยังคุมถนนหลัก', hero: { health: -2 }, paths: { freedom: 1 } }
-      ],
-      outcomes: {
-        clear_pine_road: { news: 'ถนนป่าสนเปิดให้ผู้ลี้ภัยผ่านได้อีกครั้ง เมืองรับคนเพิ่มแต่ความเสี่ยงระหว่างทางลดลง', modifiers: { refugeePressure: 5, herbPrice: .2, travelRisk: -4, guardPresence: -1 } },
-        warn_pine_road: { news: 'เมืองชายแดนปิดคลังบางส่วนหลังได้รับข่าวซุ่มโจมตี สมุนไพรและเสบียงเริ่มแพงขึ้น', modifiers: { refugeePressure: 3, herbPrice: .35, travelRisk: 1, guardPresence: 1 } },
-        cross_pine_road: { news: 'โจรยังคุมถนนป่าสน ผู้เดินทางจึงต้องอ้อมทางไกลและเสี่ยงมากขึ้น', modifiers: { travelRisk: 5, guardPresence: 1 } }
-      }
-    },
-    {
-      id: 'world_mask_unveiled', worldMonth: 196, region: 'cloud-sect', duration: 1, title: 'บัญชีหน้ากากถูกเปิดเผย',
-      news: 'เอกสารลับเผยว่ามีคนในสำนักส่งเส้นทางให้ศัตรู ความไว้วางใจระหว่างศิษย์สั่นคลอน', importance: 'major', intervention: true,
-      interventionChoices: [
-        { outcome: 'expose_mask_network', text: 'ช่วยตรวจสอบบัญชีลับ', note: 'จับสายลับได้บางส่วน สำนักคุมประตูเข้มขึ้นแต่ผู้คนเดินทางลำบาก', hero: { reputation: 5 }, paths: { insight: 2 } },
-        { outcome: 'protect_wen_truth', text: 'ยืนยันความบริสุทธิ์ของผู้บริสุทธิ์', note: 'รักษาความสัมพันธ์และลดการลงโทษผิดคน', hero: { reputation: 3 }, relations: { master: 4 }, paths: { compassion: 2 } },
-        { outcome: 'sell_mask_news', text: 'ขายข่าวให้ตลาดมืด', note: 'ได้เงินทันที แต่ศัตรูรู้ตัวและเส้นทางอันตรายขึ้น', hero: { money: 18, reputation: -8 }, paths: { freedom: 1 } }
-      ],
-      outcomes: {
-        expose_mask_network: { news: 'เครือข่ายส่งข่าวในสำนักถูกเปิดโปง ประตูเขาถูกคุมเข้มและการลอบโจมตีลดลง', modifiers: { guardPresence: -3, travelRisk: -2, herbPrice: .1 } },
-        protect_wen_truth: { news: 'บัญชีลับถูกตรวจใหม่ ผู้บริสุทธิ์รอดจากการลงโทษและศิษย์บางส่วนกลับมาร่วมมือกัน', modifiers: { guardPresence: -1, travelRisk: -1 } },
-        sell_mask_news: { news: 'ข่าวบัญชีลับหลุดสู่ตลาดมืด งูดำเริ่มขยับกำลังและเส้นทางภูเขาไม่ปลอดภัย', modifiers: { guardPresence: 2, travelRisk: 6, herbPrice: .25 } }
-      }
-    },
-    {
-      id: 'world_lantern_vow', worldMonth: 210, region: 'cloud-sect', duration: 1, title: 'คำมั่นใต้แสงตะเกียง',
-      news: 'ก่อนหิมะละลาย สำนักต้องเลือกระหว่างเสริมกำแพง อพยพผู้คน หรือซ่อนเสบียงไว้ตามทางลับ', importance: 'major', intervention: true,
-      interventionChoices: [
-        { outcome: 'prepare_refugee_route', text: 'ช่วยเตรียมเส้นทางอพยพ', note: 'ผู้คนรอดมากขึ้น แต่เสบียงในสำนักลดลง', hero: { money: -4, reputation: 4 }, paths: { compassion: 2 } },
-        { outcome: 'reinforce_sect_wall', text: 'ช่วยเสริมกำแพงสำนัก', note: 'แนวป้องกันแข็งแรงขึ้นและลดความเสี่ยงของศึก', hero: { health: -4, reputation: 3 }, paths: { duty: 2 } },
-        { outcome: 'hide_sect_supplies', text: 'ซ่อนเสบียงตามทางลับ', note: 'เปิดทางรอดสำรอง แต่การเดินทางหลังศึกจะยากขึ้น', hero: { money: 3 }, paths: { freedom: 2 } }
-      ],
-      outcomes: {
-        prepare_refugee_route: { news: 'เส้นทางอพยพใต้แสงตะเกียงพร้อมใช้งาน ผู้คนจากเชิงเขาจะมีทางหนีเมื่อศึกมาถึง', modifiers: { refugeePressure: -3, herbPrice: .25, travelRisk: -2 } },
-        reinforce_sect_wall: { news: 'กำแพงเมฆาครามได้รับการเสริมก่อนหิมะละลาย สำนักพร้อมรับแรงปะทะมากขึ้น', modifiers: { guardPresence: -3, travelRisk: -3 } },
-        hide_sect_supplies: { news: 'เสบียงลับถูกซ่อนไว้สามจุด ผู้รู้เส้นทางมีน้อยลงแต่ยังมีทางรอดหลังศึก', modifiers: { refugeePressure: 2, travelRisk: 2, herbPrice: .1 } }
-      }
-    },
-    { id: 'world_market_shortage', worldMonth: 64, region: 'border-town', duration: 1, title: 'ตลาดชายแดนขาดสมุนไพร', news: 'พ่อค้ากักสมุนไพรหลังถนนตะวันตกมีโจรชุก ราคายาและวัตถุดิบเริ่มสูงขึ้น', importance: 'minor', autoOutcome: 'shortage', outcomes: { shortage: { news: 'ตลาดชายแดนขาดสมุนไพรต่อเนื่อง สำนักและหมอยาเริ่มแย่งซื้อเสบียง', modifiers: { herbPrice: .3, travelRisk: 1 } } } },
-    { id: 'world_mountain_quake', worldMonth: 108, region: 'western-border', duration: 1, title: 'แผ่นดินไหวเปิดทางเขา', news: 'แรงสั่นสะเทือนทำให้ทางผ่านภูเขาเปิดและปิดสลับกัน ผู้เดินทางต้องเปลี่ยนเส้นทาง', importance: 'minor', autoOutcome: 'quake', outcomes: { quake: { news: 'ทางเขาถูกเปิดใหม่บางส่วน แต่หินถล่มทำให้การเดินทางเสี่ยงขึ้นในช่วงสั้น ๆ', modifiers: { travelRisk: 3, guardPresence: -1 } } } },
-    { id: 'world_refugee_camp', worldMonth: 128, region: 'cloud-sect', duration: 1, title: 'ค่ายผู้ลี้ภัยตั้งใต้เชิงเขา', news: 'ผู้ลี้ภัยจากหมู่บ้านตะวันตกตั้งค่ายใต้เชิงเขาเมฆา สำนักต้องแบ่งเสบียงช่วยเหลือ', importance: 'minor', autoOutcome: 'refugees', outcomes: { refugees: { news: 'ค่ายผู้ลี้ภัยใต้เชิงเขาขยายตัว สำนักแบ่งเสบียงและเมืองชายแดนเริ่มรับคนเพิ่ม', modifiers: { refugeePressure: 7, herbPrice: .2, travelRisk: 1 } } } },
-    { id: 'world_snowmelt_signal', worldMonth: 214, region: 'cloud-sect', duration: 1, title: 'หิมะละลายก่อนเวลา', news: 'หิมะบนช่องเขาละลายเร็วกว่าปกติ เสียงกลองจากแนวหน้าดังมาถึงสำนักเมฆาคราม', importance: 'minor', autoOutcome: 'signal', outcomes: { signal: { news: 'หิมะละลายเปิดทางให้กองกำลังเคลื่อนเร็วขึ้น ทุกฝ่ายเร่งเตรียมรับศึกใหญ่', modifiers: { guardPresence: 2, travelRisk: 4, herbPrice: .15 } } } },
-    { id: 'cloud_sect_invasion', worldMonth: 216, region: 'cloud-sect', duration: 1, title: 'คืนสำนักเมฆาครามถูกบุก', news: 'ข่าวด่วนจากภูเขาเมฆาคราม: สำนักถูกกองกำลังงูดำบุก', importance: 'major', intervention: true }
-  ];
+  let WORLD_EVENTS;
   const LIN_AN_ROUTE_BIAS = { sect: .35, 'mortal-peace': .20, 'nameless-martial': .15, 'new-land': .15, underworld: .10, earlyDeath: .05 };
   function ensureWorldState(s) {
     s.world = s.world || {};
@@ -2767,99 +2661,6 @@
     return order.slice(0, Math.min(order.length, 1 + endingsCount));
   }
 
-  const STORY_CHARACTER_EVENTS = {
-    story_dream_intro: {
-      id: 'story_dream_intro', characterId: 'dream-walker', activity: 'train', minMonth: 0,
-      title: 'ห้องจำลองใต้หอคัมภีร์', text: 'ผลึกหยั่งอนาคตเปิดภาพชีวิตนับพันเส้นทาง เจ้าสามารถกำหนดบทบาทที่จะให้ระบบจำลองทดสอบได้ แต่ทุกคำตอบจะแลกด้วยอายุขัยและความทรงจำ',
-      choices: [
-        { text: 'จำลองตนเป็นผู้พิทักษ์สำนัก', effects: [{ type: 'path', key: 'duty', value: 3 }, { type: 'relation', key: 'master', value: 10 }], effect: s => { s.flags.simulationRole = 'guardian'; addLog('ระบบจำลองบันทึกบทบาทผู้พิทักษ์สำนักไว้เป็นเส้นทางหลัก', true); } },
-        { text: 'จำลองตนเป็นจอมยุทธ์พเนจร', effects: [{ type: 'path', key: 'freedom', value: 3 }], effect: s => { s.flags.simulationRole = 'wanderer'; addLog('ภาพอนาคตพาเจ้าออกนอกกำแพงสำนัก สู่เส้นทางที่ไม่มีใครกำหนด', true); } },
-        { text: 'จำลองตนเป็นผู้ค้นความจริง', effects: [{ type: 'path', key: 'insight', value: 3 }], effect: s => { s.flags.simulationRole = 'truth-seeker'; addLog('เจ้าจดจำร่องรอยในอนาคตเพื่อไล่ตามต้นเหตุของหายนะ', true); } }
-      ]
-    },
-    story_revenge_intro: {
-      id: 'story_revenge_intro', characterId: 'revenant', activity: 'train', minMonth: 0,
-      title: 'คำสาบานก่อนสิ้นใจ', text: 'ชีวิตแรกของเจ้าถูกบีบให้เดินเข้าสู่ความตาย แต่เสียงในใจกลับไม่ยอมดับ หากเกิดใหม่ได้ เจ้าจะเลือกสิ่งใดติดตัวไปกับร่างใหม่',
-      choices: [
-        { text: 'เก็บรายชื่อผู้แค้นไว้ในความทรงจำ', effects: [{ type: 'flag', key: 'revengeLedger', value: true }, { type: 'path', key: 'insight', value: 2 }], effect: s => addLog('รายชื่อศัตรูถูกสลักไว้ในความทรงจำของวิญญาณ', true) },
-        { text: 'เก็บความเมตตาไว้ ไม่กลายเป็นคนแบบพวกมัน', effects: [{ type: 'flag', key: 'revengeMercy', value: true }, { type: 'path', key: 'compassion', value: 3 }], effect: s => addLog('แม้ต้องล้างแค้น เจ้าจะไม่ยอมสูญเสียหัวใจของตนเอง', true) }
-      ]
-    },
-    story_dynasty_intro: {
-      id: 'story_dynasty_intro', characterId: 'dynasty-heir', activity: 'rest', minMonth: 0,
-      title: 'ทารกใต้ธงตระกูล', text: 'เจ้าลืมตาขึ้นในตระกูลที่กำลังร่วงโรย ทุกชีวิตที่ผ่านไปจะฝากทรัพย์สิน ศัตรู และชื่อเสียงไว้ให้ทายาทรุ่นต่อไป',
-      choices: [
-        { text: 'วางรากฐานเศรษฐกิจของตระกูล', effects: [{ type: 'flag', key: 'dynastyCommerce', value: true }, { type: 'stat', path: 'hero.money', value: 12 }], effect: s => addLog('ตระกูลเริ่มฟื้นจากบัญชีการค้าและเส้นทางคาราวาน', true) },
-        { text: 'วางรากฐานกำลังยุทธ์', effects: [{ type: 'flag', key: 'dynastyMartial', value: true }, { type: 'stat', path: 'hero.powerBonus', value: 25 }], effect: s => addLog('ตระกูลเปิดหอฝึกเล็ก ๆ เพื่อรวบรวมผู้มีพรสวรรค์', true) }
-      ]
-    },
-    story_isekai_intro: {
-      id: 'story_isekai_intro', characterId: 'isekai-underdog', activity: 'rest', minMonth: 0,
-      title: 'เกิดใหม่ในร่างสวะ', text: 'โลกใหม่ไม่ได้ต้อนรับเจ้า เด็กคนนี้ถูกเรียกว่าสวะ ถูกทิ้งไว้ใต้ชายคา และไม่มีใครเชื่อว่าจะลุกขึ้นได้',
-      choices: [
-        { text: 'อดทนสะสมความรู้เงียบ ๆ', effects: [{ type: 'flag', key: 'isekaiKnowledge', value: true }, { type: 'path', key: 'insight', value: 2 }], effect: s => addLog('เจ้าซ่อนความทรงจำจากโลกเดิมไว้ แล้วเริ่มอ่านทุกตำราในบ้าน', true) },
-        { text: 'ประกาศว่าจะปีนขึ้นไปเหนือทุกคน', effects: [{ type: 'flag', key: 'isekaiDefiance', value: true }, { type: 'path', key: 'freedom', value: 2 }, { type: 'stat', path: 'hero.powerBonus', value: 10 }], effect: s => addLog('คำดูถูกกลายเป็นเชื้อไฟก้อนแรกของชีวิตใหม่', true) }
-      ]
-    },
-    story_revenge_trial: {
-      id: 'story_revenge_trial', characterId: 'revenant', activity: 'explore', minMonth: 12,
-      title: 'เงาของศัตรูในชีวิตก่อน', text: 'ร่องรอยของคนที่เคยสังหารเจ้าในชีวิตก่อนปรากฏขึ้นอีกครั้ง คราวนี้เจ้ามีเวลาเลือกว่าจะเสี่ยงเปิดเผยตัวหรือสะสมกำลังต่อ',
-      choices: [
-        { text: 'ตามรอยทันที', conditions: { flag: { key: 'revengeLedger', value: true } }, locked: 'ต้องรักษาบัญชีแค้นไว้ตั้งแต่ชีวิตแรก', effect: s => { s.flags.revengeTargetFound = true; s.hero.powerBonus += 35; addLog('เจ้าเห็นตราประทับเดิมบนอาวุธของศัตรู และรู้ว่าการเกิดใหม่ไม่ใช่เรื่องบังเอิญ', true); } },
-        { text: 'สะสมกำลังและรอวันเอาคืน', effects: [{ type: 'stat', path: 'hero.cultivation', value: 30 }, { type: 'path', key: 'insight', value: 2 }], effect: s => addLog('เจ้ายอมปล่อยศัตรูผ่านไปชั่วคราว เพื่อให้การแก้แค้นครั้งเดียวจบสิ้น') },
-        { text: 'เปิดเผยตัว ล่อศัตรูให้ฆ่าเพื่อเริ่มชีวิตใหม่', conditions: { flag: { key: 'revengeLedger', value: true } }, note: 'จบชีวิตปัจจุบันและเกิดใหม่เป็นทารกในร่างใหม่', effect: s => { s.hero.health = 0; endGame('death_battle', { cause: 'ยอมสละชีวิตเพื่อรักษาร่องรอยของศัตรูและเริ่มการล้างแค้นในร่างใหม่' }); } }
-      ]
-    },
-    story_dynasty_council: {
-      id: 'story_dynasty_council', characterId: 'dynasty-heir', activity: 'work', minMonth: 12,
-      title: 'สภาทายาท', text: 'ผู้ใหญ่ในตระกูลเริ่มถามว่ารุ่นของเจ้าจะพาตระกูลไปทางใด ทุกคำตอบจะกลายเป็นมรดกที่ทายาทรุ่นต่อไปต้องแบก',
-      choices: [
-        { text: 'ขยายการค้าและพันธมิตร', conditions: { flag: { key: 'dynastyCommerce', value: true } }, effects: [{ type: 'faction', key: 'jianghu', value: 5 }, { type: 'stat', path: 'hero.money', value: 18 }], effect: s => addLog('ตระกูลเริ่มมีเส้นทางค้าขายที่ไม่มีสำนักใดกล้าขวาง', true) },
-        { text: 'รวบรวมยอดฝีมือเข้าตระกูล', conditions: { flag: { key: 'dynastyMartial', value: true } }, effects: [{ type: 'stat', path: 'hero.powerBonus', value: 60 }, { type: 'faction', key: 'sect', value: 3 }], effect: s => addLog('หอฝึกของตระกูลกลายเป็นที่รวมตัวของคนหนุ่มสาวผู้มีความทะเยอทะยาน', true) }
-      ]
-    },
-    story_isekai_awakening: {
-      id: 'story_isekai_awakening', characterId: 'isekai-underdog', activity: 'train', minMonth: 12,
-      title: 'วันที่สวะลุกขึ้น', text: 'คนที่เคยรังแกเจ้าพบว่าร่างกายของสวะเริ่มแข็งแกร่งขึ้น พวกเขายื่นข้อเสนอให้ก้มหัวหรือพิสูจน์ตัวเองต่อหน้าทุกคน',
-      choices: [
-        { text: 'รับการประลองต่อหน้าทุกคน', effects: [{ type: 'stat', path: 'hero.powerBonus', value: 50 }, { type: 'path', key: 'duty', value: 1 }], effect: s => { s.flags.isekaiProven = true; addLog('เด็กที่เคยถูกเรียกว่าสวะยืนหยัดได้ด้วยกำลังของตนเอง', true); } },
-        { text: 'เก็บไพ่ตายไว้และออกเดินทาง', effects: [{ type: 'stat', path: 'hero.combat.agility', value: 3 }, { type: 'path', key: 'freedom', value: 3 }], effect: s => { s.flags.isekaiWanderer = true; addLog('เจ้าไม่ต้องการคำยอมรับจากคนเดิมอีกต่อไป จึงเลือกสร้างชื่อในโลกกว้าง'); } }
-      ]
-    },
-    story_dream_final: {
-      id: 'story_dream_final', characterId: 'dream-walker', activity: 'train', month: 120,
-      title: 'อนาคตที่เลือกเอง', text: 'ผลึกจำลองแตกร้าว เหลือเพียงเส้นทางหนึ่งที่ยังไม่ดับ เจ้าจะยอมรับบทบาทที่คำนวณไว้ หรือทำลายแบบจำลองแล้วเดินด้วยเจตจำนงของตนเอง',
-      choices: [
-        { text: 'ทำตามบทบาทที่จำลองว่าประสบความสำเร็จ', effects: [{ type: 'flag', key: 'simulationCompleted', value: true }], effect: s => endGame('guardian', { characterStory: { seal: '夢', title: 'ผู้เลือกอนาคต', quote: '“อนาคตที่ดีที่สุดไม่ใช่อนาคตที่คำนวณได้ แต่คืออนาคตที่เรายอมรับผลของมัน”', story: `บทบาท “${s.flags.simulationRole || 'ผู้ค้นความจริง'}” พา ${s.hero.name} ผ่านอนาคตที่เป็นไปได้หลายพันเส้นทาง ก่อนเลือกเส้นทางที่สร้างผลลัพธ์สูงสุดและรับรางวัลจากหอคัมภีร์` } }) },
-        { text: 'ทำลายผลึกและสร้างอนาคตใหม่', effects: [{ type: 'path', key: 'freedom', value: 4 }], effect: s => endGame('wanderer_lone', { characterStory: { seal: '破', title: 'ผู้ทำลายคำทำนาย', quote: '“การจำลองบอกได้ว่าอะไรอาจเกิดขึ้น แต่ไม่มีสิทธิ์บอกว่าเราต้องเป็นใคร”', story: `${s.hero.name} ทำลายผลึกทั้งหมดและออกจากหอคัมภีร์ ไม่มีรางวัลใดจากอนาคตที่คำนวณไว้ แต่ทุกก้าวหลังจากนั้นเป็นของตนเอง` } }) }
-      ]
-    },
-    story_revenge_final: {
-      id: 'story_revenge_final', characterId: 'revenant', activity: 'explore', month: 120,
-      title: 'บัญชีแค้นหน้าสุดท้าย', text: 'ศัตรูจากชีวิตแรกปรากฏตัวในฐานะผู้มีอำนาจสูงสุด เจ้าจำทุกความเจ็บปวดได้ แต่ครั้งนี้มีทั้งความทรงจำและร่างกายใหม่อยู่ในมือ',
-      choices: [
-        { text: 'ชำระบัญชีด้วยมือของตนเอง', conditions: { flag: { key: 'revengeTargetFound', value: true } }, locked: 'ต้องตามรอยศัตรูให้พบก่อน', effects: [{ type: 'flag', key: 'revengeComplete', value: true }], effect: s => endGame('guardian', { characterStory: { seal: '仇', title: 'ผู้ล้างแค้นเหนือกาล', quote: '“ข้าไม่ได้เกิดใหม่เพื่อหนีความตาย แต่เพื่อคืนความจริงให้ทุกชีวิตที่ถูกพรากไป”', story: `${s.hero.name} ปิดบัญชีแค้นของชีวิตแรกลงได้โดยไม่ปล่อยให้ความแค้นกลืนหัวใจ ความตายหลายครั้งกลายเป็นบันไดสู่ชัยชนะครั้งเดียว` } }) },
-        { text: 'ปล่อยวางและตัดวงจรแค้น', effects: [{ type: 'path', key: 'compassion', value: 4 }], effect: s => endGame('wanderer_exodus', { characterStory: { seal: '慈', title: 'ผู้ชนะโดยไม่ฆ่า', quote: '“การแก้แค้นที่ยิ่งใหญ่ที่สุด คือการไม่ยอมให้ศัตรูกำหนดว่าข้าจะกลายเป็นใคร”', story: `${s.hero.name} เลือกตัดวงจรความแค้นและพาผู้รอดชีวิตออกจากเงามืด ชีวิตก่อนหน้านี้ไม่สูญเปล่า เพราะมันทำให้เจ้ารู้ว่าความเมตตาต้องใช้ความกล้าเพียงใด` } }) }
-      ]
-    },
-    story_dynasty_final: {
-      id: 'story_dynasty_final', characterId: 'dynasty-heir', activity: 'work', month: 120,
-      title: 'ธงตระกูลเหนือเมือง', text: 'หลังผ่านมือทายาทหลายรุ่น ตระกูลมีโอกาสผงาดขึ้นเป็นหนึ่งในอำนาจหลักของยุทธภพ แต่การผงาดต้องแลกด้วยการตัดสินใจสุดท้าย',
-      choices: [
-        { text: 'ประกาศตระกูลเป็นพันธมิตรของผู้คน', conditions: { statMin: { path: 'lineageState.prestige', value: 80 } }, locked: 'ชื่อเสียงตระกูลยังไม่ถึง 80', effect: s => endGame('guardian', { characterStory: { seal: '門', title: 'ตระกูลผงาด', quote: '“คนหนึ่งชีวิตอาจดับลง แต่ชื่อของตระกูลอยู่ได้ด้วยสิ่งที่ส่งต่อให้คนรุ่นหลัง”', story: `ทายาทรุ่นที่ ${s.lineageState.generation} ชูธงตระกูลเหนือเมือง ตระกูลไม่ได้ผงาดเพราะคนใดคนหนึ่ง แต่เพราะทุกชีวิตก่อนหน้าฝากรากฐานไว้ไม่ขาดสาย` } }) },
-        { text: 'ขายอำนาจตระกูลเพื่อความอยู่รอด', effect: s => endGame('outlaw', { characterStory: { seal: '散', title: 'ตระกูลที่เลือกอยู่รอด', quote: '“ชื่อเสียงไม่อาจเลี้ยงคนตาย ความอยู่รอดจึงเป็นมรดกอีกแบบหนึ่ง”', story: `ตระกูลยอมลดธงและแลกอำนาจกับเส้นทางปลอดภัย ผู้คนอาจลืมชื่อของพวกเจ้า แต่ทายาทยังมีชีวิตให้เริ่มต้นใหม่` } }) }
-      ]
-    },
-    story_isekai_final: {
-      id: 'story_isekai_final', characterId: 'isekai-underdog', activity: 'train', month: 120,
-      title: 'เหนือคำว่าสวะ', text: 'คนที่เคยเหยียดหยามเจ้าคุกเข่าอยู่เบื้องหน้า โลกทั้งใบกำลังรอฟังว่าเด็กที่ถูกทิ้งจะใช้พลังที่ได้มาอย่างไร',
-      choices: [
-        { text: 'ยึดอำนาจและบังคับให้ทุกคนยอมรับ', effects: [{ type: 'path', key: 'duty', value: 2 }], effect: s => endGame('guardian', { characterStory: { seal: '天', title: 'ผู้เหนือคำดูแคลน', quote: '“จากสวะสู่ยอดคน ไม่มีใครมอบตำแหน่งนี้ให้ ข้าจึงจะเป็นคนกำหนดความหมายของมันเอง”', story: `${s.hero.name} ยืนเหนือคนที่เคยหัวเราะเยาะ ร่างสวะกลายเป็นชื่อที่ทุกสำนักต้องกล่าวถึง แม้ไม่มีใครกล้าดูถูกอีกต่อไป` } }) },
-        { text: 'เปิดทางให้คนที่ถูกกดขี่รุ่นต่อไป', effects: [{ type: 'path', key: 'compassion', value: 4 }], effect: s => endGame('wanderer_exodus', { characterStory: { seal: '新', title: 'ผู้เปิดประตูให้คนรุ่นใหม่', quote: '“ข้าไม่ได้ปีนขึ้นมาเพื่อยืนเหนือคนอื่น แต่เพื่อดึงคนที่ถูกทิ้งขึ้นมาด้วยกัน”', story: `${s.hero.name} เปลี่ยนบ้านที่เคยเรียกเจ้าว่าสวะให้กลายเป็นสถานที่รับผู้ถูกทอดทิ้งจากทั่วโลกใหม่ และเริ่มยุคของผู้ไม่มีใครเลือก` } }) }
-      ]
-    }
-  };
-
   const ANNUAL_EVENT_SEEDS = [
     { name: 'เสียงกระซิบจากผู้เดินทาง', path: 'insight', gain: 2 },
     { name: 'คู่แข่งที่ไม่ยอมแพ้', path: 'duty', gain: 2 },
@@ -2884,14 +2685,7 @@
     travel: { name: 'ระหว่างเดินทาง', stat: 'hero.attributes.luck', path: 'freedom', good: 'โอกาสใหม่', bad: 'อันตรายระหว่างทาง' },
     free: { name: 'ระหว่างใช้ชีวิตอิสระ', stat: 'hero.attributes.luck', path: 'freedom', good: 'ประสบการณ์ชีวิต', bad: 'เวลาที่สูญเปล่า' }
   };
-  const OFFICIAL_EVENTS = [
-    { id: 'official_normal_duty', activity: 'sect', minMonth: 0, rarity: 'normal', title: 'งานปกติของผู้มีหน้าที่', text: 'ทะเบียน เสบียง และคำร้องของผู้คนรอผู้รับผิดชอบ', choices: [{ text: 'รับงานและทำให้เสร็จ', effects: [{ type: 'path', key: 'duty', value: 1 }, { type: 'stat', path: 'hero.reputation', value: 1 }] }, { text: 'ส่งต่อให้คนอื่น', effects: [{ type: 'stat', path: 'hero.reputation', value: -1 }] }] },
-    { id: 'official_secret_order', activity: 'sect', minMonth: 84, conditions: { flag: { key: 'metSect', value: true } }, rarity: 'uncommon', title: 'คำสั่งลับจากสำนัก', text: 'อาจารย์และศิษย์พี่ขอให้เจ้าตามหลักฐานที่ไม่ควรอยู่ในมือคนนอก', choices: [{ text: 'รับคำสั่งและเก็บความลับ', effects: [{ type: 'relation', key: 'master', value: 2 }, { type: 'stat', path: 'hero.powerBonus', value: 12 }, { type: 'path', key: 'insight', value: 2 }] }, { text: 'เปิดเผยต่อเมือง', effects: [{ type: 'stat', path: 'hero.reputation', value: 3 }, { type: 'path', key: 'compassion', value: 1 }] }] },
-    { id: 'official_city_defense', activity: 'sect', minMonth: 24, rarity: 'rare', title: 'กำแพงเมืองสั่นสะเทือน', text: 'ผู้คนจากเมืองและสำนักต้องร่วมมือรับมือภัยที่กำลังเข้ามา', choices: [{ text: 'ยืนแนวหน้า', effects: [{ type: 'stat', path: 'hero.powerBonus', value: 18 }, { type: 'relation', key: 'supervisor', value: 3 }, { type: 'faction', key: 'jianghu', value: 2 }] }, { text: 'คุ้มกันพลเรือน', effects: [{ type: 'stat', path: 'hero.reputation', value: 4 }, { type: 'path', key: 'compassion', value: 2 }] }] },
-    { id: 'official_investigation', activity: 'sect', minMonth: 36, rarity: 'rare', title: 'คดีที่ไม่มีใครอยากแตะ', text: 'หลักฐานชี้ไปยังทั้งสำนักและที่ทำการเมือง การเลือกข้างอาจเปลี่ยนชีวิต', choices: [{ text: 'สืบตามหลักฐาน', effects: [{ type: 'path', key: 'insight', value: 3 }, { type: 'stat', path: 'hero.reputation', value: 2 }] }, { text: 'ปิดคดีเพื่อรักษาความสงบ', effects: [{ type: 'path', key: 'duty', value: 2 }, { type: 'stat', path: 'hero.reputation', value: -1 }] }] },
-    { id: 'official_risky_mission', activity: 'sect', minMonth: 60, rarity: 'epic', title: 'งานเสี่ยงที่ไม่มีชื่อในบัญชี', text: 'ภารกิจนี้ให้สิทธิ์และอำนาจมาก แต่ความผิดพลาดจะถูกตีความว่าเป็นการทรยศ', choices: [{ text: 'รับภารกิจ', effects: [{ type: 'stat', path: 'hero.powerBonus', value: 30 }, { type: 'stat', path: 'hero.health', value: -8 }, { type: 'path', key: 'duty', value: 3 }] }, { text: 'ปฏิเสธอย่างสุภาพ', effects: [{ type: 'stat', path: 'hero.reputation', value: -1 }] }] }
-  ];
-
+  let OFFICIAL_EVENTS;
   const LEARNING_TYPES = {
     lore: { name: 'ความรู้โลกและประวัติศาสตร์', stat: 'intellect', path: 'insight', gain: 2, unlock: null },
     cultivation: { name: 'คัมภีร์บำเพ็ญเพียร', stat: 'spirit', path: 'insight', gain: 2, unlock: 'basicCultivation' },
@@ -2965,132 +2759,9 @@
     return amount;
   }
 
-  const LEARNING_EVENTS = [
-    { id: 'learning_master_lesson', activity: 'study', minMonth: 24, unlock: s => learningTeacher(s).id === 'master', title: 'บทเรียนจากอาจารย์', text: 'อาจารย์ผู้ชี้แนะวางตำราสองเล่มลงตรงหน้า เล่มหนึ่งสอนให้จำ อีกเล่มสอนให้ตั้งคำถาม', choices: [
-      { text: 'จดจำหลักการและทบทวนให้แม่น', effects: [{ type: 'path', key: 'insight', value: 2 }], effect: s => { s.learningState.focus = 'cultivation'; const teacherName = s.mode === 'story' && s.characterId === 'lin-an' ? 'อาจารย์เหวินจง' : 'อาจารย์ผู้ชี้แนะ'; addLog(`${teacherName}มอบคัมภีร์ปฐมเมฆาให้เจ้าใช้ศึกษาต่อ`, true); addTreasure(s, 'คัมภีร์ปฐมเมฆา', { learningRate: 10, learningType: 'cultivation' }); } },
-      { text: 'ถามถึงเหตุผลที่อยู่เบื้องหลังวิชา', effects: [{ type: 'stat', path: 'hero.attributes.spirit', value: 2 }, { type: 'path', key: 'insight', value: 2 }], effect: s => addLog('คำถามของเจ้าทำให้อาจารย์ยอมรับว่า ความเข้าใจสำคัญกว่าการท่องจำ') }
-    ] },
-    { id: 'learning_sect_archive', activity: 'study', minMonth: 84, unlock: s => s.flags?.metSect && learningLocationKey(s) === 'sect', title: 'หอคัมภีร์ที่ถูกผนึก', text: 'หอคัมภีร์สำนักเปิดให้ศิษย์ที่มีผลงาน เจ้าพบชื่อของวิชาที่ไม่มีในบัญชีทั่วไป', choices: [
-      { text: 'ขออนุญาตเปิดผนึกอย่างเป็นทางการ', conditions: { statMin: { path: 'relations.senior', value: 8 } }, locked: 'ต้องมีศิษย์พี่รับรองอย่างน้อย 8', effects: [{ type: 'flag', key: 'cultivationLearned', value: true }, { type: 'path', key: 'duty', value: 2 }], effect: s => addLog('สำนักอนุญาตให้เจ้าเรียนวิชาโคจรปราณเก้าชีพจร', true) },
-      { text: 'คัดลอกเฉพาะส่วนที่ใช้ช่วยผู้คน', effects: [{ type: 'flag', key: 'swordLearned', value: true }, { type: 'path', key: 'compassion', value: 2 }], effect: s => addLog('เจ้าคัดลอกกระบวนท่าป้องกันตัวโดยไม่แย่งสิทธิ์ของสำนัก', true) }
-    ] },
-    { id: 'learning_item_rubbing', activity: 'study', minMonth: 24, unlock: s => hasLearningItem(s), title: 'รอยหมึกบนคัมภีร์', text: 'ไอเทมที่เจ้าครอบครองเผยตัวอักษรซ่อนเร้นเมื่อวางไว้ใต้แสงจันทร์', choices: [
-      { text: 'ถอดความอย่างระมัดระวัง', effects: [{ type: 'path', key: 'insight', value: 3 }], effect: s => { s.learningState.knowledge.lore = Math.min(100, s.learningState.knowledge.lore + 4); addLog('ความรู้จากไอเทมถูกถอดความและเก็บเป็นบทเรียนของเจ้า', true); } },
-      { text: 'ทดลองกับวิชาที่กำลังฝึก', effects: [{ type: 'stat', path: 'hero.attributes.intellect', value: 2 }], effect: s => { s.learningState.knowledge.martial = Math.min(100, s.learningState.knowledge.martial + 3); addLog('เจ้าทดลองความรู้จากไอเทมกับกระบวนท่าที่กำลังฝึก'); } }
-    ] }
-  ];
-  const FAMILY_EVENTS = [
-    {
-      id: 'family_health_crisis', activity: 'family', minMonth: 1,
-      unlock: s => familyAllowed(s) && (ensureFamilyState(s).children.some(child => child.alive !== false) || (ensureFamilyState(s).spouse && ensureFamilyState(s).spouse.alive !== false) || ensureFamilyState(s).parents.some(p => p.alive !== false)),
-      title: 'ไข้ที่ไม่ควรมองข้าม', text: 'คนในเรือนล้มป่วยพร้อมกัน ค่าใช้จ่ายรักษาและเวลาที่ต้องดูแลอาจกระทบทั้งตระกูล',
-      choices: [
-        { text: 'ใช้เงินรักษาเต็มที่', note: 'สุขภาพครอบครัวและความผูกพันดีขึ้น', requires: s => s.hero.money >= 8, effects: [{ type: 'stat', path: 'hero.money', value: -8 }], effect: s => { const f = ensureFamilyState(s); f.health = clamp(f.health + 12, 0, 100); f.bond = clamp(f.bond + 8, 0, 100); addFamilyChronicle(s, 'ทุ่มทรัพย์รักษาคนในเรือน', 3); } },
-        { text: 'กู้เงินจากคลังตระกูล', note: 'รักษาได้แต่เกิดหนี้และแรงกดดัน', effect: s => { const f = ensureFamilyState(s); f.debt += 12; f.health = clamp(f.health + 5, 0, 100); f.conflict = clamp(f.conflict + 4, 0, 100); addFamilyChronicle(s, 'กู้หนี้เพื่อประคองชีวิตคนในเรือน', -1); } }
-      ]
-    },
-    {
-      id: 'family_education_choice', activity: 'family', minMonth: 72,
-      unlock: s => familyAllowed(s) && ensureFamilyState(s).children.some(child => child.alive !== false && child.ageMonths >= 6 * 12 && child.ageMonths < 18 * 12),
-      title: 'ทางแยกของทายาท', text: 'ทายาทเริ่มมีพรสวรรค์ การเลือกครูและเส้นทางวันนี้จะสะท้อนในพงศาวดารตระกูล',
-      choices: [
-        { text: 'ส่งเข้าเรียนกับครูผู้รู้', note: 'การศึกษาสูงขึ้น ใช้เงิน 10 ตำลึง', requires: s => s.hero.money >= 10, effects: [{ type: 'stat', path: 'hero.money', value: -10 }], effect: s => { const f = ensureFamilyState(s); const c = f.children.find(child => child.alive !== false && child.ageMonths >= 6 * 12 && child.ageMonths < 18 * 12); if (c) { c.path = 'study'; c.education = Math.min(100, c.education + 20); f.legacyScore += 4; addFamilyChronicle(s, `ส่ง${c.name}เข้าสู่เส้นทางการศึกษา`, 4); } } },
-        { text: 'ให้ฝึกงานและช่วยงานเรือน', note: 'ได้ทรัพยากรเล็กน้อยและความรับผิดชอบ', effect: s => { const f = ensureFamilyState(s); const c = f.children.find(child => child.alive !== false && child.ageMonths >= 6 * 12 && child.ageMonths < 18 * 12); if (c) { c.path = 'social'; c.education = Math.min(100, c.education + 8); s.hero.money += 4; f.bond = clamp(f.bond + 3, 0, 100); addFamilyChronicle(s, `${c.name} เรียนรู้หน้าที่จากชีวิตจริง`, 2); } } }
-      ]
-    },
-    {
-      id: 'family_conflict', activity: 'family', minMonth: 1,
-      unlock: s => familyAllowed(s) && ensureFamilyState(s).conflict >= 8,
-      title: 'รอยร้าวในเรือน', text: 'หนี้ ความเหนื่อยล้า และความคาดหวังต่างกันทำให้คนในครอบครัวเริ่มขัดแย้ง',
-      choices: [
-        { text: 'หยุดงานเพื่อพูดคุยและไกล่เกลี่ย', note: 'ความขัดแย้งลดลง ใช้เงิน 3 ตำลึง', requires: s => s.hero.money >= 3, locked: 'ต้องมีเงินอย่างน้อย 3 ตำลึง', effects: [{ type: 'stat', path: 'hero.money', value: -3 }], effect: s => { const f = ensureFamilyState(s); f.conflict = Math.max(0, f.conflict - 10); f.bond = clamp(f.bond + 6, 0, 100); addFamilyChronicle(s, 'ไกล่เกลี่ยรอยร้าวในเรือน', 3); } },
-        { text: 'ปล่อยให้เวลาตัดสิน', note: 'ความขัดแย้งรุนแรงขึ้นและชื่อเสียงครอบครัวเสียหาย', effect: s => { const f = ensureFamilyState(s); f.conflict = clamp(f.conflict + 8, 0, 100); s.hero.reputation -= 3; f.legacyScore = Math.max(0, f.legacyScore - 2); addFamilyChronicle(s, 'ความขัดแย้งถูกปล่อยให้ลุกลาม', -2); } }
-      ]
-    },
-    {
-      id: 'family_child_growth', activity: 'family', minMonth: 72,
-      unlock: s => familyAllowed(s) && ensureFamilyState(s).children.some(child => child.alive !== false && child.ageMonths >= 12 * 12 && child.ageMonths < 18 * 12),
-      title: 'ทายาทเริ่มเติบโต', text: 'ทายาทเริ่มมีความคิดของตนเอง การดูแลวันนี้จะกลายเป็นชื่อเสียงและความสามารถของตระกูลในวันหน้า',
-      choices: [
-        { text: 'มอบหน้าที่และให้เรียนรู้จากโลก', note: 'ความรับผิดชอบและ Legacy เพิ่มขึ้น', effect: s => { const f = ensureFamilyState(s); const c = f.children.find(child => child.alive !== false && child.ageMonths >= 12 * 12 && child.ageMonths < 18 * 12); if (c) { c.education = Math.min(100, c.education + 12); c.path = c.path || 'wander'; f.bond = clamp(f.bond + 5, 0, 100); f.legacyScore += 5; addFamilyChronicle(s, `${c.name} เริ่มรับผิดชอบงานของตระกูล`, 5); } } },
-        { text: 'เก็บทายาทไว้คุ้มครองในเรือน', note: 'สุขภาพครอบครัวดีขึ้น แต่การศึกษาช้าลง', effect: s => { const f = ensureFamilyState(s); const c = f.children.find(child => child.alive !== false && child.ageMonths >= 12 * 12 && child.ageMonths < 18 * 12); if (c) { c.health = clamp(c.health + 10, 0, 100); f.health = clamp(f.health + 5, 0, 100); f.conflict = clamp(f.conflict + 2, 0, 100); addFamilyChronicle(s, `คุ้มครอง${c.name}ไว้ในเรือน`, 2); } } }
-      ]
-    },
-    {
-      id: 'family_debt_inheritance', activity: 'family', minMonth: 1,
-      unlock: s => familyAllowed(s) && (ensureFamilyState(s).debt >= 10 || ensureFamilyState(s).legacyScore >= 8),
-      title: 'หนี้เก่ากับมรดกใหม่', text: 'เอกสารจากญาติผู้ล่วงลับเผยทั้งทรัพย์สินและหนี้สินที่ตระกูลต้องรับผิดชอบ',
-      choices: [
-        { text: 'รับมรดกพร้อมชำระหนี้', note: 'ได้ทรัพย์สินและชื่อเสียง แต่ต้องจ่าย 12 ตำลึง', requires: s => s.hero.money >= 12, effects: [{ type: 'stat', path: 'hero.money', value: -12 }], effect: s => { const f = ensureFamilyState(s); f.debt = Math.max(0, f.debt - 12); f.treasury += 18; f.legacyScore += 6; f.bond = clamp(f.bond + 4, 0, 100); addFamilyChronicle(s, 'รับมรดกและสะสางหนี้เก่าของตระกูล', 6); } },
-        { text: 'ปฏิเสธมรดกเพื่อรักษาความอยู่รอด', note: 'ลดหนี้แต่สูญเสียโอกาสและชื่อเสียง', effect: s => { const f = ensureFamilyState(s); f.debt = Math.max(0, f.debt - 5); f.legacyScore = Math.max(0, f.legacyScore - 2); s.hero.reputation -= 2; addFamilyChronicle(s, 'ปฏิเสธมรดกที่ผูกติดหนี้สิน', -2); } }
-      ]
-    },
-  ];
-
-  const FREE_LIFE_EVENTS = [
-    {
-      id: 'free-life-day-work', freeLife: true, activity: 'free', rarity: 'normal', tag: 'โอกาสจากถนน',
-      title: 'งานหนึ่งวันใต้ชายคาตลาด',
-      text: 'เจ้าพบคนขายของที่ต้องการแรงงานชั่วคราว งานนี้ไม่เปลี่ยนเส้นทางชีวิตในทันที แต่ช่วยให้เดือนนี้ไม่ขาดมือ',
-      freeWeight: s => ((s.hero?.money || 0) < 12 ? 2.4 : .65) * freeLifeLocationWeight(s, ['roadside', 'inn', 'rented']),
-      choices: [
-        { text: 'รับงานและลงมือช่วย', auto: 'safe', effects: [{ type: 'flag', key: 'freeLifeWorked', value: true }, { type: 'stat', path: 'hero.money', value: 5 }, { type: 'stat', path: 'hero.health', value: -2 }, { type: 'path', key: 'duty', value: 1 }] },
-        { text: 'ปฏิเสธเพื่อรักษาแรง', auto: 'safe', effects: [{ type: 'stat', path: 'hero.health', value: 2 }, { type: 'path', key: 'freedom', value: 1 }] }
-      ]
-    },
-    {
-      id: 'free-life-teahouse', freeLife: true, activity: 'free', rarity: 'normal', tag: 'ผู้คนระหว่างทาง',
-      title: 'โต๊ะว่างในโรงน้ำชา',
-      text: 'เสียงสนทนาหลายสายพาเจ้ารู้จักผู้คนใหม่ ทั้งข่าวสารและความสัมพันธ์อาจเริ่มจากโต๊ะเล็ก ๆ นี้',
-      freeWeight: s => (1 + ((s.hero?.attributes?.charm || 0) / 40) + ((s.relations?.acquaintance || 0) > 5 ? .35 : 0)) * freeLifeLocationWeight(s, ['owned', 'estate', 'rented', 'inn']),
-      choices: [
-        { text: 'นั่งฟังและทำความรู้จักผู้คน', auto: 'safe', effects: [{ type: 'flag', key: 'freeLifeNewsNetwork', value: true }, { type: 'relation', key: 'acquaintance', value: 3 }, { type: 'stat', path: 'hero.reputation', value: 1 }, { type: 'path', key: 'compassion', value: 1 }] },
-        { text: 'ฟังเฉพาะข่าวสำคัญแล้วเดินต่อ', auto: 'safe', effects: [{ type: 'stat', path: 'hero.attributes.intellect', value: 1 }, { type: 'path', key: 'insight', value: 1 }] }
-      ]
-    },
-    {
-      id: 'free-life-quiet-shelter', freeLife: true, activity: 'free', rarity: 'normal', tag: 'จังหวะพัก',
-      title: 'เรือนพักที่ยังมีห้องว่าง',
-      text: 'เจ้าพบสถานที่สงบให้หยุดพักหนึ่งคืน คุณภาพของที่พักขึ้นอยู่กับสถานที่ที่เจ้าครอบครองและทรัพย์ที่มี',
-      freeWeight: s => ((s.hero?.health || 0) < (s.hero?.maxHealth || 100) * .65 ? 2.2 : .55) * freeLifeLocationWeight(s, ['owned', 'estate', 'rented', 'retainer', 'sect']),
-      choices: [
-        { text: 'จ่ายค่าที่พักและพักให้เต็มที่', auto: 'safe', requires: s => s.hero.money >= 2, locked: 'ต้องมีเงินอย่างน้อย 2 ตำลึง', note: 'ใช้เงิน 2 ตำลึงเพื่อพักฟื้น', effects: [{ type: 'flag', key: 'freeLifeShelterKnown', value: true }, { type: 'stat', path: 'hero.money', value: -2 }, { type: 'stat', path: 'hero.health', value: s => Math.max(4, Math.round((restRoute(s).heal || 8) * .45)) }] },
-        { text: 'นอนกลางแจ้งโดยไม่เสียเงิน', auto: 'safe', effects: [{ type: 'stat', path: 'hero.health', value: 2 }, { type: 'path', key: 'freedom', value: 1 }] }
-      ]
-    },
-    {
-      id: 'free-life-road-merchant', freeLife: true, activity: 'free', rarity: 'rare', tag: 'การเดินทางและทรัพยากร',
-      title: 'พ่อค้าร่วมทาง',
-      text: 'พ่อค้ารับซื้อสมุนไพรทั่วไป และชวนเจ้าเดินร่วมทางช่วงหนึ่งโดยช่วยออกค่าเสบียง',
-      freeWeight: s => (1 + ((s.hero?.money || 0) >= 20 ? .45 : 0) + ((s.hero?.attributes?.luck || 0) / 80)) * freeLifeLocationWeight(s, ['roadside', 'inn', 'hidden_cave']),
-      choices: [
-        { text: 'ขายสมุนไพรให้พ่อค้า', auto: 'safe', requires: s => (s.materials?.herb || 0) >= 1, locked: 'ต้องมีสมุนไพรทั่วไปอย่างน้อย 1', note: 'สมุนไพรทั่วไป −1 · เงิน +7', effects: [{ type: 'material', key: 'herb', value: -1 }, { type: 'stat', path: 'hero.money', value: 7 }, { type: 'path', key: 'freedom', value: 2 }] },
-        { text: 'เดินร่วมทางกับพ่อค้าชั่วคราว', auto: 'safe', requires: s => s.hero.money >= 2, locked: 'ต้องมีเงินอย่างน้อย 2 ตำลึง', note: 'ใช้เงิน 2 ตำลึงและเสียสุขภาพเล็กน้อย', effects: [{ type: 'flag', key: 'freeLifeTraveled', value: true }, { type: 'faction', key: 'jianghu', value: 1 }, { type: 'stat', path: 'hero.money', value: -2 }, { type: 'stat', path: 'hero.health', value: -1 }, { type: 'stat', path: 'hero.attributes.luck', value: 2 }, { type: 'path', key: 'freedom', value: 3 }] },
-        { text: 'ขอบคุณและแยกทางกับพ่อค้า', auto: 'safe', effects: [{ type: 'path', key: 'freedom', value: 1 }] }
-      ]
-    },
-    {
-      id: 'free-life-hillside', freeLife: true, activity: 'free', rarity: 'rare', tag: 'สำรวจโลกกว้าง',
-      title: 'ทางแยกบนไหล่เขา',
-      text: 'ทางหนึ่งนำไปยังซากหมู่บ้าน อีกทางลัดเลาะไปยังหุบเขาเงียบงัน เจ้าเลือกได้ตามกำลังและนิสัยของตน',
-      freeWeight: s => (1 + ((s.hero?.talent === 'keen' || s.hero?.attributes?.luck || 0) >= 14 ? .8 : 0)) * freeLifeLocationWeight(s, ['roadside', 'hidden_cave']),
-      choices: [
-        { text: 'สำรวจซากหมู่บ้านอย่างระมัดระวัง', auto: 'safe', effects: [{ type: 'flag', key: 'freeLifeTrailMapped', value: true }, { type: 'material', key: 'herb', value: 2 }, { type: 'stat', path: 'hero.attributes.intellect', value: 1 }, { type: 'stat', path: 'hero.health', value: -2 }, { type: 'path', key: 'insight', value: 2 }] },
-        { text: 'เลือกทางหุบเขาเพื่อเก็บประสบการณ์', auto: 'safe', effects: [{ type: 'stat', path: 'hero.attributes.luck', value: 1 }, { type: 'stat', path: 'hero.health', value: -1 }, { type: 'path', key: 'freedom', value: 2 }] }
-      ]
-    },
-    {
-      id: 'free-life-news', freeLife: true, activity: 'free', rarity: 'normal', tag: 'ข่าวสารจากโลก',
-      title: 'ข่าวลือที่เปลี่ยนทิศทางลม',
-      text: 'เจ้ารับรู้ข่าวของเมือง สำนัก และผู้คนจากหลายแหล่ง ข่าวนี้ไม่มีคำสั่งให้ต้องทำตาม แต่ช่วยให้ตัดสินใจเดือนหน้าได้ดีขึ้น',
-      freeWeight: s => (1 + ((s.hero?.attributes?.intellect || 0) / 60)) * freeLifeLocationWeight(s, ['owned', 'estate', 'sect', 'inn']),
-      choices: [
-        { text: 'จดจำข่าวและตรวจสอบแหล่งที่มา', auto: 'safe', effects: [{ type: 'flag', key: 'freeLifeNewsVerified', value: true }, { type: 'stat', path: 'hero.attributes.intellect', value: 1 }, { type: 'stat', path: 'hero.reputation', value: 1 }, { type: 'path', key: 'insight', value: 2 }] },
-        { text: 'ปล่อยให้ข่าวผ่านไปตามลม', auto: 'safe', effects: [{ type: 'stat', path: 'hero.health', value: 1 }, { type: 'path', key: 'freedom', value: 1 }] }
-      ]
-    }
-  ];
-
+  let LEARNING_EVENTS;
+  let FAMILY_EVENTS;
+  let FREE_LIFE_EVENTS;
   function buildFreeLifeEventPool(s) {
     if (s.mode !== 'free' || s.activity !== 'free') return [];
     return FREE_LIFE_EVENTS.filter(event => !s.eventHistory.includes(event.id) && evaluateCondition(s, event.conditions));
@@ -3787,9 +3458,6 @@
     ]
   }
 };
-  Object.entries(EXTRA_GRADED_SCENES).forEach(([rarity, phases]) => {
-    Object.entries(phases).forEach(([phase, scenes]) => UNIQUE_GRADED_SCENES[rarity][phase].push(...scenes));
-  });
 
   // Entries follow the authored scene order above. Each event is restricted to
   // activities in which its situation can plausibly occur.
@@ -3816,18 +3484,7 @@
 
   // These discoveries state the reward in the scene itself; they are only
   // eligible while exploring and never grant a technique already mastered.
-  const EXPLORATION_DISCOVERIES = [
-    ['uncommon','herb','สมุนไพรบนไหล่ทาง','ระหว่างสำรวจ เจ้าพบสมุนไพรชั้นดีขึ้นอยู่ในพื้นที่ที่ต้องระวังเท้าพลาด'],
-    ['extraordinary','herb','สมุนไพรใต้ร่มหิน','ใต้ร่มหินมีสมุนไพรหายากขึ้นอยู่ใกล้พื้นดินที่ไม่มั่นคง'],
-    ['epic','herb','สมุนไพรกลางหมอก','ในบริเวณที่หมอกปกคลุม เจ้าพบสมุนไพรมหากาพย์ แต่การเข้าใกล้อาจทำให้หลงทาง'],
-    ['uncommon','weapon','กระบี่ข้างทาง','เจ้าพบกระบี่ชั้นดีถูกทิ้งไว้ใกล้ร่องรอยการต่อสู้ ไม่มีผู้ใดอยู่ให้ถามหาเจ้าของ'],
-    ['extraordinary','weapon','กระบี่ในห่อผ้า','ห่อผ้าเก่าที่ซ่อนอยู่ตามเส้นทางบรรจุกระบี่หายาก และมีร่องรอยว่าพื้นที่นี้อาจไม่ปลอดภัย'],
-    ['epic','weapon','กระบี่จากซากค่าย','เจ้าพบกระบี่มหากาพย์ในซากค่ายร้าง การนำมันออกมาต้องผ่านบริเวณที่เสี่ยงพังทลาย'],
-    ['uncommon','manual','บันทึกกระบวนท่าชำรุด','เจ้าพบคัมภีร์กระบี่ชั้นดีที่ขาดบางหน้า ซ่อนอยู่ในห่อกันฝน'],
-    ['extraordinary','manual','คัมภีร์ใต้ก้อนหิน','เจ้าพบคัมภีร์กระบี่หายากซ่อนใต้ก้อนหิน แต่ทางเข้ามีร่องรอยสัตว์'],
-    ['epic','manual','คัมภีร์ในซากเก่า','ในซากสถานที่ร้าง เจ้าพบคัมภีร์กระบี่มหากาพย์วางอยู่หลังสิ่งกีดขวางที่อาจพังลงมา']
-  ];
-
+  let EXPLORATION_DISCOVERIES;
   const DISCOVERY_ACTIONS = {
     'uncommon/herb': ['ค่อย ๆ เก็บสมุนไพรบนไหล่ทาง', 'ดูจุดวางเท้าก่อนเข้าใกล้', 'ปล่อยสมุนไพรไว้ริมทาง'],
     'extraordinary/herb': ['เอื้อมเก็บสมุนไพรใต้ร่มหิน', 'ตรวจพื้นดินรอบร่มหินก่อน', 'ออกห่างจากพื้นดินที่ไม่มั่นคง'],
@@ -3856,548 +3513,7 @@
   };
 
   // Manual type determines the learned technique and its loadout slot.
-  const MANUAL_DISCOVERY_TYPES = {
-    fist: { label: 'หมัด', slot: 'combat', subtype: 'fist', manualSubtype: 'attack_fist', learningType: 'martial', names: ['หมัดสายธาร', 'หมัดสะท้อนหิน', 'หมัดสะท้านเมฆา'], bonus: power => ({ attack: Math.floor(power * .8), body: Math.floor(power / 2) }) },
-    blade: { label: 'ดาบ', slot: 'combat', subtype: 'sword', manualSubtype: 'attack_sword', learningType: 'martial', names: ['ดาบลมเช้า', 'ดาบเงาจันทร์', 'ดาบแหวกหมอก'], bonus: power => ({ attack: power + Math.floor(power / 3) }) },
-    defense: { label: 'คุ้มกาย', slot: 'defense', subtype: 'shield', manualSubtype: 'defense', learningType: 'martial', names: ['ม่านไม้ไผ่', 'ม่านหินผา', 'ม่านเมฆาซ้อน'], bonus: power => ({ defense: power, body: Math.floor(power / 3) }) },
-    movement: { label: 'ย่างก้าว', slot: 'movement', subtype: 'step', manualSubtype: 'movement', learningType: 'survival', names: ['ก้าวใบไผ่', 'ก้าวข้ามธาร', 'ก้าวไร้รอย'], bonus: power => ({ agility: power, defense: Math.floor(power / 4) }) },
-    cultivation: { label: 'บำเพ็ญ', slot: 'cultivation', subtype: 'breath', manualSubtype: 'cultivation', learningType: 'cultivation', names: ['ลมหายใจยามเช้า', 'โคจรธารเย็น', 'ปราณเมฆาทบชั้น'], bonus: power => ({ training: power }) }
-  };
-  const EXTRA_MANUAL_SCENES = [
-    ['uncommon','fist','ภาพหมัดบนผืนผ้า','เจ้าพบคัมภีร์หมัดชั้นดีห่อด้วยผ้ากันฝนใต้สัมภาระเก่า'],
-    ['extraordinary','fist','รอยหมัดบนแผ่นไม้','เจ้าพบคัมภีร์หมัดหายากเก็บอยู่ข้างแผ่นไม้ที่มีรอยฝึก'],
-    ['epic','fist','สมุดหมัดในซากเก่า','เจ้าพบคัมภีร์หมัดมหากาพย์ในซากที่อาจพังลงมา'],
-    ['uncommon','blade','สมุดดาบของผู้เดินทาง','เจ้าพบคัมภีร์ดาบชั้นดีในห่อของผู้เดินทางที่ถูกทิ้งไว้'],
-    ['extraordinary','blade','ตำราดาบใต้รากไม้','เจ้าพบคัมภีร์ดาบหายากใต้รากไม้ใกล้พื้นที่ลาดชัน'],
-    ['epic','blade','ม้วนดาบหลังแผ่นหิน','เจ้าพบคัมภีร์ดาบมหากาพย์ซ่อนหลังแผ่นหินที่ไม่มั่นคง'],
-    ['uncommon','defense','บทคุ้มกายที่ตกหล่น','เจ้าพบคัมภีร์คุ้มกายชั้นดีในห่อกระดาษที่เปียกฝน'],
-    ['extraordinary','defense','บันทึกรับแรง','เจ้าพบคัมภีร์คุ้มกายหายากในหีบเก่าข้างรอยทาง'],
-    ['epic','defense','ตำราม่านป้องกัน','เจ้าพบคัมภีร์คุ้มกายมหากาพย์ในบริเวณซากปรักที่มีเศษหินหล่น'],
-    ['uncommon','movement','แผนผังก้าวเท้า','เจ้าพบคัมภีร์ย่างก้าวชั้นดีพร้อมภาพรอยเท้าบนผืนผ้า'],
-    ['extraordinary','movement','ม้วนก้าวข้ามธาร','เจ้าพบคัมภีร์ย่างก้าวหายากใกล้ทางน้ำที่ไหลเชี่ยว'],
-    ['epic','movement','ตำราก้าวไร้รอย','เจ้าพบคัมภีร์ย่างก้าวมหากาพย์ในที่ซ่อนซึ่งทางกลับถูกหมอกบัง'],
-    ['uncommon','cultivation','ลมหายใจในสมุดเก่า','เจ้าพบคัมภีร์บำเพ็ญชั้นดีอยู่ในห่อผ้าใต้สัมภาระ'],
-    ['extraordinary','cultivation','ม้วนโคจรปราณ','เจ้าพบคัมภีร์บำเพ็ญหายากซ่อนในที่ซึ่งพื้นดินไม่มั่นคง'],
-    ['epic','cultivation','คัมภีร์ปราณในซากหอ','เจ้าพบคัมภีร์บำเพ็ญมหากาพย์ในซากหอที่อาจพังทลาย']
-  ].map(([rarity, type, title, text]) => [rarity, `manual_${type}`, title, text]);
-  EXPLORATION_DISCOVERIES.push(...EXTRA_MANUAL_SCENES);
-
-  const ADDITIONAL_MANUAL_TECHNIQUES = [
-  {
-    "id": "discovery_alt_fist_uncommon",
-    "type": "fist",
-    "grade": "uncommon",
-    "name": "หมัดตอกไม้",
-    "bonus": {
-      "attack": 3,
-      "body": 3
-    },
-    "description": "ส่งหมัดสั้นจากช่วงเอว พร้อมตั้งกายให้มั่น",
-    "title": "ม้วนหมัดในกองฟืน",
-    "text": "เจ้าพบคัมภีร์หมัดตอกไม้ซ่อนอยู่ในห่อผ้าระหว่างท่อนไม้"
-  },
-  {
-    "id": "discovery_alt_fist_rare",
-    "type": "fist",
-    "grade": "rare",
-    "name": "หมัดขุนเขา",
-    "bonus": {
-      "attack": 8,
-      "body": 3
-    },
-    "description": "ออกหมัดจากฐานเท้าหนักแน่นดั่งขุนเขา โดยรักษากำลังของร่างกายไว้พร้อมรับแรง",
-    "title": "ภาพหมัดบนแผ่นไม้",
-    "text": "เจ้าพบคัมภีร์หมัดขุนเขาในหีบที่ซ่อนหลังแผ่นไม้ชำรุด"
-  },
-  {
-    "id": "discovery_alt_fist_epic",
-    "type": "fist",
-    "grade": "epic",
-    "name": "หมัดอสนีคราม",
-    "bonus": {
-      "attack": 13,
-      "body": 5
-    },
-    "description": "ผู้ฝึกขยับเท้าเข้าประชิดก่อนรวมแรงขึ้นจากพื้น แล้วส่งหมัดอย่างเด็ดขาดดุจอสนี พร้อมรักษารากฐานกายให้รองรับแรงสะท้อน",
-    "title": "หมัดในศาลาร้าง",
-    "text": "คัมภีร์หมัดอสนีครามอยู่บนชั้นหินของศาลาเก่าที่มีหลังคาชำรุด"
-  },
-  {
-    "id": "discovery_alt_blade_uncommon",
-    "type": "blade",
-    "grade": "uncommon",
-    "name": "ดาบตัดกิ่งหลิว",
-    "bonus": {
-      "attack": 5,
-      "agility": 1
-    },
-    "description": "ฟันสั้นตามแนวโค้ง พร้อมก้าวเปลี่ยนมุมอย่างคล่องตัว",
-    "title": "ดาบบนผ้าใบ",
-    "text": "เจ้าพบคัมภีร์ดาบตัดกิ่งหลิวในผ้าใบที่พันอยู่รอบด้ามไม้"
-  },
-  {
-    "id": "discovery_alt_blade_rare",
-    "type": "blade",
-    "grade": "rare",
-    "name": "ดาบสลายหิมะ",
-    "bonus": {
-      "attack": 10,
-      "defense": 2
-    },
-    "description": "คมดาบฟันหนักเพียงจังหวะเดียว ก่อนจัดแนวรับให้มั่นเหมือนหิมะที่ค่อย ๆ คลายตัว",
-    "title": "ม้วนดาบในช่องหิน",
-    "text": "คัมภีร์ดาบสลายหิมะถูกซ่อนไว้ในช่องหินที่ปากทางแคบ"
-  },
-  {
-    "id": "discovery_alt_blade_epic",
-    "type": "blade",
-    "grade": "epic",
-    "name": "ดาบเพลิงทมิฬ",
-    "bonus": {
-      "attack": 16,
-      "defense": 3
-    },
-    "description": "ผู้ฝึกส่งคมดาบหนักแน่นดุจเปลวไฟในราตรี แล้วพลิกด้ามกลับสู่ท่าตั้งรับ เคล็ดนี้รักษาสมดุลระหว่างแรงฟันกับการป้องกัน",
-    "title": "คัมภีร์หลังเตาหิน",
-    "text": "เจ้าพบคัมภีร์ดาบเพลิงทมิฬด้านหลังเตาหินเก่าใกล้เศษซาก"
-  },
-  {
-    "id": "discovery_alt_sword_uncommon",
-    "type": "sword",
-    "grade": "uncommon",
-    "name": "กระบี่หยดน้ำ",
-    "bonus": {
-      "attack": 4,
-      "agility": 1
-    },
-    "description": "ปลายกระบี่เคลื่อนเบาพร้อมก้าวสั้น ดั่งหยดน้ำที่เลื่อนไหล",
-    "title": "กระบี่บนแพไม้",
-    "text": "เจ้าพบคัมภีร์กระบี่หยดน้ำในกล่องเล็กผูกกับซากแพไม้"
-  },
-  {
-    "id": "discovery_alt_sword_rare",
-    "type": "sword",
-    "grade": "rare",
-    "name": "กระบี่วสันต์",
-    "bonus": {
-      "attack": 8,
-      "agility": 3
-    },
-    "description": "แนวกระบี่เปลี่ยนไปตามจังหวะเท้าเหมือนสายลมฤดูใบไม้ผลิ ให้ความคล่องตัวเด่นกว่าการปะทะตรง",
-    "title": "บันทึกกระบี่ในโพรง",
-    "text": "เจ้าพบคัมภีร์กระบี่วสันต์ในโพรงไม้ที่มีรอยขุดเก่า"
-  },
-  {
-    "id": "discovery_alt_sword_epic",
-    "type": "sword",
-    "grade": "epic",
-    "name": "กระบี่ดาวเคียงจันทร์",
-    "bonus": {
-      "attack": 12,
-      "agility": 6
-    },
-    "description": "ปลายกระบี่เปลี่ยนทิศพร้อมการย่างเท้า ดุจหมู่ดาวเคลื่อนรอบจันทร์ ผู้ฝึกอาศัยความคล่องตัวสร้างช่องว่างก่อนส่งคมเข้าหาเป้าหมาย",
-    "title": "สมุดใต้โคมหิน",
-    "text": "เจ้าพบคัมภีร์กระบี่ดาวเคียงจันทร์ใต้โคมหินที่เอนอยู่ริมทาง"
-  },
-  {
-    "id": "discovery_alt_defense_uncommon",
-    "type": "defense",
-    "grade": "uncommon",
-    "name": "เกราะเปลือกไม้",
-    "bonus": {
-      "defense": 4,
-      "body": 2
-    },
-    "description": "ตั้งกายรับแรงอย่างยืดหยุ่น ดุจเปลือกไม้หุ้มแก่น",
-    "title": "สมุดรับแรงในร่องไม้",
-    "text": "คัมภีร์เกราะเปลือกไม้ถูกซ่อนไว้ในร่องของท่อนไม้กลวง"
-  },
-  {
-    "id": "discovery_alt_defense_rare",
-    "type": "defense",
-    "grade": "rare",
-    "name": "โล่ธารหิน",
-    "bonus": {
-      "defense": 8,
-      "body": 4
-    },
-    "description": "ตั้งแขนรับแรงพร้อมรักษาจุดศูนย์ถ่วง ดุจก้อนหินที่ยืนอยู่ท่ามกลางธารไหล",
-    "title": "ตำราคุ้มกายริมธาร",
-    "text": "เจ้าพบคัมภีร์โล่ธารหินในห่อกันน้ำใกล้ทางน้ำตื้น"
-  },
-  {
-    "id": "discovery_alt_defense_epic",
-    "type": "defense",
-    "grade": "epic",
-    "name": "เกราะผาสวรรค์",
-    "bonus": {
-      "defense": 12,
-      "body": 6
-    },
-    "description": "ผู้ฝึกวางฐานกายให้หนักแน่นดั่งผาสูง ก่อนผ่อนแรงจากไหล่ลงสู่เท้า เคล็ดรับแรงนี้ให้ความสำคัญกับความแข็งแรงของร่างกาย",
-    "title": "บันทึกผาสูง",
-    "text": "คัมภีร์เกราะผาสวรรค์อยู่ในซอกผาเก่าที่ต้องปีนอย่างระวัง"
-  },
-  {
-    "id": "discovery_alt_movement_uncommon",
-    "type": "movement",
-    "grade": "uncommon",
-    "name": "ก้าวนกกระจอก",
-    "bonus": {
-      "agility": 4,
-      "defense": 2
-    },
-    "description": "ก้าวสั้นสลับซ้ายขวา เพื่อหลบพร้อมตั้งท่ารับ",
-    "title": "แผนเท้าใต้ก้อนหิน",
-    "text": "เจ้าพบคัมภีร์ก้าวนกกระจอกใต้ก้อนหินที่มีสัญลักษณ์เท้า"
-  },
-  {
-    "id": "discovery_alt_movement_rare",
-    "type": "movement",
-    "grade": "rare",
-    "name": "ย่างลมวน",
-    "bonus": {
-      "agility": 8,
-      "defense": 3
-    },
-    "description": "หมุนตัวตามจังหวะเท้าเพื่อรักษาระยะและแนวป้องกัน แม้ต้องเคลื่อนที่ต่อเนื่อง",
-    "title": "ผืนผ้าลายวน",
-    "text": "เจ้าพบคัมภีร์ย่างลมวนม้วนอยู่ในผืนผ้าที่มีแผนก้าวเป็นวง"
-  },
-  {
-    "id": "discovery_alt_movement_epic",
-    "type": "movement",
-    "grade": "epic",
-    "name": "ก้าวเมฆาคล้อย",
-    "bonus": {
-      "agility": 12,
-      "defense": 5
-    },
-    "description": "ผู้ฝึกเปลี่ยนระยะด้วยก้าวโค้งต่อเนื่องดั่งเมฆาที่เคลื่อนคล้อย การหันไหล่แต่ละครั้งช่วยรักษาแนวรับขณะเคลื่อนออกจากแรงปะทะ",
-    "title": "ม้วนเท้าในหอเก่า",
-    "text": "เจ้าพบคัมภีร์ก้าวเมฆาคล้อยในหอเก่าที่พื้นบางส่วนยุบตัว"
-  },
-  {
-    "id": "discovery_alt_cultivation_uncommon",
-    "type": "cultivation",
-    "grade": "uncommon",
-    "name": "ลมหายใจต้นสน",
-    "bonus": {
-      "training": 4,
-      "body": 1
-    },
-    "description": "หายใจยาวตามจังหวะตั้งกาย เพื่อประคองการบำเพ็ญ",
-    "title": "เคล็ดลมบนเปลือกไม้",
-    "text": "เจ้าพบคัมภีร์ลมหายใจต้นสนห่ออยู่ในเปลือกไม้แห้ง"
-  },
-  {
-    "id": "discovery_alt_cultivation_rare",
-    "type": "cultivation",
-    "grade": "rare",
-    "name": "ปราณสายน้ำวน",
-    "bonus": {
-      "training": 8,
-      "defense": 2
-    },
-    "description": "กำหนดปราณเป็นจังหวะวนอย่างสม่ำเสมอ พร้อมรักษาท่ากายให้มั่นคงตลอดการฝึก",
-    "title": "ม้วนปราณในไหดิน",
-    "text": "เจ้าพบคัมภีร์ปราณสายน้ำวนในไหดินที่ปิดผนึกด้วยผ้า"
-  },
-  {
-    "id": "discovery_alt_cultivation_epic",
-    "type": "cultivation",
-    "grade": "epic",
-    "name": "ห้วงปราณดารา",
-    "bonus": {
-      "training": 12,
-      "body": 3
-    },
-    "description": "ผู้ฝึกค่อย ๆ รวบลมหายใจเป็นจังหวะยาวราวหมู่ดาวเรียงตัว พร้อมขัดเกลาร่างกายให้รองรับการบำเพ็ญที่ต่อเนื่อง",
-    "title": "ตำราดาราในกล่องทองแดง",
-    "text": "เจ้าพบคัมภีร์ห้วงปราณดาราในกล่องทองแดงใต้พื้นหินที่ชำรุด"
-  }
-];
-  ADDITIONAL_MANUAL_TECHNIQUES.push(...[
-  {
-    "id": "discovery_third_fist_uncommon",
-    "type": "fist",
-    "grade": "uncommon",
-    "name": "หมัดคลื่นทราย",
-    "bonus": {
-      "attack": 3,
-      "defense": 1,
-      "body": 1
-    },
-    "description": "ยืนหยัดแล้วส่งหมัดสั้นดุจคลื่นทรายกระทบฝั่ง",
-    "title": "ตำราหมัดในห่อป่าน",
-    "text": "เจ้าพบคัมภีร์หมัดคลื่นทรายในห่อป่านที่ซ่อนอยู่หลังหลักทาง"
-  },
-  {
-    "id": "discovery_third_fist_rare",
-    "type": "fist",
-    "grade": "rare",
-    "name": "หมัดหมีตั้งหลัก",
-    "bonus": {
-      "attack": 6,
-      "defense": 2,
-      "body": 3
-    },
-    "description": "ฝึกตั้งไหล่รับแรงก่อนส่งหมัดหนัก คล้ายหมีที่ยืนมั่นบนสองเท้า",
-    "title": "สมุดหมัดในโพรงดิน",
-    "text": "คัมภีร์หมัดหมีตั้งหลักอยู่ในโพรงดินที่มีเศษหินร่วงปิดทาง"
-  },
-  {
-    "id": "discovery_third_fist_epic",
-    "type": "fist",
-    "grade": "epic",
-    "name": "หมัดพิทักษ์ปฐพี",
-    "bonus": {
-      "attack": 10,
-      "defense": 4,
-      "body": 5
-    },
-    "description": "ผู้ฝึกถ่ายน้ำหนักลงสู่พื้นก่อนส่งแรงกลับผ่านกำปั้น ท่าที่มั่นคงช่วยรักษาการป้องกันและร่างกายยามเข้าประชิด",
-    "title": "แผ่นจารึกหมัดใต้ผา",
-    "text": "เจ้าพบคัมภีร์หมัดพิทักษ์ปฐพีในกล่องหินใต้หน้าผาที่แตกร้าว"
-  },
-  {
-    "id": "discovery_third_blade_uncommon",
-    "type": "blade",
-    "grade": "uncommon",
-    "name": "ดาบเฉือนเมฆ",
-    "bonus": {
-      "attack": 5,
-      "body": 1
-    },
-    "description": "ฟันดาบจากฐานมั่นคง ให้คมผ่านเป้าหมายในจังหวะเดียว",
-    "title": "ตำราดาบในซอกตอไม้",
-    "text": "คัมภีร์ดาบเฉือนเมฆถูกสอดไว้ในซอกตอไม้ใกล้แนวทางเก่า"
-  },
-  {
-    "id": "discovery_third_blade_rare",
-    "type": "blade",
-    "grade": "rare",
-    "name": "ดาบวายุย้อน",
-    "bonus": {
-      "attack": 9,
-      "agility": 3
-    },
-    "description": "ชักดาบกลับพร้อมเปลี่ยนเท้า แล้วอาศัยจังหวะลมย้อนเข้าหาช่องว่าง",
-    "title": "ม้วนดาบใต้ผ้าคลุม",
-    "text": "เจ้าพบคัมภีร์ดาบวายุย้อนใต้ผ้าคลุมเก่าซึ่งติดอยู่กับกิ่งไม้"
-  },
-  {
-    "id": "discovery_third_blade_epic",
-    "type": "blade",
-    "grade": "epic",
-    "name": "ดาบพิรุณทลาย",
-    "bonus": {
-      "attack": 15,
-      "agility": 4
-    },
-    "description": "ผู้ฝึกเปลี่ยนมุมยืนก่อนฟันต่อเนื่องดั่งสายฝนที่กระทบพื้น ท่วงท่าเน้นแรงดาบและการขยับตัวเพื่อรักษาระยะโจมตี",
-    "title": "หีบดาบในทางฝน",
-    "text": "คัมภีร์ดาบพิรุณทลายอยู่ในหีบเก่าบนทางลาดที่ฝนกัดเซาะ"
-  },
-  {
-    "id": "discovery_third_sword_uncommon",
-    "type": "sword",
-    "grade": "uncommon",
-    "name": "กระบี่เข็มสน",
-    "bonus": {
-      "attack": 3,
-      "agility": 2
-    },
-    "description": "ปลายกระบี่พุ่งสั้นและแม่นยำ พร้อมก้าวเบาราวเข็มสน",
-    "title": "กระดาษลายเข็มสน",
-    "text": "เจ้าพบคัมภีร์กระบี่เข็มสนม้วนอยู่ในกระบอกไม้ที่มีลายใบสน"
-  },
-  {
-    "id": "discovery_third_sword_rare",
-    "type": "sword",
-    "grade": "rare",
-    "name": "กระบี่สายรุ้ง",
-    "bonus": {
-      "attack": 7,
-      "agility": 4
-    },
-    "description": "ก้าวเฉียงแล้วเปลี่ยนแนวกระบี่อย่างลื่นไหล ดั่งสีรุ้งที่ทอดผ่านหลังฝน",
-    "title": "ตำราสีจางหลังฝน",
-    "text": "คัมภีร์กระบี่สายรุ้งซ่อนในกล่องเคลือบสีใต้ชายหินที่เปียกฝน"
-  },
-  {
-    "id": "discovery_third_sword_epic",
-    "type": "sword",
-    "grade": "epic",
-    "name": "กระบี่ธารดารา",
-    "bonus": {
-      "attack": 11,
-      "agility": 7
-    },
-    "description": "แนวกระบี่และก้าวเท้าเคลื่อนไหลราวธารดาว ผู้ฝึกอาศัยการเปลี่ยนทิศเข้าประชิดก่อนส่งคม แล้วถอยออกโดยไม่เสียจังหวะ",
-    "title": "จารึกใต้แสงดาว",
-    "text": "เจ้าพบคัมภีร์กระบี่ธารดาราในหีบไม้ใต้ศิลาที่มีรอยดาว"
-  },
-  {
-    "id": "discovery_third_defense_uncommon",
-    "type": "defense",
-    "grade": "uncommon",
-    "name": "ท่ายืนรากหญ้า",
-    "bonus": {
-      "defense": 3,
-      "body": 3
-    },
-    "description": "ยืนรับแรงด้วยขาที่มั่นคง ดั่งรากหญ้ายึดดิน",
-    "title": "สมุดท่ายืนริมทาง",
-    "text": "เจ้าพบคัมภีร์ท่ายืนรากหญ้าในห่อผ้าที่ผูกไว้กับกิ่งไม้ต่ำ"
-  },
-  {
-    "id": "discovery_third_defense_rare",
-    "type": "defense",
-    "grade": "rare",
-    "name": "กายาฝนพรำ",
-    "bonus": {
-      "defense": 7,
-      "body": 5
-    },
-    "description": "รับแรงทีละส่วนและผ่อนลมหายใจต่อเนื่อง ดั่งหยดฝนซึมลงสู่ผืนดิน",
-    "title": "ม้วนผ้ารับฝน",
-    "text": "คัมภีร์กายาฝนพรำอยู่ในม้วนผ้าที่ถูกซ่อนไว้ใต้กระเบื้องแตก"
-  },
-  {
-    "id": "discovery_third_defense_epic",
-    "type": "defense",
-    "grade": "epic",
-    "name": "กายาขุนเขาเงียบ",
-    "bonus": {
-      "defense": 11,
-      "body": 7
-    },
-    "description": "ผู้ฝึกตั้งกายอย่างสงบนิ่งแล้วกระจายแรงไปยังฐานเท้า ท่าคุ้มกายนี้เสริมความแข็งแรงของร่างกายเพื่อรองรับการปะทะ",
-    "title": "บันทึกกายาในถ้ำตื้น",
-    "text": "เจ้าพบคัมภีร์กายาขุนเขาเงียบในกล่องเก่าของถ้ำตื้นที่มีหินหล่น"
-  },
-  {
-    "id": "discovery_third_movement_uncommon",
-    "type": "movement",
-    "grade": "uncommon",
-    "name": "ก้าวแมวป่า",
-    "bonus": {
-      "agility": 3,
-      "defense": 2,
-      "body": 1
-    },
-    "description": "ย่อกายแล้วก้าวสั้นเพื่อหลบ พร้อมรักษาการทรงตัว",
-    "title": "ภาพเท้าบนแผ่นผ้า",
-    "text": "เจ้าพบคัมภีร์ก้าวแมวป่าในแผ่นผ้าที่มีภาพรอยเท้าหลายจังหวะ"
-  },
-  {
-    "id": "discovery_third_movement_rare",
-    "type": "movement",
-    "grade": "rare",
-    "name": "ก้าวแยกเงา",
-    "bonus": {
-      "agility": 7,
-      "defense": 4
-    },
-    "description": "เคลื่อนตัวออกด้านข้างก่อนตั้งแนวรับ ทำให้เปลี่ยนระยะได้โดยไม่เปิดช่องง่าย",
-    "title": "บันทึกเงาบนพื้นหิน",
-    "text": "เจ้าพบคัมภีร์ก้าวแยกเงาใต้แผ่นหินที่มีรอยขีดเป็นแนวเท้า"
-  },
-  {
-    "id": "discovery_third_movement_epic",
-    "type": "movement",
-    "grade": "epic",
-    "name": "ย่างวายุโอบผา",
-    "bonus": {
-      "agility": 11,
-      "defense": 6
-    },
-    "description": "ผู้ฝึกก้าวเฉียงเลาะแนวแรงปะทะดุจลมวนรอบหน้าผา พร้อมยกแขนคุ้มกายขณะเปลี่ยนตำแหน่งอย่างต่อเนื่อง",
-    "title": "ม้วนลมหลังโขดหิน",
-    "text": "คัมภีร์ย่างวายุโอบผาวางในซอกหลังโขดหินซึ่งลมพัดแรง"
-  },
-  {
-    "id": "discovery_third_cultivation_uncommon",
-    "type": "cultivation",
-    "grade": "uncommon",
-    "name": "ลมหายใจดินอุ่น",
-    "bonus": {
-      "training": 3,
-      "body": 2
-    },
-    "description": "หายใจช้าและมั่นคงเพื่อฝึกปราณควบคู่การตั้งกาย",
-    "title": "สมุดลมหายใจในถุงผ้า",
-    "text": "เจ้าพบคัมภีร์ลมหายใจดินอุ่นในถุงผ้าที่เก็บไว้ในภาชนะดิน"
-  },
-  {
-    "id": "discovery_third_cultivation_rare",
-    "type": "cultivation",
-    "grade": "rare",
-    "name": "ปราณเกล็ดน้ำค้าง",
-    "bonus": {
-      "training": 7,
-      "body": 3
-    },
-    "description": "ค่อย ๆ รวบรวมลมหายใจดั่งหยดน้ำค้าง พร้อมขัดเกลาร่างกายให้มั่นคงระหว่างฝึก",
-    "title": "คัมภีร์หยดน้ำค้าง",
-    "text": "เจ้าพบคัมภีร์ปราณเกล็ดน้ำค้างในห่อกันชื้นข้างแนวหิน"
-  },
-  {
-    "id": "discovery_third_cultivation_epic",
-    "type": "cultivation",
-    "grade": "epic",
-    "name": "เคล็ดปราณขอบฟ้า",
-    "bonus": {
-      "training": 11,
-      "defense": 4
-    },
-    "description": "ผู้ฝึกเรียงจังหวะหายใจให้ยาวและสม่ำเสมอราวเส้นขอบฟ้า พร้อมตั้งท่าคุ้มกายเพื่อประคองการบำเพ็ญ",
-    "title": "บันทึกขอบฟ้าในหอร้าง",
-    "text": "เจ้าพบคัมภีร์เคล็ดปราณขอบฟ้าในหอร้างที่หน้าต่างเปิดรับลมแรง"
-  }
-]);
-  const EXTRA_MANUAL_ACTIONS = {
-    discovery_alt_fist_uncommon: ['ดึงห่อผ้าออกจากระหว่างท่อนไม้', 'ดูว่าท่อนไม้กดห่ออยู่ตรงไหน', 'ปล่อยห่อผ้าไว้'],
-    discovery_alt_fist_rare: ['เปิดหีบหลังแผ่นไม้ชำรุด', 'ตรวจแผ่นไม้ที่บังหีบก่อน', 'ไม่เปิดหีบหลังแผ่นไม้'],
-    discovery_alt_fist_epic: ['ขึ้นชั้นหินไปหยิบคัมภีร์ในศาลา', 'ดูหลังคาศาลาที่ชำรุดจากด้านนอก', 'ไม่เข้าไปใต้หลังคาศาลา'],
-    discovery_alt_blade_uncommon: ['แก้ผ้าใบจากด้ามไม้แล้วเก็บตำรา', 'ตรวจผ้าใบที่พันรอบด้ามไม้', 'วางด้ามไม้กับผ้าใบไว้'],
-    discovery_alt_blade_rare: ['ลอดทางแคบไปเอาคัมภีร์จากช่องหิน', 'มองความกว้างของทางเข้าก่อน', 'ไม่ลอดเข้าไปในช่องทางแคบ'],
-    discovery_alt_blade_epic: ['ค้นหลังเตาหินเพื่อนำคัมภีร์ออกมา', 'สังเกตเศษซากรอบเตาหิน', 'ออกจากบริเวณเตาเก่า'],
-    discovery_alt_sword_uncommon: ['แก้กล่องออกจากซากแพไม้', 'ดูเชือกที่ผูกกล่องกับแพ', 'ทิ้งกล่องไว้กับซากแพ'],
-    discovery_alt_sword_rare: ['นำคัมภีร์ออกจากโพรงไม้', 'ตรวจรอยขุดเก่าข้างโพรง', 'ไม่แตะโพรงไม้'],
-    discovery_alt_sword_epic: ['หยิบตำราใต้โคมหินที่เอน', 'ดูว่าโคมหินเอนไปทางใด', 'เดินผ่านโคมหินโดยไม่หยิบตำรา'],
-    discovery_alt_defense_uncommon: ['ดึงคัมภีร์ออกจากท่อนไม้กลวง', 'ดูร่องท่อนไม้ก่อนเอื้อมมือ', 'ปล่อยท่อนไม้ไว้'],
-    discovery_alt_defense_rare: ['นำห่อกันน้ำจากข้างทางน้ำ', 'สำรวจความลึกของน้ำตื้น', 'ไม่เก็บห่อที่ริมน้ำ'],
-    discovery_alt_defense_epic: ['ปีนขึ้นไปหยิบคัมภีร์จากซอกผา', 'ตรวจจุดจับบนผาก่อนปีน', 'ไม่ปีนขึ้นซอกผา'],
-    discovery_alt_movement_uncommon: ['ยกหินสัญลักษณ์เท้าเพื่อเก็บตำรา', 'ดูเครื่องหมายเท้าบนก้อนหิน', 'ไม่ขยับก้อนหิน'],
-    discovery_alt_movement_rare: ['คลี่ผืนผ้าและเก็บคัมภีร์', 'พิจารณาแผนก้าวเป็นวงบนผ้า', 'ปล่อยผืนผ้าม้วนไว้'],
-    discovery_alt_movement_epic: ['ข้ามพื้นที่ยุบไปเอาคัมภีร์ในหอ', 'ตรวจพื้นหอจากปากทาง', 'ออกจากหอพื้นทรุด'],
-    discovery_alt_cultivation_uncommon: ['แกะเปลือกไม้เพื่อเก็บคัมภีร์', 'ตรวจเปลือกไม้แห้งที่ห่อไว้', 'ทิ้งเปลือกไม้ไว้'],
-    discovery_alt_cultivation_rare: ['เปิดผ้าผนึกไหดินแล้วเก็บคัมภีร์', 'ตรวจผ้าที่ปิดปากไห', 'ไม่เปิดไหดิน'],
-    discovery_alt_cultivation_epic: ['ยกพื้นหินชำรุดเพื่อเอากล่องทองแดง', 'ตรวจรอยชำรุดบนพื้นหิน', 'ไม่ยกพื้นหิน'],
-    discovery_third_fist_uncommon: ['เก็บห่อป่านหลังหลักทาง', 'ตรวจหลักทางและห่อป่านก่อน', 'ปล่อยห่อป่านไว้หลังหลัก'],
-    discovery_third_fist_rare: ['เคลื่อนเศษหินเพื่อเอาคัมภีร์ในโพรง', 'ดูเศษหินที่ปิดโพรงดิน', 'ไม่ขุดโพรงที่มีหินร่วง'],
-    discovery_third_fist_epic: ['เข้าใต้หน้าผาแตกร้าวไปเอากล่องหิน', 'ตรวจรอยแตกจากนอกหน้าผา', 'ออกห่างจากหน้าผา'],
-    discovery_third_blade_uncommon: ['ดึงตำราดาบออกจากซอกตอไม้', 'สำรวจตอไม้ริมทางเก่า', 'ทิ้งตำราในตอไม้'],
-    discovery_third_blade_rare: ['ปลดผ้าคลุมจากกิ่งไม้เพื่อเก็บตำรา', 'ดูว่าผ้าคลุมติดกิ่งตรงไหน', 'ไม่ปลดผ้าจากกิ่งไม้'],
-    discovery_third_blade_epic: ['ไปเปิดหีบบนทางลาดที่ถูกฝนกัดเซาะ', 'ตรวจความมั่นคงของทางลาด', 'ไม่ขึ้นทางลาดที่สึกกร่อน'],
-    discovery_third_sword_uncommon: ['เปิดกระบอกลายใบสนแล้วเก็บคัมภีร์', 'ดูรายละเอียดลายบนกระบอกไม้', 'ปล่อยกระบอกไม้ไว้'],
-    discovery_third_sword_rare: ['นำกล่องเคลือบสีจากใต้ชายหินเปียกฝน', 'ดูพื้นเปียกใต้ชายหินก่อน', 'ไม่เข้าใต้ชายหินเปียก'],
-    discovery_third_sword_epic: ['เปิดหีบไม้ใต้ศิลาลายดาว', 'ตรวจรอยดาวบนศิลาก่อน', 'ปล่อยหีบไว้ใต้ศิลา'],
-    discovery_third_defense_uncommon: ['แก้ห่อผ้าจากกิ่งไม้ต่ำ', 'ตรวจปมที่ผูกห่อกับกิ่ง', 'ไม่แก้ห่อจากกิ่งไม้'],
-    discovery_third_defense_rare: ['ยกกระเบื้องแตกเพื่อเอาม้วนผ้า', 'ดูขอบกระเบื้องแตกก่อนยก', 'ไม่แตะกระเบื้องแตก'],
-    discovery_third_defense_epic: ['เข้าไปเอากล่องเก่าจากถ้ำที่มีหินหล่น', 'ฟังเสียงหินหล่นจากปากถ้ำ', 'ไม่เข้าไปในถ้ำ'],
-    discovery_third_movement_uncommon: ['เก็บคัมภีร์บนแผ่นผ้ารอยเท้า', 'ดูภาพรอยเท้าหลายจังหวะ', 'วางแผ่นผ้าไว้'],
-    discovery_third_movement_rare: ['ยกแผ่นหินรอยเท้าเพื่อเอาคัมภีร์', 'ตรวจแนวรอยขีดบนแผ่นหิน', 'ไม่ยกแผ่นหิน'],
-    discovery_third_movement_epic: ['ฝ่าลมแรงไปหยิบคัมภีร์หลังโขดหิน', 'ดูทิศลมก่อนเข้าใกล้โขดหิน', 'ไม่เข้าไปด้านหลังโขดหิน'],
-    discovery_third_cultivation_uncommon: ['เปิดภาชนะดินแล้วหยิบถุงคัมภีร์', 'ตรวจสภาพภาชนะดินก่อนเปิด', 'วางภาชนะดินไว้'],
-    discovery_third_cultivation_rare: ['เก็บห่อกันชื้นข้างแนวหิน', 'ตรวจห่อกันชื้นก่อนหยิบ', 'ปล่อยห่อไว้ข้างแนวหิน'],
-    discovery_third_cultivation_epic: ['เข้าไปเก็บคัมภีร์ที่หน้าต่างหอร้าง', 'มองภายในหอร้างจากทางเข้า', 'ไม่เข้าไปในหอร้าง']
-  };
-  const ADDITIONAL_MANUAL_TYPES = { ...MANUAL_DISCOVERY_TYPES, sword: { label: 'กระบี่', slot: 'combat', subtype: 'jian', manualSubtype: 'attack_jian', learningType: 'martial' } };
-
+  const { MANUAL_DISCOVERY_TYPES, EXTRA_MANUAL_SCENES, ADDITIONAL_MANUAL_TECHNIQUES, EXTRA_MANUAL_ACTIONS, ADDITIONAL_MANUAL_TYPES } = window.OneLifeTechniqueCatalog.createManualCatalog();
   function discoveryManualName(techniqueId) {
     const extra = ADDITIONAL_MANUAL_TECHNIQUES.find(t => t.id === techniqueId);
     if (extra) return `คัมภีร์${ADDITIONAL_MANUAL_TYPES[extra.type].label} · ${extra.name}`;
@@ -4808,11 +3924,14 @@
         const manualDef = manualType ? MANUAL_DISCOVERY_TYPES[manualType] : null;
         const techniqueId = kind === 'manual' ? `discovery_sword_${itemGrade}` : manualDef ? `discovery_${manualType}_${itemGrade}` : undefined;
         const name = kind === 'weapon' ? ({ uncommon: 'กระบี่ทางสน', rare: 'กระบี่เมฆเคลื่อน', epic: 'กระบี่ดาราซ่อนคม' }[itemGrade]) : discoveryManualName(techniqueId);
+        const workbookManualType = kind === 'manual' ? 'jian' : manualType;
         const reward = kind === 'herb' ? { type: 'gradedMaterial', key: 'herb', grade: itemGrade, value: 1 }
-          : { type: 'treasure', name, bonus: kind === 'weapon' ? { attack: ({ uncommon: 5, rare: 6, epic: 7 }[itemGrade]), agility: 1 } : {}, grade: itemGrade, category: kind === 'weapon' ? 'weapon' : 'technique_manual', subtype: kind === 'weapon' ? 'jian' : manualDef?.manualSubtype || 'attack_jian', techniqueId };
+          : workbookManualType ? { type: 'workbookTechniqueManual', grade: itemGrade, manualType: workbookManualType }
+            : { type: 'treasure', name, bonus: kind === 'weapon' ? { attack: ({ uncommon: 5, rare: 6, epic: 7 }[itemGrade]), agility: 1 } : {}, grade: itemGrade, category: kind === 'weapon' ? 'weapon' : 'technique_manual', subtype: kind === 'weapon' ? 'jian' : manualDef?.manualSubtype || 'attack_jian', techniqueId };
         const discoveryActions = DISCOVERY_ACTIONS[`${rarity}/${kind}`];
         const discoveryDanger = /พลาด|ไม่มั่นคง|หลงทาง|ไม่ปลอดภัย|พัง|สัตว์|ลาดชัน|เศษหิน|ไหลเชี่ยว|หมอก/.test(text);
         groups.push({ id: `graded-discovery-${rarity}-${kind}`, rarity, activity: 'explore', title, text, tag: `${phase.name} · ${EVENT_RARITIES[rarity].name}`, uniqueGraded: true,
+          ...(workbookManualType ? { unlock: s => availableWorkbookTechniqueManuals(s, itemGrade, workbookManualType).length > 0 } : {}),
           choices: [
             { text: discoveryActions[0], note: discoveryDanger ? 'สำเร็จได้รับของ · พลาดเสียสุขภาพ' : 'สำเร็จได้รับของ · พลาดยังไม่ได้ของ', check: { stat: 'intellect', difficulty: 10 + power }, effects: [reward], failureEffects: discoveryDanger ? [{ type: 'stat', path: 'hero.health', value: -healthLoss(power) }] : [] },
             { text: discoveryActions[1], note: 'ยังไม่ได้รับของ', effects: [{ type: 'path', key: 'insight', value: power }] },
@@ -4867,6 +3986,13 @@
       jewelry: ['หีบหลังม่านหมอก', 'ในที่ซ่อนซึ่งถูกหมอกปิดล้อม เจ้าพบเครื่องประดับมีตราตระกูลเก่า หากเข้าไปอาจหาทางกลับลำบาก'],
       cursed: ['ห่อผนึกต้องห้าม', 'ห่อผนึกจากห้องลับซ่อนวัตถุอาถรรพ์ซึ่งผู้คนเคยแย่งชิง พลังของมันอาจแลกด้วยผลเสีย'],
       mounts: ['พาหนะฝ่าเขตอันตราย', 'สัตว์พาหนะหายากติดอยู่ใกล้เส้นทางที่กำลังพังทลาย หากช่วยมันออกมาอาจยอมร่วมทาง']
+    },
+    legendary: {
+      weapons: ['อาวุธจากหอผนึกสวรรค์', 'ภายในหอผนึกเก่ามีอาวุธตำนานซ่อนอยู่ กลไกผนึกยังทำงานและทางเดินไม่มั่นคง'],
+      armor: ['เกราะตำนานใต้แท่นผนึก', 'แท่นผนึกที่แตกร้าวเผยให้เห็นเครื่องป้องกันตำนาน แต่แรงปราณรอบแท่นยังแปรปรวน'],
+      jewelry: ['เครื่องประดับตำนานในสุสาน', 'สุสานโบราณเก็บเครื่องประดับตำนานไว้หลังกลไกที่ยังไม่คลาย'],
+      cursed: ['วัตถุต้องห้ามระดับตำนาน', 'วัตถุต้องห้ามระดับตำนานถูกผนึกไว้หลายชั้น การแตะต้องอาจปลุกคำสาปรุนแรง'],
+      mounts: ['พาหนะสายเลือดบรรพกาล', 'พาหนะสายเลือดบรรพกาลบาดเจ็บอยู่ในเขตอันตรายและยังไม่ยอมให้ผู้ใดเข้าใกล้']
     }
   };
 
@@ -4890,17 +4016,22 @@
     'epic/armor': ['พยายามเปิดหีบผนึกและหลบกลไกป้องกัน', 'ไม่เข้าใกล้หีบที่อาจมีกลไก'],
     'epic/jewelry': ['ฝ่าหมอกไปนำเครื่องประดับตราตระกูล', 'ไม่เสี่ยงหลงทางเข้าไปในหมอก'],
     'epic/cursed': ['เปิดห่อผนึกที่ผู้คนเคยแย่งชิง', 'ทิ้งห่ออาถรรพ์ไว้ในห้องลับ'],
-    'epic/mounts': ['เข้าไปช่วยพาหนะออกจากเส้นทางที่พัง', 'ไม่เข้าไปบนเส้นทางที่กำลังพัง']
+    'epic/mounts': ['เข้าไปช่วยพาหนะออกจากเส้นทางที่พัง', 'ไม่เข้าไปบนเส้นทางที่กำลังพัง'],
+    'legendary/weapons': ['ฝ่ากลไกผนึกเพื่อนำอาวุธตำนานออกมา', 'สำรวจกลไกก่อนเข้าใกล้อาวุธ'],
+    'legendary/armor': ['คลายผนึกและนำเครื่องป้องกันตำนานออกมา', 'ถอยจากแท่นผนึกที่แปรปรวน'],
+    'legendary/jewelry': ['เปิดกลไกสุสานเพื่อนำเครื่องประดับออกมา', 'หลีกเลี่ยงกลไกที่ยังทำงาน'],
+    'legendary/cursed': ['เปิดผนึกวัตถุต้องห้ามตำนาน', 'ปล่อยวัตถุต้องห้ามไว้ในผนึก'],
+    'legendary/mounts': ['ช่วยพาหนะบรรพกาลออกจากเขตอันตราย', 'ไม่เข้าใกล้พาหนะที่ยังตื่นกลัว']
   };
 
   function buildLibraryDiscoveryEvents() {
     return Object.entries(LIBRARY_DISCOVERY_SCENES).flatMap(([rarity, categories]) =>
       Object.entries(categories).map(([category, [title, text]]) => {
-        const grade = { normal: 'common', uncommon: 'uncommon', extraordinary: 'rare', epic: 'epic' }[rarity];
+        const grade = { normal: 'common', uncommon: 'uncommon', extraordinary: 'rare', epic: 'epic', legendary: 'legendary' }[rarity];
         const power = { normal: 1, uncommon: 2, extraordinary: 4, epic: 7 }[rarity];
         const cursed = category === 'cursed';
         const actions = LIBRARY_DISCOVERY_ACTIONS[`${rarity}/${category}`];
-        const dangerous = category === 'mounts' || (rarity === 'extraordinary' && ['armor', 'jewelry'].includes(category)) || (rarity === 'epic' && ['weapons', 'armor', 'jewelry'].includes(category));
+        const dangerous = category === 'mounts' || (rarity === 'extraordinary' && ['armor', 'jewelry'].includes(category)) || (['epic', 'legendary'].includes(rarity) && ['weapons', 'armor', 'jewelry'].includes(category));
         return {
           id: `library-discovery-${rarity}-${category}`, rarity, activity: category === 'mounts' ? 'travel' : 'explore',
           minAge: 12, title, text, tag: `ค้นพบ · ${ITEM_GRADES[grade].name}`, libraryDiscovery: true,
@@ -4920,7 +4051,9 @@
   function availableLibraryLoot(s, grade, category) {
     const owned = new Set((s.treasures || []).map(item => typeof item === 'string' ? item : item.id || item.name));
     const names = new Set((s.treasures || []).map(item => typeof item === 'string' ? item : item.name));
-    return (ITEM_LIBRARY[grade]?.[category] || []).filter(item => !owned.has(item.id) && !names.has(item.name));
+    const realm = s.hero?.cultivationAccess || s.flags?.basicCultivation ? Math.max(1, Number(s.hero?.realm) || 1) : 0;
+    return (ITEM_LIBRARY[grade]?.[category] || []).filter(item => !owned.has(item.id) && !names.has(item.name)
+      && (!['weapon', 'armor', 'talisman'].includes(item.category) || item.equipmentRealm <= Math.max(1, realm + 1)));
   }
 
   function grantLibraryLoot(s, grade, category) {
@@ -4930,6 +4063,31 @@
     s.treasures = Array.isArray(s.treasures) ? s.treasures : [];
     addTreasure(s, item.name, { ...item.bonus }, { ...item, bonus: { ...item.bonus }, travel: item.travel ? { ...item.travel } : undefined });
     return item;
+  }
+
+  function workbookTechniqueManualCategory(type) {
+    return type === 'fist' ? { category: 'attack', subtype: 'fist' }
+      : ['blade', 'jian'].includes(type) ? { category: 'attack', subtype: 'jian' }
+        : type === 'defense' ? { category: 'defense' }
+          : type === 'movement' ? { category: 'movement' }
+            : type === 'cultivation' ? { category: 'cultivation' } : null;
+  }
+  function availableWorkbookTechniqueManuals(s, grade, type) {
+    const target = workbookTechniqueManualCategory(type);
+    if (!target) return [];
+    const currentRealm = s.hero?.cultivationAccess || s.flags?.basicCultivation ? Math.max(1, Number(s.hero?.realm) || 1) : 0;
+    const owned = new Set((s.treasures || []).map(item => typeof item === 'object' ? item.techniqueId : null).filter(Boolean));
+    const rows = TECHNIQUE_LIBRARY[grade]?.[target.category] || [];
+    return rows.filter(item => !owned.has(item.id) && (!target.subtype || item.techniqueSubtype === target.subtype) && item.manualRealm <= Math.max(1, currentRealm + 1));
+  }
+  function grantWorkbookTechniqueManual(s, grade, type) {
+    const pool = availableWorkbookTechniqueManuals(s, grade, type);
+    if (!pool.length) return null;
+    const technique = pool[Math.floor(Math.random() * pool.length)];
+    const labels = { fist: 'หมัด', blade: 'กระบี่', jian: 'กระบี่', defense: 'ป้องกัน', movement: 'ย่างก้าว', cultivation: 'บำเพ็ญ' };
+    const name = `คัมภีร์${labels[type] || 'วิชา'} · ${technique.name}`;
+    addTreasure(s, name, {}, { id: `manual_${technique.id}`, grade, category: 'technique_manual', subtype: technique.manualSubtype, learningType: technique.learningType, techniqueId: technique.id, manualRealm: technique.manualRealm, manualStage: technique.manualStage, workbookSourceId: technique.id });
+    return technique;
   }
 
   function buildAnnualEventPool(s) {
@@ -5005,58 +4163,9 @@
     });
   }
 
-  const MIDDLE_GAME_EVENTS = [
-    { id: 'middle_rival_sect', activity: 'sect', minMonth: 84, title: 'สำนักคู่แข่งส่งสารท้าทาย', text: 'สำนักหุบเขาแดงส่งสารกล่าวหาว่าเมฆาครามแย่งเส้นทางค้าและศิษย์ของพวกเขา ความขัดแย้งยังแก้ได้ด้วยคำพูดหรือฝีมือ', choices: [
-      { text: 'ขอเจรจาแบ่งเส้นทาง', effects: [{ type: 'faction', key: 'sect', value: 3 }, { type: 'stat', path: 'hero.reputation', value: 3 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { s.flags.rivalSectTreaty = true; addLog('สำนักคู่แข่งยอมแบ่งเส้นทางค้า ชื่อของเจ้าเริ่มมีน้ำหนักในสภาสำนัก', true); } },
-      { text: 'รับคำประลองแทนสำนัก', effects: [{ type: 'stat', path: 'hero.health', value: -10 }, { type: 'stat', path: 'hero.powerBonus', value: 45 }, { type: 'path', key: 'duty', value: 2 }], effect: s => { s.flags.rivalSectDuel = true; addLog('เจ้ารับคำประลองแทนสำนัก แม้บาดเจ็บแต่ไม่ยอมให้ชื่อเมฆาครามถูกเหยียบ', true); } },
-      { text: 'ปล่อยให้ผู้อาวุโสตัดสิน', effects: [{ type: 'path', key: 'freedom', value: 1 }], effect: s => addLog('เจ้าถอยออกจากการเมืองสำนัก และเก็บข้อมูลความขัดแย้งไว้เงียบ ๆ') }
-    ] },
-    { id: 'middle_sect_politics', activity: 'sect', minMonth: 96, title: 'เสียงกระซิบในสภาศิษย์', text: 'ศิษย์อาวุโสสองฝ่ายผลักดันคนละแนวทาง ฝ่ายหนึ่งต้องการส่งกำลังไปช่วยเมือง อีกฝ่ายต้องการเก็บกำลังไว้ป้องกันสำนัก', choices: [
-      { text: 'สนับสนุนการช่วยเมือง', effects: [{ type: 'faction', key: 'sect', value: 2 }, { type: 'stat', path: 'hero.reputation', value: 4 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { s.flags.sectCivicFaction = true; addLog('สภาสำนักส่งกำลังช่วยเมือง ผู้คนภายนอกเริ่มเชื่อใจเมฆาคราม', true); } },
-      { text: 'สนับสนุนการรักษากำลัง', effects: [{ type: 'stat', path: 'hero.powerBonus', value: 35 }, { type: 'path', key: 'duty', value: 2 }], effect: s => { s.flags.sectFortressFaction = true; addLog('สำนักเก็บกำลังไว้ได้มากขึ้น แต่เมืองชายแดนจำการตัดสินใจนี้ไว้', true); } }
-    ] },
-    { id: 'middle_disciple_traitor', activity: 'any', minMonth: 108, unlock: s => !!s.flags?.metSect && ((s.relations?.senior || 0) >= 8 || s.flags?.knowsTraitor), title: 'ศิษย์ร่วมรุ่นผู้ส่งข่าว', text: 'เจ้าพบรอยหมึกงูดำบนใบขอเบิกเสบียง ศิษย์ร่วมรุ่นคนหนึ่งอาจส่งข้อมูลให้คนนอก แต่หลักฐานยังไม่พอจะกล่าวหาใคร', choices: [
-      { text: 'ติดตามรอยหมึกอย่างลับ ๆ', effects: [{ type: 'path', key: 'insight', value: 3 }, { type: 'stat', path: 'hero.reputation', value: 2 }], effect: s => { s.flags.discipleTraitorTracked = true; s.flags.knowsTraitor = true; addLog('เจ้าตามรอยหมึกจนพบว่าศิษย์ทรยศยังไม่ได้ส่งข้อมูลทั้งหมด ความจริงใกล้เปิดเผย', true); } },
-      { text: 'แจ้งอาจารย์ทันที', effects: [{ type: 'relation', key: 'master', value: 6 }, { type: 'path', key: 'duty', value: 2 }], effect: s => { s.flags.warnedMaster = true; addLog('อาจารย์สั่งตรวจบัญชีใหม่และป้องกันไม่ให้ความสงสัยกลายเป็นการลงโทษผิดคน', true); } },
-      { text: 'แบล็กเมลศิษย์คนนั้น', effects: [{ type: 'stat', path: 'hero.money', value: 12 }, { type: 'stat', path: 'hero.reputation', value: -4 }, { type: 'path', key: 'freedom', value: 2 }], effect: s => { s.flags.debtProvoked = true; addLog('เจ้าบังคับให้ศิษย์ทรยศจ่ายเงินแลกกับความเงียบ ข่าวนี้อาจย้อนกลับมาทวงราคาในภายหลัง'); } }
-    ] },
-    { id: 'middle_black_market', minAge: 12, activity: 'social', minMonth: 90, title: 'ประตูหลังตลาดมืด', text: 'คนรู้จักพาเจ้าเข้าตรอกที่ไม่มีป้าย ร้านค้าด้านในรับซื้อของจากสงครามและขายข้อมูลที่ทางการไม่ยอมรับ', choices: [
-      { text: 'ขายของที่ไม่ต้องใช้', effects: [{ type: 'stat', path: 'hero.money', value: 10 }, { type: 'path', key: 'freedom', value: 1 }], effect: s => { s.flags.blackMarketKnown = true; addLog('ตลาดมืดจ่ายเงินสูงกว่าตลาดปกติ แต่ชื่อของเจ้าถูกจดลงในบัญชีลับ', true); } },
-      { text: 'ซื้อข่าวเส้นทางงูดำ', requires: s => (s.hero?.money || 0) >= 8, locked: 'เงินไม่พอซื้อข่าว', effects: [{ type: 'stat', path: 'hero.money', value: -8 }, { type: 'path', key: 'insight', value: 3 }], effect: s => { s.flags.blackMarketIntel = true; s.flags.foundMap = true; addLog('ข่าวจากตลาดมืดชี้เส้นทางลำเลียงของงูดำและช่วยให้เจ้าเตรียมตัวก่อนคนอื่น', true); } },
-      { text: 'แจ้งทางการและถอนตัว', effects: [{ type: 'stat', path: 'hero.reputation', value: 5 }, { type: 'path', key: 'duty', value: 2 }], effect: s => { s.flags.blackMarketReported = true; addLog('ทางการกวาดตรอกตลาดมืด แต่คนขายข่าวจำชื่อของเจ้าได้'); } }
-    ] },
-    { id: 'middle_natural_disaster', minAge: 12, activity: 'explore', minMonth: 104, title: 'ฝนหล่มถล่มหมู่บ้าน', text: 'ฝนตกต่อเนื่องจนทางน้ำเปลี่ยนทิศ บ้านชายเขาหลายหลังถูกตัดขาด และผู้คนต้องการทั้งแรงงานกับยา', choices: [
-      { text: 'ใช้แรงเปิดทางน้ำ', effects: [{ type: 'stat', path: 'hero.health', value: -8 }, { type: 'stat', path: 'hero.reputation', value: 6 }, { type: 'relation', key: 'acquaintance', value: 5 }], effect: s => { s.flags.disasterRelief = true; addLog('ทางน้ำเปิดอีกครั้ง ผู้คนจำมือที่เปื้อนโคลนของเจ้าได้ดีกว่าคำประกาศใด', true); } },
-      { text: 'ขายสมุนไพรให้ผู้ดูแลเสบียง', requires: s => (s.materials?.herb || 0) >= 2, locked: 'สมุนไพรไม่พอ', effects: [{ type: 'material', key: 'herb', value: -2 }, { type: 'stat', path: 'hero.money', value: 8 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { s.flags.disasterSupplies = true; addLog('ผู้ดูแลเสบียงรับซื้อสมุนไพรเพื่อนำไปรักษาคนเจ็บ'); } },
-      { text: 'จดแผนที่น้ำหลากแล้วเดินทางต่อ', effects: [{ type: 'path', key: 'insight', value: 3 }, { type: 'stat', path: 'hero.health', value: -2 }], effect: s => { s.flags.floodMap = true; addLog('แผนที่น้ำหลากทำให้เส้นทางในฤดูฝนของเจ้าปลอดภัยขึ้น'); } }
-    ] },
-    { id: 'middle_regional_war', activity: 'any', minMonth: 120, minAge: 15, unlock: s => (s.world?.modifiers?.travelRisk || 0) >= 4 || (s.world?.modifiers?.refugeePressure || 0) >= 5, title: 'สงครามลามถึงชายแดน', text: 'กองกำลังจากสองฝ่ายขยับเข้าหาเมืองชายแดน ผู้ลี้ภัยเพิ่มขึ้น และคนธรรมดาต้องเลือกว่าจะช่วยแนวหน้า แนวหลัง หรือพาตัวเองออกไป', choices: [
-      { text: 'เข้าหน่วยรักษาแนวหลัง', effects: [{ type: 'stat', path: 'hero.health', value: -10 }, { type: 'stat', path: 'hero.reputation', value: 8 }, { type: 'path', key: 'duty', value: 3 }], effect: s => { s.flags.regionalWarService = true; addLog('เจ้ารับงานแนวหลังและเห็นว่าสงครามไม่ได้มีแต่คนถือดาบ', true); } },
-      { text: 'พาผู้ลี้ภัยออกจากเส้นทางศึก', requires: s => s.hero.money >= 6, locked: 'ต้องมีเงินอย่างน้อย 6 ตำลึง', effects: [{ type: 'stat', path: 'hero.money', value: -6 }, { type: 'stat', path: 'hero.reputation', value: 5 }, { type: 'path', key: 'compassion', value: 3 }], effect: s => { s.flags.regionalWarRelief = true; addLog('ขบวนผู้ลี้ภัยผ่านช่องเขาได้ก่อนกองทัพปิดถนน'); } },
-      { text: 'รับสัญญาคุ้มกันสินค้า', effects: [{ type: 'stat', path: 'hero.money', value: 20 }, { type: 'stat', path: 'hero.reputation', value: -3 }, { type: 'path', key: 'freedom', value: 2 }], effect: s => { s.flags.regionalWarContract = true; addLog('สัญญาสงครามทำให้เจ้ามีเงินมากขึ้น แต่บางคนเรียกเจ้าว่าคนหากำไรจากความพินาศ'); } }
-    ] },
-    { id: 'middle_master_companion_arc', storyCharacter: 'lin-an', activity: 'social', minMonth: 96, unlock: s => (s.relations?.master || 0) >= 10 || (s.relations?.friend || 0) >= 10, title: 'คำสัญญาของอาจารย์และสหาย', text: 'อาจารย์เหวินกับเฉินหยูต่างขอให้เจ้าช่วยคนละเรื่องในคืนเดียว คนหนึ่งต้องการรักษารากฐานสำนัก อีกคนต้องการตามหาผู้สูญหายจากหมู่บ้านชายแดน', choices: [
-      { text: 'แบ่งเวลาให้ทั้งสองฝ่าย', effects: [{ type: 'stat', path: 'hero.health', value: -6 }, { type: 'relation', key: 'master', value: 5 }, { type: 'relation', key: 'friend', value: 5 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { s.flags.masterFriendArcShared = true; addLog('เจ้าไม่ยอมให้คำสัญญาสองสายกลายเป็นเหตุผลที่ต้องทอดทิ้งใครคนหนึ่ง', true); } },
-      { text: 'เลือกภารกิจของอาจารย์', effects: [{ type: 'relation', key: 'master', value: 10 }, { type: 'stat', path: 'hero.powerBonus', value: 55 }, { type: 'path', key: 'duty', value: 2 }], effect: s => { s.flags.masterArcChosen = true; addLog('อาจารย์มอบความลับของค่ายกลให้เจ้า เพราะรู้ว่าเจ้ารักษาหน้าที่ได้'); } },
-      { text: 'เลือกตามหาคนหายกับสหาย', effects: [{ type: 'relation', key: 'friend', value: 10 }, { type: 'stat', path: 'hero.reputation', value: 5 }, { type: 'path', key: 'freedom', value: 2 }], effect: s => { s.flags.friendArcChosen = true; addLog('เฉินหยูได้คนกลับบ้าน และมิตรภาพของพวกเจ้ากลายเป็นเรื่องที่คนอื่นพึ่งพาได้'); } }
-    ] }
-  ];
+  let MIDDLE_GAME_EVENTS;
+  let DEBT_EVENTS;
 
-  const DEBT_EVENTS = [
-    {
-      id: 'debt_collection_notice', minAge: 12, activity: 'any', minMonth: 1,
-      unlock: s => !!s.flags?.debtCollectionDue && (s.household?.debt || 0) > 0,
-      title: 'เจ้าหนี้มาถึงหน้าบ้าน',
-      text: s => `${s.household?.creditor || 'เจ้าหนี้ตลาดชายแดน'}ส่งคนมาติดตามหนี้ ดอกเบี้ยสะสม ${s.household?.interestAccrued || 0} ตำลึง และเอกสารยึดทรัพย์ถูกวางไว้บนโต๊ะ`,
-      choices: [
-        { text: 'จ่ายเงินก้อนเพื่อลดแรงกดดัน', note: 'จ่าย 10 ตำลึง ลดหนี้ 16 ตำลึงและล้างค้างชำระ', requires: s => (s.hero?.money || 0) >= 10, locked: 'เงินไม่พอจ่ายก้อนเจรจา', effect: s => { const h = ensureHousehold(s); s.hero.money -= 10; h.debt = Math.max(0, h.debt - 16); h.arrears = 0; h.collectionStage = Math.max(0, h.collectionStage - 1); s.flags.debtCollectionDue = false; s.hero.reputation += 2; addLog('เจ้าหนี้รับเงินก้อนและถอนเอกสารยึดทรัพย์ชั่วคราว', true); } },
-        { text: 'ขอผ่อนผันด้วยผลงาน', note: 'ลดดอกเบี้ยชั่วคราว แต่ต้องทำงานและเสียชื่อเสียงเล็กน้อย', effect: s => { const h = ensureHousehold(s); h.interestRate = Math.max(.04, h.interestRate - .01); h.arrears = Math.max(0, h.arrears - 1); s.flags.debtCollectionDue = false; s.hero.reputation -= 1; h.workRisk += 1; addLog('เจ้าหนี้ยอมเลื่อนกำหนดแลกกับการรับงานเสี่ยงในเดือนถัดไป', true); } },
-        { text: 'ปฏิเสธและเตรียมรับการยึดทรัพย์', note: 'ไม่เสียเงินตอนนี้ แต่เจ้าหนี้จะยกระดับการบังคับใช้หนี้', effect: s => { const h = ensureHousehold(s); h.collectionStage = Math.min(3, h.collectionStage + 1); h.arrears += 1; s.flags.debtProvoked = true; s.hero.reputation -= 4; addLog('เจ้าหนี้เก็บเอกสารกลับไปพร้อมรอยยิ้ม และบอกว่าจะกลับมาอีกครั้ง', true); } }
-      ]
-    }
-  ];
-
-  // Story characters belong to their own route, not the player's free life.
   // World events may still mention Lin An as an independent character.
   function eventScopeAllowed(s, event, id = event?.id) {
     if (!event) return false;
@@ -5076,6 +4185,7 @@
     const infantLegendaryEvents = INFANT_LEGENDARY_EVENTS.filter(event => (!event.unlock || event.unlock(s)) && (event.minMonth || 0) <= s.month && (event.maxMonth ?? Infinity) >= s.month && !s.eventHistory.includes(event.id));
     const infantEpicEvents = INFANT_EPIC_EVENTS.filter(event => (!event.unlock || event.unlock(s)) && (event.minMonth || 0) <= s.month && (event.maxMonth ?? Infinity) >= s.month && !s.eventHistory.includes(event.id));
     const learningEvents = s.activity === 'study' ? LEARNING_EVENTS : [];
+    const trainingEvents = s.activity === 'train' ? TRAINING_EVENTS : [];
     const restEvents = s.activity === 'rest' ? REST_EVENTS : [];
     const explorationEvents = s.activity === 'explore' ? EXPLORATION_EVENTS : [];
     const craftEvents = s.activity === 'craft' ? CRAFT_EVENTS : [];
@@ -5084,7 +4194,7 @@
     const travelEvents = s.activity === 'travel' ? TRAVEL_EVENTS : [];
     const freeLifeEvents = buildFreeLifeEventPool(s);
     const questEvents = s.activity === 'quest' ? QUEST_EVENTS : [];
-    return [...RANDOM_EVENTS, ...MIDDLE_GAME_EVENTS, ...DEBT_EVENTS, ...restEvents, ...learningEvents, ...explorationEvents, ...craftEvents, ...socialEvents, ...OFFICIAL_EVENTS, ...familyEvents, ...travelEvents, ...freeLifeEvents, ...questEvents, ...characterEvents, ...annualEvents, ...infantLegendaryEvents, ...infantEpicEvents].filter(event =>
+    return [...RANDOM_EVENTS, ...MIDDLE_GAME_EVENTS, ...DEBT_EVENTS, ...restEvents, ...learningEvents, ...explorationEvents, ...craftEvents, ...socialEvents, ...OFFICIAL_EVENTS, ...familyEvents, ...travelEvents, ...freeLifeEvents, ...questEvents, ...characterEvents, ...annualEvents, ...infantLegendaryEvents, ...infantEpicEvents, ...trainingEvents].filter(event =>
       eventScopeAllowed(s, event) &&
       // Adult-oriented legacy events can otherwise ask a baby to flee, trade,
       // listen to rumours or care for a spouse. Young children use the authored
@@ -5370,6 +4480,7 @@
       else if (effect.type === 'relation') s.relations[effect.key] = (s.relations[effect.key] || 0) + Number(value || 0);
       else if (effect.type === 'gradedMaterial') { addGradedMaterial(s, effect.key, effect.grade, Number(value || 0)); }
       else if (effect.type === 'libraryLoot') { grantLibraryLoot(s, effect.grade, effect.category); }
+      else if (effect.type === 'workbookTechniqueManual') { grantWorkbookTechniqueManual(s, effect.grade, effect.manualType); }
       else if (effect.type === 'treasure') { addTreasure(s, effect.name, effect.bonus, { grade: effect.grade, category: effect.category, subtype: effect.subtype, techniqueId: effect.techniqueId }); }
       else if (effect.type === 'craftKnowledge') { ensureCraftingState(s); s.crafting.knowledge[effect.key] = Math.max(0, (s.crafting.knowledge[effect.key] || 0) + Number(value || 0)); }
       else if (effect.type === 'money') s.hero.money = Math.max(0, Number(s.hero.money || 0) + Number(value || 0));
@@ -5430,348 +4541,18 @@
     return check ? `${ATTRIBUTE_LABELS[check.stat] || check.stat} ${check.difficulty} · ให้ชะตาตัดสินได้` : '';
   }
 
-  const TECHNIQUES = [
-    { id: 'survival', name: 'สัญชาตญาณเอาตัวรอด', effect: 'กายา +1 · ว่องไว +1', bonus: { body: 1, agility: 1 }, unlock: () => true },
-    { id: 'breath', name: 'เคล็ดรวบรวมปราณเมฆา', effect: 'วิชาบำเพ็ญพื้นฐาน · ความเร็วฝึกตน +10%', bonus: { training: 10 }, unlock: (s) => s.flags.basicCultivation },
-    { id: 'sword', name: 'กระบี่ธารไหล', effect: 'โจมตี +6', bonus: { attack: 6 }, unlock: (s) => s.flags.swordLearned },
-    { id: 'step', name: 'ย่างก้าวไร้เงา', effect: 'ว่องไว +6', bonus: { agility: 6 }, unlock: (s) => s.flags.stepLearned },
-    { id: 'cloudShield', name: 'ม่านเมฆคุ้มกาย', effect: 'ป้องกัน +8', bonus: { defense: 8 }, unlock: (s) => s.flags.shieldLearned },
-    { id: 'tigerBody', name: 'กายาพยัคฆ์หิน', effect: 'กายา +8 · ป้องกัน +3', bonus: { body: 8, defense: 3 }, unlock: (s) => s.flags.bodyLearned },
-    { id: 'swiftBreath', name: 'โคจรปราณเก้าชีพจร', effect: 'ความเร็วฝึกตน +22%', bonus: { training: 22 }, unlock: (s) => s.flags.cultivationLearned },
-    { id: 'ironBody', name: 'กายาเหล็กดำ', effect: 'ป้องกัน +5 · กายา +5', bonus: { defense: 5, body: 5 }, unlock: (s) => s.hero.combat?.body >= 15 },
-    { id: 'clanBlade', name: 'มีดสั้นตระกูลหลิน', effect: 'โจมตี +5 · ว่องไว +3', bonus: { attack: 5, agility: 3 }, unlock: (s) => s.flags.familyToken },
-    { id: 'starSword', name: 'กระบี่ดาวตก', effect: 'โจมตี +12', bonus: { attack: 12 }, unlock: (s) => s.flags.spiritWeapon },
-    { id: 'voidBreath', name: 'หายใจหลอมสุญญตา', effect: 'ความเร็วฝึกตน +18% · โจมตี +4', bonus: { training: 18, attack: 4 }, unlock: (s) => s.flags.enlightenment },
-    { id: 'forbidden', name: 'โลหิตงูดำต้องห้าม', effect: 'โจมตี +15 · กายา -3', bonus: { attack: 15, body: -3 }, unlock: (s) => s.flags.forbiddenPower },
-    { id: 'masterPendant', name: 'จี้หยกคุ้มชีพอาจารย์เหวิน', effect: 'ป้องกัน +10 · กายา +8', bonus: { defense: 10, body: 8 }, unlock: (s) => s.flags.masterBondGiven },
-    { id: 'seniorFlow', name: 'กระบี่ธารเมฆาประสาน', effect: 'โจมตี +14 · ว่องไว +5', bonus: { attack: 14, agility: 5 }, unlock: (s) => s.flags.seniorBondGiven },
-    { id: 'discovery_sword_uncommon', name: 'กระบี่ทางไผ่', grade: 'uncommon', effect: 'โจมตี +5', bonus: { attack: 5 }, unlock: s => (s.learnedManualTechniques || []).includes('discovery_sword_uncommon') },
-    { id: 'discovery_sword_rare', name: 'กระบี่เงาหิน', grade: 'rare', effect: 'โจมตี +9 · ว่องไว +2', bonus: { attack: 9, agility: 2 }, unlock: s => (s.learnedManualTechniques || []).includes('discovery_sword_rare') },
-    { id: 'discovery_sword_epic', name: 'กระบี่ลวงหมอก', grade: 'epic', effect: 'โจมตี +14 · ว่องไว +4', bonus: { attack: 14, agility: 4 }, unlock: s => (s.learnedManualTechniques || []).includes('discovery_sword_epic') }
-  ];
-  Object.entries(MANUAL_DISCOVERY_TYPES).forEach(([type, def]) => {
-    ['uncommon', 'rare', 'epic'].forEach((grade, index) => {
-      const id = `discovery_${type}_${grade}`;
-      const bonus = def.bonus([5, 9, 14][index]);
-      const labels = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กายา', agility: 'ว่องไว', training: 'ความเร็วฝึก' };
-      TECHNIQUES.push({ id, name: def.names[index], grade, techniqueSubtype: def.subtype, manualSlot: def.slot, learningType: def.learningType,
-        effect: Object.entries(bonus).map(([key, value]) => `${labels[key]} +${value}${key === 'training' ? '%' : ''}`).join(' · '), bonus,
-        unlock: s => (s.learnedManualTechniques || []).includes(id) });
-    });
+  const { TECHNIQUES, TECHNIQUE_DESCRIPTIONS, TECHNIQUE_CATEGORY_DEFS, COMMON_ATTACK_TECHNIQUE_NAMES, COMMON_DEFENSE_TECHNIQUE_NAMES, COMMON_MOVEMENT_TECHNIQUE_NAMES, COMMON_CULTIVATION_TECHNIQUE_NAMES, COMMON_ATTACK_TECHNIQUES, COMMON_DEFENSE_TECHNIQUES, COMMON_MOVEMENT_TECHNIQUES, COMMON_CULTIVATION_TECHNIQUES, TECHNIQUE_LIBRARY, TECHNIQUE_LIBRARY_BY_ID, COMMON_SUPPORT_TECHNIQUE_NAMES, COMMON_SUPPORT_TECHNIQUES } = window.OneLifeTechniqueCatalog.createTechniqueData({ MANUAL_DISCOVERY_TYPES, ADDITIONAL_MANUAL_TECHNIQUES, ADDITIONAL_MANUAL_TYPES });
+  const WORKBOOK_EQUIPMENT_ROWS = Object.values(ITEM_LIBRARY).flatMap(group => ['weapons', 'armor', 'jewelry'].flatMap(key => group[key] || []));
+  const WORKBOOK_EQUIPMENT_BY_CATEGORY_GRADE = new Map();
+  const WORKBOOK_EQUIPMENT_BY_CATEGORY_GRADE_SUBTYPE = new Map();
+  WORKBOOK_EQUIPMENT_ROWS.forEach(item => {
+    const groupKey = `${item.category}|${item.grade}`;
+    const subtypeKey = `${groupKey}|${item.subtype}`;
+    if (!WORKBOOK_EQUIPMENT_BY_CATEGORY_GRADE.has(groupKey)) WORKBOOK_EQUIPMENT_BY_CATEGORY_GRADE.set(groupKey, []);
+    if (!WORKBOOK_EQUIPMENT_BY_CATEGORY_GRADE_SUBTYPE.has(subtypeKey)) WORKBOOK_EQUIPMENT_BY_CATEGORY_GRADE_SUBTYPE.set(subtypeKey, []);
+    WORKBOOK_EQUIPMENT_BY_CATEGORY_GRADE.get(groupKey).push(item);
+    WORKBOOK_EQUIPMENT_BY_CATEGORY_GRADE_SUBTYPE.get(subtypeKey).push(item);
   });
-  ADDITIONAL_MANUAL_TECHNIQUES.forEach(entry => {
-    const def = ADDITIONAL_MANUAL_TYPES[entry.type];
-    const labels = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กายา', agility: 'ว่องไว', training: 'ความเร็วฝึก' };
-    TECHNIQUES.push({ id: entry.id, name: entry.name, grade: entry.grade, techniqueSubtype: def.subtype, manualSubtype: def.manualSubtype, manualSlot: def.slot, learningType: def.learningType, description: entry.description, bonus: { ...entry.bonus },
-      effect: Object.entries(entry.bonus).map(([key, value]) => `${labels[key]} +${value}${key === 'training' ? '%' : ''}`).join(' · '), unlock: s => (s.learnedManualTechniques || []).includes(entry.id) });
-  });
-  TECHNIQUES.push({ id: 'manual_cloud_origin', name: 'ลมหายใจปฐมเมฆา', grade: 'uncommon', techniqueSubtype: 'breath', manualSlot: 'cultivation', learningType: 'cultivation', effect: 'ความเร็วฝึก +5%', bonus: { training: 5 }, unlock: s => (s.learnedManualTechniques || []).includes('manual_cloud_origin') });
-  const TECHNIQUE_DESCRIPTIONS = {
-    survival: 'สัญชาตญาณที่ค่อย ๆ หล่อหลอมจากการเอาชีวิตรอด ทำให้ร่างกายพร้อมขยับเมื่อภัยมาถึง',
-    breath: 'ลมหายใจพื้นฐานของสำนักเมฆาคราม ช่วยให้ผู้ฝึกประคองปราณอย่างสม่ำเสมอ',
-    sword: 'คมกระบี่เคลื่อนไปตามจังหวะต่อเนื่อง ประหนึ่งสายน้ำที่ไม่หยุดไหล',
-    step: 'ย่างเท้าอย่างเบาและเปลี่ยนตำแหน่งรวดเร็ว ทิ้งเพียงเงาที่จับทางได้ยาก',
-    cloudShield: 'รวมแรงตั้งรับให้มั่นคง ดุจม่านเมฆาที่ซ้อนทับกันอยู่เบื้องหน้า',
-    tigerBody: 'ขัดเกลาร่างกายให้รับแรงปะทะได้มั่นคง ดั่งพยัคฆ์ที่ยืนหยัดอยู่บนผาหิน',
-    swiftBreath: 'กำหนดลมหายใจให้ผ่านชีพจรทีละสาย แล้วค่อย ๆ เพิ่มจังหวะการฝึกโดยไม่ปล่อยให้ปราณสะดุด',
-    ironBody: 'ฝึกรับแรงซ้ำอย่างมีแบบแผน เพื่อให้ร่างกายแข็งแกร่งและยืนหยัดได้นานขึ้น',
-    clanBlade: 'เคล็ดใช้มีดสั้นที่ตกทอดในตระกูลหลิน อาศัยก้าวสั้นและคมมีดเข้าประชิด',
-    starSword: 'กระบี่ที่ออกคมอย่างรวดเร็วดุจดาวตก ผู้ใช้ต้องจับจังหวะให้มั่นก่อนส่งแรงออกไป',
-    voidBreath: 'ปล่อยลมหายใจให้สงบก่อนรวบรวมพลัง ความว่างระหว่างแต่ละจังหวะช่วยให้จิตตั้งมั่น แล้วส่งแรงออกไปโดยไม่ลังเล',
-    forbidden: 'เคล็ดโลหิตต้องห้ามที่เร่งพลังโจมตีอย่างรุนแรง แต่แรงย้อนกลับกัดกร่อนร่างกายของผู้ใช้',
-    masterPendant: 'คำสอนและจี้หยกของอาจารย์เตือนให้ตั้งมั่นก่อนรับศึก ช่วยประคองทั้งร่างกายและการป้องกัน',
-    seniorFlow: 'กระบี่ที่เรียนรู้ร่วมกับศิษย์พี่ เน้นรับส่งจังหวะให้ต่อเนื่อง จนการรุกและการเคลื่อนไหวประสานกันอย่างเป็นธรรมชาติ',
-    manual_cloud_origin: 'ลมหายใจปฐมเมฆาเริ่มจากการตั้งจิตให้สงบ แล้วประคองการฝึกให้ต่อเนื่อง',
-    discovery_sword_uncommon: 'กระบี่พื้นฐานที่ก้าวผ่านช่องแคบดั่งลมลอดแนวไผ่',
-    discovery_sword_rare: 'ปลายกระบี่ซ่อนอยู่หลังจังหวะก้าวมั่นคงดุจเงาหิน ก่อนเปลี่ยนทิศเข้าหาช่องว่าง',
-    discovery_sword_epic: 'ผู้ฝึกปล่อยคมกระบี่คล้อยตามจังหวะเท้า ราวกับเงาที่เลือนหายในม่านหมอก เมื่อคู่ต่อสู้มองตามคมแรก จึงเปลี่ยนแนวโจมตีจากอีกมุมอย่างต่อเนื่อง',
-    discovery_fist_uncommon: 'ส่งหมัดจากฐานกายที่มั่นคง ให้แรงไหลต่อเนื่องดั่งสายน้ำ',
-    discovery_fist_rare: 'ตั้งหลักรับแรงก่อนส่งหมัดกลับ ราวคลื่นสะท้อนจากหน้าผา ทั้งพลังโจมตีและร่างกายจึงเติบโตไปพร้อมกัน',
-    discovery_fist_epic: 'ผู้ฝึกรวบแรงจากเท้าสู่หัวไหล่แล้วปล่อยหมัดหนักแน่น ดุจเสียงสะท้านกลางชั้นเมฆา เคล็ดนี้อาศัยรากฐานกายที่แข็งแรงเพื่อรองรับแรงที่ส่งออก',
-    discovery_blade_uncommon: 'ดาบฟันตรงอย่างฉับไว ดั่งลมแรกที่พัดผ่านยามเช้า',
-    discovery_blade_rare: 'คมดาบเคลื่อนผ่านจังหวะเงียบงัน ก่อนทุ่มแรงลงในแนวฟันเดียวที่หนักแน่นดั่งเงาจันทร์ทาบพื้น',
-    discovery_blade_epic: 'ผู้ฝึกยกดาบรวบแรงไว้ครู่หนึ่ง ก่อนฟันเปิดทางราวผ่าม่านหมอก ทุกส่วนของร่างกายร่วมส่งแรงในทิศเดียว ทำให้คมดาบหนักแน่นยิ่งขึ้น',
-    discovery_defense_uncommon: 'ตั้งกายรับแรงอย่างยืดหยุ่น ดั่งแนวไผ่ที่เอนตามลม',
-    discovery_defense_rare: 'รับแรงด้วยท่าที่มั่นคงดั่งหน้าผา แล้วกระจายแรงผ่านร่างกายเพื่อลดการเสียหลัก',
-    discovery_defense_epic: 'จัดท่ายืนและลมหายใจเป็นชั้นต่อเนื่อง ดุจม่านเมฆาซ้อนกันหลายแนว ผู้ฝึกค่อย ๆ ผ่อนแรงปะทะลง พร้อมรักษารากฐานกายให้มั่นคง',
-    discovery_movement_uncommon: 'ย่างเท้าเบาและมั่นคง ดั่งใบไผ่ที่ลอยตามสายลม',
-    discovery_movement_rare: 'เปลี่ยนจังหวะเท้าสั้นยาวดั่งก้าวข้ามธาร ช่วยให้เคลื่อนตัวคล่องและตั้งรับได้ทัน',
-    discovery_movement_epic: 'ผู้ฝึกเคลื่อนเท้าอย่างต่อเนื่องจนยากจะจับจุดหยุดนิ่ง ราวเดินผ่านพื้นที่โดยไม่ทิ้งรอย ทุกการเปลี่ยนทิศยังรักษาท่าป้องกันไว้พร้อมกัน',
-    discovery_cultivation_uncommon: 'ปรับลมหายใจให้สม่ำเสมอดั่งความสงบยามเช้า เพื่อเริ่มฝึกปราณ',
-    discovery_cultivation_rare: 'โคจรปราณอย่างนุ่มนวลดั่งธารเย็น ผู้ฝึกจึงประคองจังหวะบำเพ็ญได้ต่อเนื่องขึ้น',
-    discovery_cultivation_epic: 'รวบรวมลมหายใจเป็นจังหวะซ้อนกันดุจเมฆาหลายชั้น ผู้ฝึกค่อย ๆ เรียบเรียงทางเดินปราณและรักษาความต่อเนื่องตลอดการบำเพ็ญ'
-  };
-  TECHNIQUES.forEach(technique => { technique.description = TECHNIQUE_DESCRIPTIONS[technique.id] || technique.description || ''; });
-
-  const ITEM_GRADES = {
-    common: { id: 'common', name: 'สามัญ', color: '#a7b0bc', priceMultiplier: 1, powerMultiplier: 1, rarityWeight: 1 },
-    uncommon: { id: 'uncommon', name: 'ชั้นดี', color: '#65d391', priceMultiplier: 2.5, powerMultiplier: 1.75, rarityWeight: .45 },
-    rare: { id: 'rare', name: 'หายาก', color: '#5eb7ff', priceMultiplier: 6, powerMultiplier: 2.5, rarityWeight: .16 },
-    epic: { id: 'epic', name: 'มหากาพย์', color: '#c491ff', priceMultiplier: 15, powerMultiplier: 3.25, rarityWeight: .05 },
-    legendary: { id: 'legendary', name: 'ตำนาน', color: '#ffbd62', priceMultiplier: 40, powerMultiplier: 4, rarityWeight: .01 }
-  };
-  const ITEM_CATEGORY_DEFS = {
-    weapon: { id: 'weapon', name: 'อาวุธ', subtypes: { sword: 'ดาบ', jian: 'กระบี่', dao: 'ดาบใหญ่/ดาบโค้ง', spear: 'หอก', staff: 'พลอง/กระบอง', dagger: 'มีดสั้น', bow: 'ธนู', whip: 'แส้', fan: 'พัดเหล็ก', claw: 'กรงเล็บ', hammer: 'ค้อน', needle: 'เข็มลับ' } },
-    armor: { id: 'armor', name: 'เครื่องป้องกัน', subtypes: { head: 'เครื่องป้องกันศีรษะ', body: 'เกราะ/เสื้อ', legs: 'เครื่องป้องกันขา', boots: 'รองเท้า', cloak: 'ผ้าคลุม', shield: 'โล่/กระบัง' } },
-    talisman: { id: 'talisman', name: 'เครื่องราง', subtypes: { jade: 'หยก', ward: 'ยันต์คุ้มครอง', pendant: 'จี้/ตรา', ring: 'แหวน', necklace: 'สร้อย', bell: 'ระฆัง', relic: 'วัตถุโบราณ', keepsake: 'ของแทนใจ' } },
-    material: { id: 'material', name: 'วัตถุดิบ', subtypes: { ore: 'แร่', relic: 'วัตถุดิบพิเศษ' } },
-    consumable: { id: 'consumable', name: 'ของกดใช้', subtypes: { pill: 'ยา/โอสถ', food: 'อาหาร', potion: 'น้ำยา', tool: 'เครื่องมือ', poison: 'พิษ', scroll: 'ม้วนใช้ครั้งเดียว' } },
-    cursed: { id: 'cursed', name: 'ของอาถรรพ์', subtypes: { blood: 'โลหิตอาถรรพ์', soul: 'วิญญาณ', seal: 'คำสาปผนึก', forbidden: 'พลังต้องห้าม', haunted: 'วัตถุสิงสู่' } },
-    technique_manual: { id: 'technique_manual', name: 'คัมภีร์วิชา', subtypes: { attack_fist: 'คัมภีร์หมัด', attack_sword: 'คัมภีร์ดาบ', attack_jian: 'คัมภีร์กระบี่', defense: 'คัมภีร์ป้องกัน', movement: 'คัมภีร์ตัวเบา', cultivation: 'คัมภีร์บำเพ็ญ' } },
-    mount: { id: 'mount', name: 'พาหนะ', subtypes: { horse: 'ม้า', wolf: 'หมาป่า', boar: 'หมูป่า', deer: 'กวาง', ox: 'วัว', tiger: 'เสือ', lion: 'สิงโต' } }
-  };
-  const WEAPON_TYPE_LABELS = ITEM_CATEGORY_DEFS.weapon.subtypes;
-  const ITEM_SLOT_DEFS = {
-    weapon: { id: 'weapon', name: 'อาวุธ', limit: 1 },
-    armor: { id: 'armor', name: 'เครื่องป้องกัน', limit: 1 },
-    boots: { id: 'boots', name: 'รองเท้า', category: 'armor', subtype: 'boots', limit: 1 },
-    ring1: { id: 'ring1', name: 'แหวนช่องที่ 1', category: 'talisman', subtype: 'ring', limit: 1 },
-    ring2: { id: 'ring2', name: 'แหวนช่องที่ 2', category: 'talisman', subtype: 'ring', limit: 1 },
-    necklace: { id: 'necklace', name: 'สร้อย', category: 'talisman', subtype: 'necklace', limit: 1 },
-    mount: { id: 'mount', name: 'พาหนะ', category: 'mount', limit: 1 }
-  };
-  const COMMON_WEAPON_NAMES = {
-    sword: ['ดาบเหล็กฝึกหัด', 'ดาบคนเดินทาง', 'ดาบคมเดียวบ้านนา', 'ดาบทหารยาม', 'ดาบไม้เสริมเหล็ก'],
-    jian: ['กระบี่เหล็กขาว', 'กระบี่ศิษย์ใหม่', 'กระบี่ปลายธาร', 'กระบี่ลมอ่อน', 'กระบี่ใบไผ่'],
-    dao: ['ดาบใหญ่ช่างตีเหล็ก', 'ดาบโค้งนักล่า', 'ดาบผ่าฟืน', 'ดาบทหารราบ', 'ดาบเขี้ยวหมาป่า'],
-    spear: ['หอกไม้ปลายเหล็ก', 'หอกยามเมือง', 'หอกล่าหมูป่า', 'หอกด้ามไผ่', 'หอกสามัญ'],
-    staff: ['พลองหวาย', 'กระบองไม้เนื้อแข็ง', 'พลองคนเดินทาง', 'ไม้เท้าศิษย์ใหม่', 'กระบองเถ้าดำ'],
-    dagger: ['มีดสั้นชาวบ้าน', 'มีดล่าสัตว์', 'มีดพกนักเดินทาง', 'มีดปลายแหลม', 'มีดเหล็กบาง'],
-    bow: ['คันธนูไม้ไผ่', 'ธนูนักล่า', 'คันธนูเมืองชายแดน', 'ธนูสายปอ', 'ธนูไม้สน'],
-    whip: ['แส้หนังธรรมดา', 'แส้เถาวัลย์', 'แส้คุมม้า', 'แส้เส้นปอ', 'แส้หนังวัว'],
-    fan: ['พัดกระดาษเสริมเหล็ก', 'พัดไม้ไผ่', 'พัดนักเดินทาง', 'พัดลายเมฆา', 'พัดขนนกธรรมดา'],
-    claw: ['กรงเล็บเหล็กฝึกหัด', 'กรงเล็บนักล่า', 'ปลอกเล็บชาวยุทธ์', 'กรงเล็บเขี้ยวหิน', 'กรงเล็บทองแดง'],
-    hammer: ['ค้อนช่างเหล็ก', 'ค้อนศิษย์ใหม่', 'ค้อนทุบหิน', 'ค้อนด้ามไม้', 'ค้อนเหล็กสั้น'],
-    needle: ['เข็มเงินธรรมดา', 'เข็มเย็บผ้าซ่อนคม', 'เข็มทองแดง', 'เข็มแพทย์ฝึกหัด', 'เข็มลมเบา']
-  };
-  const COMMON_ARMOR_NAMES = ['เสื้อผ้าฝ้ายหนา', 'เสื้อเกราะหนังบาง', 'เสื้อคลุมเดินทาง', 'เกราะไม้ไผ่', 'เสื้อเกราะชาวบ้าน', 'หมวกหนังนักเดินทาง', 'ปลอกแขนผ้าเสริมเหล็ก', 'สนับขาผ้าใบ', 'รองเท้าหนังพื้นแข็ง', 'ผ้าคลุมกันฝนชายแดน'];
-  const COMMON_RING_NAMES = ['แหวนทองแดงรวบปราณ', 'แหวนเหล็กผู้เดินทาง', 'แหวนไม้จันทน์', 'แหวนหยกแตกร้าว', 'แหวนเชือกถักคุ้มภัย'];
-  const COMMON_NECKLACE_NAMES = ['สร้อยเหรียญเก่า', 'สร้อยหยกเมฆา', 'สร้อยเชือกแดง', 'สร้อยฟันหมาป่า', 'สร้อยป้ายไม้'];
-  const COMMON_CURSED_ITEMS = [
-    makeLibraryItem('common_cursed_blood_1', 'มีดเลือดค้างคืน', 'cursed', 'blood', { attack: 7.5, healthCost: 1 }),
-    makeLibraryItem('common_cursed_soul_1', 'กระดิ่งเรียกเงา', 'cursed', 'soul', { defense: 6, restHealth: -2 }),
-    makeLibraryItem('common_cursed_seal_1', 'ผ้ายันต์กลับด้าน', 'cursed', 'seal', { defense: 6, riskReduction: -1 }),
-    makeLibraryItem('common_cursed_forbidden_1', 'แหวนลมหายใจดำ', 'cursed', 'forbidden', { training: 6, healthCost: 1 }),
-    makeLibraryItem('common_cursed_haunted_1', 'หน้ากากคนเฝ้าศพ', 'cursed', 'haunted', { agility: 6, karma: -1 }),
-    makeLibraryItem('common_cursed_blood_2', 'ปลอกแขนดูดแรง', 'cursed', 'blood', { attack: 7.5, body: -1 }),
-    makeLibraryItem('common_cursed_soul_2', 'ขวดเสียงครวญ', 'cursed', 'soul', { spirit: 6, restQi: -2 }),
-    makeLibraryItem('common_cursed_seal_2', 'ป้ายผนึกแตก', 'cursed', 'seal', { defense: 6, breakthroughBonus: -2 }),
-    makeLibraryItem('common_cursed_forbidden_2', 'ตำราครึ่งหน้า', 'cursed', 'forbidden', { training: 6, riskReduction: -1 }),
-    makeLibraryItem('common_cursed_haunted_2', 'สร้อยฟันผีดิบ', 'cursed', 'haunted', { luck: 3, karma: -1 })
-  ];
-  function libraryItemDescription(name, category, subtype) {
-    const descriptions = {
-      weapon: `อาวุธ${ITEM_CATEGORY_DEFS.weapon.subtypes[subtype] || 'สามัญ'}สำหรับผู้เริ่มต้น ใช้งานได้ตรงไปตรงมา`,
-      armor: 'เครื่องป้องกันระดับสามัญ เนื้อวัสดุไม่หรูหราแต่พอช่วยรับแรงได้',
-      talisman: subtype === 'ring' ? 'แหวนระดับสามัญสำหรับพกติดตัว ช่วยเสริมพลังเล็กน้อย' : 'สร้อยระดับสามัญสำหรับพกติดตัว ช่วยคุ้มครองผู้สวมใส่เล็กน้อย',
-      cursed: 'วัตถุอาถรรพ์ระดับสามัญ พลังเด่นกว่าของทั่วไปแต่มีผลข้างเคียงติดมาด้วย',
-      mount: 'พาหนะระดับสามัญ ฝึกเลี้ยงได้ง่ายและช่วยลดเวลาเดินทาง',
-      material: 'วัตถุดิบระดับสามัญ ใช้เป็นฐานในการหลอมและคราฟต์ไอเท็ม'
-    };
-    return descriptions[category] || `${name} ระดับสามัญสำหรับผู้เริ่มต้น`;
-  }
-  function makeLibraryItem(id, name, category, subtype, bonus, extra = {}) { return { id, name, category, subtype, grade: 'common', bonus: { ...bonus }, description: extra.description || libraryItemDescription(name, category, subtype), ...extra }; }
-  const COMMON_MOUNT_NAMES = {
-    horse: ['ม้าสีน้ำตาล', 'ม้าขาวบ้านนา', 'ม้าขาไว', 'ม้าศึกเก่า', 'ม้าดำเดินทาง'],
-    wolf: ['หมาป่าเทา', 'หมาป่าหลังเขา', 'หมาป่าลายดำ', 'หมาป่าตีนเบา', 'หมาป่าฝูงเหนือ'],
-    boar: ['หมูป่าขนแข็ง', 'หมูป่าดอยหิน', 'หมูป่าจมูกดำ', 'หมูป่าตัวหนา', 'หมูป่าป่าลึก'],
-    deer: ['กวางเขาสั้น', 'กวางหางขาว', 'กวางป่าเหนือ', 'กวางลายจุด', 'กวางเขาอ่อน'],
-    ox: ['วัวเขาสั้น', 'วัวทุ่ง', 'วัวเทา', 'วัวลากเกวียน', 'วัวเขาโค้ง'],
-    tiger: ['เสือลายหมอก', 'เสือเขี้ยวสั้น', 'เสือป่าหินผา', 'เสือเงาไม้', 'เสือโคร่งชายเขา'],
-    lion: ['สิงโตแผงคอสั้น', 'สิงโตทุ่งหญ้า', 'สิงโตเขี้ยวขาว', 'สิงโตเฝ้าผา', 'สิงโตฝุ่นแดง']
-  };
-  const COMMON_MOUNT_PROFILES = {
-    horse: { timeMultiplier: .65, costMultiplier: 1, dangerMultiplier: .95, healthMultiplier: .85, resourceMultiplier: .95, description: 'ม้าสามัญที่วิ่งได้เร็วและทรงตัวดี เหมาะกับถนนยาวและการเดินทางทั่วไป' },
-    wolf: { timeMultiplier: .82, costMultiplier: .9, dangerMultiplier: .9, healthMultiplier: .8, resourceMultiplier: .9, description: 'หมาป่าสามัญที่คล่องตัวและประสาทสัมผัสดี เดินทางในทางรกได้คล่องกว่าสัตว์พาหนะทั่วไป' },
-    boar: { timeMultiplier: .92, costMultiplier: 1, dangerMultiplier: .85, healthMultiplier: .75, resourceMultiplier: .95, description: 'หมูป่าสามัญร่างแน่นและอึด เดินช้ากว่าแต่รับทางขรุขระและอันตรายได้ดี' },
-    deer: { timeMultiplier: .75, costMultiplier: .95, dangerMultiplier: 1.05, healthMultiplier: .95, resourceMultiplier: .85, description: 'กวางสามัญขาไวและเบาตัว ทำความเร็วได้ดีแต่บอบบางเมื่อเจอเส้นทางอันตราย' },
-    ox: { timeMultiplier: 1.02, costMultiplier: .8, dangerMultiplier: .8, healthMultiplier: .7, resourceMultiplier: .75, description: 'วัวสามัญกำลังมาก แบกเสบียงได้ดีและใจเย็น แต่เคลื่อนที่ช้ากว่าสัตว์ชนิดอื่น' },
-    tiger: { timeMultiplier: .72, costMultiplier: 1.15, dangerMultiplier: .72, healthMultiplier: .82, resourceMultiplier: .9, description: 'เสือสามัญพุ่งตัวได้เร็วและข่มสัตว์ร้ายระหว่างทาง แต่ต้องใช้เนื้อเลี้ยงและควบคุมให้ดี' },
-    lion: { timeMultiplier: .8, costMultiplier: 1.1, dangerMultiplier: .68, healthMultiplier: .78, resourceMultiplier: .88, description: 'สิงโตสามัญร่างกำยำและน่าเกรงขาม ช่วยลดภัยจากสัตว์ป่าได้ดีแต่กินเสบียงมาก' }
-  };
-  const COMMON_MOUNTS = Object.entries(COMMON_MOUNT_NAMES).flatMap(([subtype, names]) => names.map((name, index) => makeLibraryItem(`common_mount_${subtype}_${index + 1}`, name, 'mount', subtype, {}, { travel: { ...COMMON_MOUNT_PROFILES[subtype] }, description: COMMON_MOUNT_PROFILES[subtype].description })));
-  const WEAPON_DESIGNS = {
-    sword: { label: 'ดาบ', roots: ['ตัดลม', 'เงาฝน', 'ยอดสน', 'แสงอรุณ', 'ธารศิลา'], action: 'คมดาบทอดแนวฟันมั่นคง', attack: 6, secondary: 'body', secondaryBase: 1 },
-    jian: { label: 'กระบี่', roots: ['ใบไผ่', 'จันทร์เสี้ยว', 'สายธาร', 'หมอกเช้า', 'ดาวเคียง'], action: 'ปลายกระบี่สมดุลและพลิกทิศคล่อง', attack: 5, secondary: 'agility', secondaryBase: 1 },
-    dao: { label: 'ดาบใหญ่', roots: ['ผาหิน', 'คลื่นเพลิง', 'เขี้ยวพยัคฆ์', 'เมฆทึบ', 'พสุธา'], action: 'คมกว้างและน้ำหนักส่งแรงฟันหนัก', attack: 8, secondary: 'body', secondaryBase: 1 },
-    spear: { label: 'หอก', roots: ['ปลายสน', 'สายฝน', 'วายุเหนือ', 'จันทร์ไกล', 'เงาเมฆ'], action: 'ด้ามยาวช่วยคุมระยะด้วยปลายหอก', attack: 6, secondary: 'defense', secondaryBase: 1 },
-    staff: { label: 'พลอง', roots: ['ไผ่เขียว', 'ไม้จันทน์', 'ธารไหล', 'เงาภูผา', 'ลมหมุน'], action: 'ด้ามพลองสมดุลสำหรับกวาดและตั้งรับ', attack: 4, secondary: 'defense', secondaryBase: 2 },
-    dagger: { label: 'มีดสั้น', roots: ['คมจันทร์', 'ฝนปรอย', 'เงาไผ่', 'ปลายดาว', 'น้ำค้าง'], action: 'คมสั้นเบามือเหมาะกับจังหวะประชิด', attack: 4, secondary: 'agility', secondaryBase: 2 },
-    bow: { label: 'ธนู', roots: ['ไม้สน', 'ลมเหนือ', 'เหยี่ยวไกล', 'จันทร์คราม', 'ดาวร่วง'], action: 'คันธนูตึงสม่ำเสมอช่วยรักษาจังหวะยิง', attack: 6, secondary: 'agility', secondaryBase: 1 },
-    whip: { label: 'แส้', roots: ['เถาวัลย์', 'สายฝน', 'อสรพิษ', 'ลมหวน', 'เงาจันทร์'], action: 'เส้นแส้อ่อนตัวเพื่อควบคุมระยะ', attack: 4, secondary: 'agility', secondaryBase: 2 },
-    fan: { label: 'พัดเหล็ก', roots: ['ใบหลิว', 'เมฆขาว', 'สายลม', 'จันทร์เย็น', 'ดาวพราว'], action: 'ซี่พัดเสริมคมช่วยรับและสวนกลับ', attack: 4, secondary: 'defense', secondaryBase: 2 },
-    claw: { label: 'กรงเล็บ', roots: ['เหล็กกล้า', 'เหยี่ยวบิน', 'พยัคฆ์', 'รัตติกาล', 'พายุ'], action: 'ปลอกเล็บกระชับมือสำหรับเข้าประชิด', attack: 5, secondary: 'agility', secondaryBase: 2 },
-    hammer: { label: 'ค้อน', roots: ['ทุบหิน', 'เหล็กดำ', 'ภูผา', 'สายฟ้า', 'ดาวตก'], action: 'หัวค้อนถ่วงน้ำหนักให้ส่งแรงกระแทก', attack: 8, secondary: 'body', secondaryBase: 2 },
-    needle: { label: 'เข็ม', roots: ['เงินอ่อน', 'น้ำค้าง', 'ดอกเหมย', 'เงาจันทร์', 'ดาวเร้น'], action: 'เข็มขนาดเล็กพกง่ายและส่งคมได้รวดเร็ว', attack: 3, secondary: 'agility', secondaryBase: 2 }
-  };
-  function makeBalancedWeapon(grade, subtype, index) {
-    const def = WEAPON_DESIGNS[subtype];
-    const gradePrefix = { common: ['ไม้', 'เหล็ก', 'ทองแดง', 'ช่าง', 'เก่า'], uncommon: ['คม', 'หลอม', 'เกล็ด', 'แก่น', 'ขัด'], rare: ['คราม', 'หยก', 'นิล', 'เงิน', 'จันทร์'], epic: ['สวรรค์', 'ดารา', 'เทพ', 'มังกร', 'วิญญาณ'] }[grade][index];
-    const name = `${def.label}${gradePrefix}${def.roots[index]}`;
-    const bonus = { attack: def.attack + (index % 3), [def.secondary]: def.secondaryBase + (index >= 3 ? 1 : 0) };
-    const stories = {
-      common: `${name} ${def.action} รูปทรงเรียบง่ายเหมาะกับการฝึกและเดินทาง`,
-      uncommon: `${name} ${def.action} ช่างเก็บรายละเอียดตามแนว${def.roots[index]} ทำให้อาวุธจับถนัดและใช้ได้มั่นคง`,
-      rare: `${name} ${def.action} ผิวอาวุธสะท้อนลวดลาย${def.roots[index]}อย่างประณีต ผู้สร้างปรับน้ำหนักให้ผู้ใช้เคลื่อนไหวได้ตามจังหวะ`,
-      epic: `${name} ${def.action} ลวดลาย${def.roots[index]}ทอดตลอดแนวอาวุธ ร่องรอยงานช่างบอกถึงเวลาที่ยาวนานกว่าจะได้สมดุลนี้ ผู้ครอบครองต้องเรียนรู้จังหวะของมันด้วยตนเอง`
-    };
-    return { id: `${grade}_${subtype}_${index + 1}`, name, category: 'weapon', subtype, grade, gradeExplicit: true, bonus, description: stories[grade] };
-  }
-  const COMMON_WEAPONS = Object.keys(WEAPON_DESIGNS).flatMap(subtype => Array.from({ length: 5 }, (_, index) => makeBalancedWeapon('common', subtype, index)));
-  const ARMOR_DESIGNS = [
-    { label: 'เสื้อผ้า', root: 'ฝ้าย', subtype: 'body', defense: 3, secondary: 'agility', value: 1, detail: 'เนื้อผ้านุ่มและตัดให้ขยับตัวสะดวก' },
-    { label: 'เสื้อเกราะ', root: 'สน', subtype: 'body', defense: 5, secondary: 'body', value: 1, detail: 'แผ่นหนังซ้อนกันช่วยรับแรงที่ลำตัว' },
-    { label: 'ผ้าคลุม', root: 'สายฝน', subtype: 'cloak', defense: 3, secondary: 'agility', value: 2, detail: 'ผ้าคลุมบางเบาเก็บชายให้ไม่กีดขวางเท้า' },
-    { label: 'เกราะ', root: 'ไผ่เขียว', subtype: 'body', defense: 5, secondary: 'defense', value: 1, detail: 'ซี่ไผ่เรียงซ้อนเพื่อกระจายแรงปะทะ' },
-    { label: 'เสื้อเกราะ', root: 'พสุธา', subtype: 'body', defense: 4, secondary: 'body', value: 2, detail: 'ชั้นผ้าและหนังหุ้มลำตัวอย่างแน่นหนา' },
-    { label: 'หมวก', root: 'ยอดสน', subtype: 'head', defense: 4, secondary: 'body', value: 1, detail: 'หมวกบุด้านในช่วยรับแรงที่ศีรษะ' },
-    { label: 'ปลอกแขน', root: 'เงาเหล็ก', subtype: 'body', defense: 3, secondary: 'defense', value: 2, detail: 'ปลอกแขนเสริมแผ่นเหล็กช่วยยกแขนรับแรง' },
-    { label: 'สนับขา', root: 'ทางศิลา', subtype: 'legs', defense: 3, secondary: 'body', value: 2, detail: 'ชั้นผ้าหนาโอบขาและช่วยประคองการยืน' },
-    { label: 'รองเท้า', root: 'ก้าวลม', subtype: 'boots', defense: 2, secondary: 'agility', value: 3, detail: 'พื้นรองเท้ายึดกระชับและเบาพอให้ก้าวคล่อง' },
-    { label: 'ผ้าคลุม', root: 'เมฆเย็น', subtype: 'cloak', defense: 2, secondary: 'agility', value: 3, detail: 'ผืนคลุมพริ้วเบาช่วยเคลื่อนกายโดยไม่รั้งไหล่' }
-  ];
-  function makeBalancedArmor(grade, index) {
-    const def = ARMOR_DESIGNS[index];
-    const prefixes = {
-      common: ['ทอ', 'หนัง', 'เดินทาง', 'ถัก', 'พื้นบ้าน', 'หนัง', 'เก่า', 'ผ้า', 'หนัง', 'กันฝน'],
-      uncommon: ['ทอแน่น', 'หนังขัด', 'สายลม', 'ถักเหล็ก', 'หนังเสริม', 'คุ้มศีรษะ', 'หุ้มเหล็ก', 'รองชั้น', 'พื้นนุ่ม', 'ชายสั้น'],
-      rare: ['หยก', 'เงาจันทร์', 'วายุ', 'คราม', 'ศิลาทอง', 'เมฆาคราม', 'นิล', 'หินเย็น', 'ดาวเหนือ', 'จันทร์ขาว'],
-      epic: ['ดารา', 'พยัคฆ์', 'เมฆาสวรรค์', 'มังกร', 'เทพศิลา', 'สุริยัน', 'พิทักษ์ฟ้า', 'พสุธาทอง', 'เมฆาคล้อย', 'หงส์เหมันต์']
-    };
-    const name = `${def.label}${prefixes[grade][index]}${def.root}`;
-    const bonus = def.secondary === 'defense' ? { defense: def.defense + def.value } : { defense: def.defense, [def.secondary]: def.value };
-    const descriptions = {
-      common: `${name} ${def.detail} รูปทรงเรียบง่ายเหมาะกับการใช้งานทั่วไป`,
-      uncommon: `${name} ${def.detail} ช่างเก็บขอบและรอยต่อให้แน่นขึ้น เพื่อให้ผู้สวมใส่เคลื่อนไหวได้มั่นคง`,
-      rare: `${name} ${def.detail} ลวดลาย${def.root}ทอดตามขอบเครื่องป้องกัน งานตัดเย็บและน้ำหนักได้รับการปรับให้สมดุล`,
-      epic: `${name} ${def.detail} ลวดลาย${def.root}เชื่อมไปตามรอยต่อทุกส่วน ช่างวางชั้นวัสดุอย่างประณีตเพื่อรักษาสมดุลระหว่างการคุ้มกายกับการเคลื่อนไหว`
-    };
-    return { id: `${grade}_armor_${index + 1}`, name, category: 'armor', subtype: def.subtype, grade, gradeExplicit: true, bonus, description: descriptions[grade] };
-  }
-  const COMMON_ARMOR = ARMOR_DESIGNS.map((_, index) => makeBalancedArmor('common', index));
-  const JEWELRY_DESIGNS = {
-    ring: [
-      { root: 'หินผา', detail: 'วงแหวนเรียบขัดเป็นลายชั้นหิน ช่วยประคองแนวรับ', bonus: { defense: 2, body: 1 } },
-      { root: 'สายลม', detail: 'วงแหวนบางเบามีรอยสลักคล้ายลมพัด ช่วยให้ขยับตัวคล่อง', bonus: { agility: 2, defense: 1 } },
-      { root: 'แสงอรุณ', detail: 'วงแหวนสีอุ่นเก็บขอบเรียบ ช่วยประคองกายขณะฝึก', bonus: { training: 2, body: 1 } },
-      { root: 'คมธาร', detail: 'แหวนวงแคบสลักเส้นธาร ช่วยให้การเคลื่อนไหวหนักแน่น', bonus: { attack: 2, agility: 1 } },
-      { root: 'ม่านเมฆ', detail: 'วงแหวนลายเมฆซ้อนชั้น ช่วยประคองท่าป้องกันและจังหวะฝึก', bonus: { defense: 1, training: 2 } }
-    ],
-    necklace: [
-      { root: 'หินคุ้มกาย', detail: 'จี้หินกลมถักกับเชือกแน่น ช่วยประคองร่างกายและการตั้งรับ', bonus: { body: 2, defense: 1 } },
-      { root: 'ใบไผ่', detail: 'จี้รูปใบไผ่ห้อยเบาไม่รั้งคอ ช่วยให้เคลื่อนตัวคล่อง', bonus: { agility: 2, body: 1 } },
-      { root: 'ธารปราณ', detail: 'จี้สลักลายธารเรียงต่อกัน ช่วยประคองจังหวะการฝึกและท่ากาย', bonus: { training: 3, body: 1 } },
-      { root: 'ดาวคุ้มภัย', detail: 'จี้ดาวมีขอบมนและสายถักแน่น ช่วยเสริมการป้องกัน', bonus: { defense: 2, agility: 1 } },
-      { root: 'ประกายเหล็ก', detail: 'จี้เหล็กขัดเงาห้อยใกล้ลำตัว ช่วยประคองแรงและการตั้งรับ', bonus: { attack: 1, body: 2 } }
-    ]
-  };
-  function makeBalancedJewelry(grade, subtype, index) {
-    const def = JEWELRY_DESIGNS[subtype][index];
-    const label = subtype === 'ring' ? 'แหวน' : 'สร้อย';
-    const prefix = { common: ['ทองแดง', 'ไม้', 'เชือก', 'เหล็ก', 'หิน'], uncommon: ['หลอม', 'ขัด', 'ถัก', 'คัด', 'ประณีต'], rare: ['คราม', 'หยก', 'นิล', 'เงิน', 'จันทร์'], epic: ['สวรรค์', 'ดารา', 'เทพ', 'มังกร', 'วิญญาณ'] }[grade][index];
-    const name = `${label}${prefix}${def.root}`;
-    const descriptions = {
-      common: `${name} ${def.detail} รูปแบบเรียบง่ายสำหรับพกติดตัว`,
-      uncommon: `${name} ${def.detail} ช่างขัดรอยต่อและเลือกวัสดุให้แน่นหนาขึ้น`,
-      rare: `${name} ${def.detail} ลวดลาย${def.root}ได้รับการเก็บรายละเอียดอย่างประณีต น้ำหนักสมดุลเมื่อสวมใส่`,
-      epic: `${name} ${def.detail} ลวดลาย${def.root}ต่อเนื่องตลอดชิ้นงาน ช่างปรับทั้งน้ำหนักและรอยต่ออย่างละเอียด จนเครื่องประดับแนบสนิทเมื่อผู้ครอบครองเคลื่อนไหว`
-    };
-    return { id: `${grade}_${subtype}_${index + 1}`, name, category: 'talisman', subtype, grade, gradeExplicit: true, bonus: { ...def.bonus }, description: descriptions[grade] };
-  }
-  const COMMON_RINGS = JEWELRY_DESIGNS.ring.map((_, index) => makeBalancedJewelry('common', 'ring', index));
-  const COMMON_NECKLACES = JEWELRY_DESIGNS.necklace.map((_, index) => makeBalancedJewelry('common', 'necklace', index));
-  function makeGradeLibraryItem(id, name, category, subtype, grade, bonus, description, extra = {}) {
-    return { id, name, category, subtype, grade, gradeExplicit: true, bonus: { ...bonus }, description, ...extra };
-  }
-  const UNCOMMON_WEAPONS = Object.keys(WEAPON_DESIGNS).flatMap(subtype => Array.from({ length: 5 }, (_, index) => makeBalancedWeapon('uncommon', subtype, index)));
-  const UNCOMMON_ARMOR = ARMOR_DESIGNS.map((_, index) => makeBalancedArmor('uncommon', index));
-  const UNCOMMON_RINGS = JEWELRY_DESIGNS.ring.map((_, index) => makeBalancedJewelry('uncommon', 'ring', index));
-  const UNCOMMON_NECKLACES = JEWELRY_DESIGNS.necklace.map((_, index) => makeBalancedJewelry('uncommon', 'necklace', index));
-  const UNCOMMON_CURSED_ITEMS = COMMON_CURSED_ITEMS.map((item, index) => makeGradeLibraryItem(`uncommon_cursed_${index + 1}`, `ของอาถรรพ์ชั้นดีชิ้นที่ ${index + 1}`, 'cursed', item.subtype, 'uncommon', item.bonus, `วัตถุอาถรรพ์ชั้นดีที่กักพลังได้มากขึ้น ผลดีเด่นกว่าของสามัญแต่ยังทิ้งผลข้างเคียงไว้`, { curseSource: 'uncommon' }));
-  const UNCOMMON_MOUNTS = COMMON_MOUNTS.map((item, index) => makeGradeLibraryItem(`uncommon_mount_${item.subtype}_${(index % 5) + 1}`, `พาหนะชั้นดี${item.name}`, 'mount', item.subtype, 'uncommon', { agility: 2 }, `พาหนะ${ITEM_CATEGORY_DEFS.mount.subtypes[item.subtype]}ชั้นดี ฝึกมาเป็นพิเศษ จังหวะก้าวสม่ำเสมอและดูแลได้ง่ายกว่า`, { travel: { ...item.travel, timeMultiplier: Number((item.travel.timeMultiplier * .94).toFixed(3)) } }));
-  const RARE_WEAPONS = Object.keys(WEAPON_DESIGNS).flatMap(subtype => Array.from({ length: 5 }, (_, index) => makeBalancedWeapon('rare', subtype, index)));
-  const RARE_ARMOR = ARMOR_DESIGNS.map((_, index) => makeBalancedArmor('rare', index));
-  const RARE_RINGS = JEWELRY_DESIGNS.ring.map((_, index) => makeBalancedJewelry('rare', 'ring', index));
-  const RARE_NECKLACES = JEWELRY_DESIGNS.necklace.map((_, index) => makeBalancedJewelry('rare', 'necklace', index));
-  const RARE_CURSED_ITEMS = COMMON_CURSED_ITEMS.map((item, index) => makeGradeLibraryItem(`rare_cursed_${index + 1}`, `วัตถุเงามืดหายาก ${index + 1}`, 'cursed', item.subtype, 'rare', item.bonus, `วัตถุอาถรรพ์หายากที่สะสมพลังได้หนาแน่น ผลตอบแทนสูงแต่ต้องรับภาระคำสาปให้ดี`, { curseSource: 'rare' }));
-  const RARE_MOUNTS = COMMON_MOUNTS.map((item, index) => makeGradeLibraryItem(`rare_mount_${item.subtype}_${(index % 5) + 1}`, `พาหนะสายเลือดหายาก${index + 1}`, 'mount', item.subtype, 'rare', { agility: 3 }, `พาหนะ${ITEM_CATEGORY_DEFS.mount.subtypes[item.subtype]}หายาก สายพันธุ์แข็งแรงและตอบสนองต่อผู้ขี่ได้ไวกว่า`, { travel: { ...item.travel, timeMultiplier: Number((item.travel.timeMultiplier * .88).toFixed(3)) } }));
-  const EPIC_WEAPONS = Object.keys(WEAPON_DESIGNS).flatMap(subtype => Array.from({ length: 5 }, (_, index) => makeBalancedWeapon('epic', subtype, index)));
-  const EPIC_ARMOR = ARMOR_DESIGNS.map((_, index) => makeBalancedArmor('epic', index));
-  const EPIC_RINGS = JEWELRY_DESIGNS.ring.map((_, index) => makeBalancedJewelry('epic', 'ring', index));
-  const EPIC_NECKLACES = JEWELRY_DESIGNS.necklace.map((_, index) => makeBalancedJewelry('epic', 'necklace', index));
-  const EPIC_CURSED_ITEMS = COMMON_CURSED_ITEMS.map((item, index) => makeGradeLibraryItem(`epic_cursed_${index + 1}`, `เศษเงาต้องห้ามมหากาพย์ ${index + 1}`, 'cursed', item.subtype, 'epic', item.bonus, `วัตถุอาถรรพ์มหากาพย์ที่พลังเกินกว่าวัตถุทั่วไปมาก แต่คำสาปก็ฝังลึกและแก้ยากขึ้น`, { curseSource: 'epic' }));
-  const EPIC_MOUNTS = COMMON_MOUNTS.map((item, index) => makeGradeLibraryItem(`epic_mount_${item.subtype}_${(index % 5) + 1}`, `พาหนะเงาสวรรค์${index + 1}`, 'mount', item.subtype, 'epic', { agility: 4 }, `พาหนะ${ITEM_CATEGORY_DEFS.mount.subtypes[item.subtype]}มหากาพย์ที่ผ่านการปลุกเส้นปราณ ความเร็วและการตอบสนองเหนือสัตว์ทั่วไป`, { travel: { ...item.travel, timeMultiplier: Number((item.travel.timeMultiplier * .8).toFixed(3)) } }));
-  const ITEM_LIBRARY = {
-    common: { weapons: COMMON_WEAPONS, armor: COMMON_ARMOR, jewelry: [...COMMON_RINGS, ...COMMON_NECKLACES], cursed: COMMON_CURSED_ITEMS, mounts: COMMON_MOUNTS },
-    uncommon: { weapons: UNCOMMON_WEAPONS, armor: UNCOMMON_ARMOR, jewelry: [...UNCOMMON_RINGS, ...UNCOMMON_NECKLACES], cursed: UNCOMMON_CURSED_ITEMS, mounts: UNCOMMON_MOUNTS },
-    rare: { weapons: RARE_WEAPONS, armor: RARE_ARMOR, jewelry: [...RARE_RINGS, ...RARE_NECKLACES], cursed: RARE_CURSED_ITEMS, mounts: RARE_MOUNTS },
-    epic: { weapons: EPIC_WEAPONS, armor: EPIC_ARMOR, jewelry: [...EPIC_RINGS, ...EPIC_NECKLACES], cursed: EPIC_CURSED_ITEMS, mounts: EPIC_MOUNTS },
-    legendary: { weapons: [], armor: [], jewelry: [], cursed: [], mounts: [] }
-  };
-  // เกรดบอกคุณภาพ ส่วนชั้นบอกขั้นขั้นต่ำ: กระจายทุกสีในทุกชั้น
-  const EQUIPMENT_REALM_SCALE = [1, 2, 3.5];
-  Object.entries(ITEM_LIBRARY).forEach(([grade, groups]) => {
-    const shift = { common: 0, uncommon: 1, rare: 2, epic: 3 }[grade] ?? 0;
-    ['weapons', 'armor', 'jewelry'].forEach(category => (groups[category] || []).forEach((item, index) => {
-      const designIndex = category === 'weapons' ? index % 5 : index;
-      const tier = [0, 0, 1, 1, 2][(designIndex + shift) % 5];
-      item.equipmentRealm = tier;
-      item.equipmentStage = tier ? 1 : 0;
-      item.bonus = Object.fromEntries(Object.entries(item.bonus || {}).map(([key, value]) => [key,
-        ['attack', 'defense', 'body', 'agility'].includes(key) && Number.isFinite(value)
-          ? Math.round(value * EQUIPMENT_REALM_SCALE[tier] * 100) / 100 : value]));
-    }));
-  });
-  const ITEM_LIBRARY_BY_ID = Object.fromEntries(Object.values(ITEM_LIBRARY).flatMap(group => Object.values(group).flat()).map(item => [item.id, item]));
-  const TECHNIQUE_CATEGORY_DEFS = {
-    attack: { id: 'attack', name: 'วิชาจู่โจม', subtypes: { fist: 'วิชาหมัด', sword: 'วิชาดาบ', jian: 'วิชากระบี่', dao: 'วิชาดาบใหญ่', spear: 'วิชาหอก', staff: 'วิชาพลอง', claw: 'วิชากรงเล็บ' } },
-    defense: { id: 'defense', name: 'วิชาป้องกัน', subtypes: { body: 'วิชาหลอมกาย', shield: 'วิชาคุ้มกาย', qi: 'วิชาปราณพิทักษ์' } },
-    movement: { id: 'movement', name: 'วิชาตัวเบา', subtypes: { step: 'วิชาก้าวเท้า', escape: 'วิชาหลบหนี', wind: 'วิชาลมกรด' } },
-    cultivation: { id: 'cultivation', name: 'วิชาบำเพ็ญ', subtypes: { breath: 'วิชาปราณ', body: 'วิชาหลอมกาย', spirit: 'วิชาขัดเกลาจิต' } },
-    support: { id: 'support', name: 'วิชาสนับสนุน', subtypes: { survival: 'วิชาเอาตัวรอด', craft: 'วิชาช่าง', insight: 'วิชาหยั่งรู้' } }
-  };
-  const COMMON_ATTACK_TECHNIQUE_NAMES = {
-    sword: ['ฟันตรงพื้นฐาน', 'ปัดคมเหล็ก', 'แทงแยกเงา', 'ก้าวตัดเส้น', 'รุกสามจังหวะ'],
-    jian: ['กระบี่สายลม', 'ปลายกระบี่แตะธาร', 'เส้นกระบี่สั้น', 'กระบี่แยกใบไม้', 'แทงคืนจันทร์'],
-    dao: ['ฟันผ่าหิน', 'ดาบโค้งกวาดลม', 'ยกดาบรับแรง', 'ฟันย้อนทาง', 'ดาบหนักสามก้าว'],
-    spear: ['หอกยื่นตรง', 'ปลายหอกคุมระยะ', 'แทงสามครั้ง', 'หอกปัดมือ', 'ก้าวหอกสั้น'],
-    staff: ['พลองกดไหล่', 'พลองหมุนพื้น', 'ตีขวางทาง', 'พลองรับแรง', 'ฟาดกลับหนึ่งจังหวะ'],
-    dagger: ['มีดสั้นเข้าประชิด', 'แทงใต้แขน', 'เฉือนข้อมือ', 'มีดกลับมือ', 'ก้าวหลบแล้วแทง'],
-    bow: ['ยิงระยะใกล้', 'น้าวสายมั่นคง', 'ลูกศรเบี่ยงทาง', 'ยิงสองจังหวะ', 'ธนูคุมช่อง'],
-    whip: ['แส้ตวัดพื้น', 'แส้รัดข้อมือ', 'แส้คุมระยะ', 'ตวัดคืนมือ', 'แส้ฟาดข้างลำตัว'],
-    fan: ['พัดปัดคม', 'พัดกระแทกมือ', 'พัดเปิดช่อง', 'พัดตัดลม', 'กางพัดสวนกลับ'],
-    claw: ['กรงเล็บกรีดแขน', 'จับแล้วฉีก', 'กรงเล็บคุมข้อมือ', 'ก้าวสั้นเข้าชิด', 'ห้านิ้วปิดทาง'],
-    hammer: ['ค้อนกดพื้น', 'ทุบขวางทาง', 'ค้อนยกสูง', 'ทุบคืนแรง', 'ค้อนหนักหนึ่งจังหวะ'],
-    needle: ['เข็มแตะจุด', 'เข็มปิดเส้น', 'เข็มสวนมือ', 'เข็มสามทิศ', 'เข็มซ่อนปลาย']
-  };
-  const COMMON_DEFENSE_TECHNIQUE_NAMES = ['ยืนมั่นรับแรง', 'ปัดแขนคุ้มกาย', 'ก้าวถอยครึ่งก้าว', 'ลมหายใจตั้งรับ', 'ไหล่รับคม', 'หมุนตัวลดแรง', 'ตั้งศอกป้องกัน', 'กายาไม่หวั่น', 'มือคุมแนว', 'รับแล้วคืนระยะ'];
-  const COMMON_MOVEMENT_TECHNIQUE_NAMES = ['ก้าวเบื้องต้น', 'ย่างสามก้าว', 'หลบข้างตัว', 'ก้าวตามลม', 'ถอยไร้เสียง', 'เปลี่ยนเท้าสั้น', 'เดินผ่านช่องแคบ', 'วิ่งข้ามพื้นหิน', 'ก้าวหลบคม', 'หยุดแล้วเคลื่อน'];
-  const COMMON_CULTIVATION_TECHNIQUE_NAMES = ['ลมหายใจสม่ำเสมอ', 'รวบปราณเข้าท้อง', 'โคจรปราณรอบแรก', 'ตั้งจิตสงบ', 'หลอมกายขั้นต้น', 'รับปราณยามเช้า', 'ปรับลมหายใจ', 'เก็บปราณหลังฝึก', 'เดินปราณช้า', 'รักษารากฐาน'];
-  function makeLibraryTechnique(id, name, category, subtype, bonus) { return { id, name, grade: 'common', category, subtype, manualCategory: 'technique_manual', bonus: { ...bonus }, effect: Object.entries(bonus).map(([key, value]) => `${key} +${value}`).join(' · '), unlock: () => false, libraryOnly: true }; }
-  const COMMON_ATTACK_TECHNIQUES = Object.entries(COMMON_ATTACK_TECHNIQUE_NAMES).flatMap(([subtype, names]) => names.map((name, index) => makeLibraryTechnique(`common_${subtype}_technique_${index + 1}`, name, 'attack', subtype, { attack: 4 })));
-  const COMMON_DEFENSE_TECHNIQUES = COMMON_DEFENSE_TECHNIQUE_NAMES.map((name, index) => makeLibraryTechnique(`common_defense_technique_${index + 1}`, name, 'defense', 'shield', { defense: 4 }));
-  const COMMON_MOVEMENT_TECHNIQUES = COMMON_MOVEMENT_TECHNIQUE_NAMES.map((name, index) => makeLibraryTechnique(`common_movement_technique_${index + 1}`, name, 'movement', 'step', { agility: 4 }));
-  const COMMON_CULTIVATION_TECHNIQUES = COMMON_CULTIVATION_TECHNIQUE_NAMES.map((name, index) => makeLibraryTechnique(`common_cultivation_technique_${index + 1}`, name, 'cultivation', 'breath', { training: 4 }));
-  const TECHNIQUE_LIBRARY = {
-    common: { attack: COMMON_ATTACK_TECHNIQUES, defense: COMMON_DEFENSE_TECHNIQUES, movement: COMMON_MOVEMENT_TECHNIQUES, cultivation: COMMON_CULTIVATION_TECHNIQUES },
-    uncommon: { attack: [], defense: [], movement: [], cultivation: [], support: [] },
-    rare: { attack: [], defense: [], movement: [], cultivation: [], support: [] },
-    epic: { attack: [], defense: [], movement: [], cultivation: [], support: [] },
-    legendary: { attack: [], defense: [], movement: [], cultivation: [], support: [] }
-  };
-  const TECHNIQUE_LIBRARY_BY_ID = Object.fromEntries(Object.values(TECHNIQUE_LIBRARY).flatMap(group => Object.values(group).flat()).map(item => [item.id, item]));
-  const COMMON_SUPPORT_TECHNIQUE_NAMES = ['จัดของเดินทาง', 'คัดแร่เบื้องต้น', 'เก็บสมุนไพรปลอดภัย', 'ผูกมัดสัมภาระ', 'จุดไฟกลางฝน', 'อ่านรอยทาง', 'ซ่อมอาวุธชั่วคราว', 'ประคองผู้บาดเจ็บ', 'กะเสบียงรายวัน', 'ฟังข่าวจากพ่อค้า'];
-  const COMMON_SUPPORT_TECHNIQUES = COMMON_SUPPORT_TECHNIQUE_NAMES.map((name, index) => makeLibraryTechnique(`common_support_technique_${index + 1}`, name, 'support', 'survival', { explore: 2 }));
-  TECHNIQUE_LIBRARY.common.support = COMMON_SUPPORT_TECHNIQUES;
-  COMMON_SUPPORT_TECHNIQUES.forEach(item => { TECHNIQUE_LIBRARY_BY_ID[item.id] = item; });
-  const COMMON_ORE_NAMES = ['แร่เหล็กหยาบ', 'แร่ทองแดงเขียว', 'เศษเงินดิบ', 'หินดำช่างตี', 'แร่ตะกั่วแดง', 'เศษเหล็กเก่า', 'หินทรายแข็ง', 'แร่ดีบุกหม่น', 'เกล็ดหินฟ้า', 'ก้อนทองแดงดิบ'];
-  const COMMON_HERB_NAMES = ['หญ้าฟื้นกาย', 'ใบลมอ่อน', 'รากขมพื้นบ้าน', 'ดอกน้ำค้าง', 'ผลเถาวัลย์แดง', 'ใบไผ่ปราณ', 'เห็ดดินชื้น', 'เมล็ดหอมจิต', 'กิ่งสนอุ่น', 'ดอกหญ้าหิมะ'];
-  const COMMON_MATERIAL_LIBRARY = [
-    ...COMMON_ORE_NAMES.map((name, index) => ({ id: `common_ore_${index + 1}`, name, type: 'ore', materialKey: 'iron', grade: 'common', value: 1, description: 'แร่ระดับสามัญ เนื้อไม่สม่ำเสมอแต่ใช้ตีอาวุธและเครื่องมือพื้นฐานได้' })),
-    ...COMMON_HERB_NAMES.map((name, index) => ({ id: `common_herb_${index + 1}`, name, type: 'herb', materialKey: 'herb', grade: 'common', value: 1, description: 'สมุนไพรระดับสามัญ สรรพคุณไม่แรงมากแต่ใช้เป็นส่วนผสมพื้นฐานได้' }))
-  ];
-  const MATERIAL_LIBRARY = { common: COMMON_MATERIAL_LIBRARY, uncommon: [], rare: [], epic: [], legendary: [] };
-  const MATERIAL_LIBRARY_BY_ID = Object.fromEntries(COMMON_MATERIAL_LIBRARY.map(item => [item.id, item]));
   function inferItemCategory(item = {}) {
     if (ITEM_CATEGORY_DEFS[item.category]) return item.category;
     if (item.consumable || item.heal != null) return 'consumable';
@@ -5892,7 +4673,7 @@
       item.description = SPECIAL_ARMOR_DESCRIPTIONS[item.name]; item.category = 'armor'; item.subtype = 'body';
       const spec = SPECIAL_ARMOR_STATS[item.name], realm = STORY_EQUIPMENT_REQUIREMENTS[item.name] || 0;
       item.grade = spec.grade; item.gradeExplicit = true;
-      item.bonus = Object.fromEntries(Object.entries(spec.bonus).map(([key, value]) => [key, value * EQUIPMENT_REALM_SCALE[realm]]));
+      item.bonus = { ...spec.bonus };
     }
     if (LEGACY_DISCOVERY_WEAPON_NAMES[item.name]) item.name = LEGACY_DISCOVERY_WEAPON_NAMES[item.name];
     const relicSubtype = STORY_RELIC_CATEGORIES[item.name];
@@ -5901,7 +4682,7 @@
     const special = SPECIAL_WEAPON_DETAILS[item.name];
     if (special) {
       const tier = STORY_EQUIPMENT_REQUIREMENTS[item.name] || 0;
-      item.bonus = Object.fromEntries(Object.entries(special.bonus).map(([key, value]) => [key, ['attack', 'defense', 'body', 'agility'].includes(key) ? Math.round(value * EQUIPMENT_REALM_SCALE[tier] * 100) / 100 : value])); item.description = special.description;
+      item.bonus = { ...special.bonus }; item.description = special.description;
       item.category = 'weapon'; item.subtype = item.name.startsWith('ค้อน') ? 'hammer' : 'jian';
       if (special.grade) { item.grade = special.grade; item.gradeExplicit = true; }
     }
@@ -5916,6 +4697,25 @@
     else if (Object.prototype.hasOwnProperty.call(STORY_EQUIPMENT_REQUIREMENTS, item.name)) { item.equipmentRealm = STORY_EQUIPMENT_REQUIREMENTS[item.name]; item.equipmentStage = item.equipmentRealm ? 1 : 0; }
     else if (['weapon', 'armor', 'talisman'].includes(item.category)) { item.equipmentRealm = Number.isInteger(item.equipmentRealm) ? clamp(item.equipmentRealm, 0, REALMS.length) : 0; item.equipmentStage = item.equipmentRealm ? clamp(Number(item.equipmentStage) || 1, 1, 9) : 0; }
     if (libraryItem?.category === 'cursed') item.bonus = { ...libraryItem.bonus };
+    if (['weapon', 'armor', 'talisman'].includes(item.category) && !libraryItem?.workbookStats) {
+      const statKeys = ['attack', 'defense', 'agility', 'body'];
+      const originalBonus = item.bonus || {};
+      const groupKey = `${item.category}|${item.grade}`;
+      const candidates = WORKBOOK_EQUIPMENT_BY_CATEGORY_GRADE.get(groupKey) || [];
+      const exactSubtype = WORKBOOK_EQUIPMENT_BY_CATEGORY_GRADE_SUBTYPE.get(`${groupKey}|${item.subtype}`) || [];
+      const pool = exactSubtype.length ? exactSubtype : candidates;
+      if (pool.length) {
+        const nearest = pool.map(row => ({ row, score: statKeys.reduce((sum, key) => sum + Math.abs((Number(originalBonus[key]) || 0) - (Number(row.bonus[key]) || 0)), 0) }))
+          .sort((a, b) => a.score - b.score || a.row.equipmentRealm - b.row.equipmentRealm || a.row.equipmentStage - b.row.equipmentStage || a.row.id.localeCompare(b.row.id))[0].row;
+        const preservedModifiers = Object.fromEntries(Object.entries(originalBonus).filter(([key, value]) => !statKeys.includes(key) || Number(value) < 0));
+        item.bonus = { ...nearest.bonus, ...preservedModifiers };
+        item.equipmentRealm = nearest.equipmentRealm;
+        item.equipmentStage = nearest.equipmentStage;
+        item.gradeExplicit = false;
+        item.workbookBalanced = true;
+        item.workbookSourceId = nearest.id;
+      }
+    }
     item.categoryData = ITEM_CATEGORY_DEFS[item.category];
     item.subtypeName = item.categoryData?.subtypes?.[item.subtype] || item.subtype;
     item.id = item.id || item.name;
@@ -5925,7 +4725,7 @@
   function itemPowerMultiplier(item = {}) {
     const grade = ITEM_GRADES[item.grade] ? item.grade : inferItemGrade(item.bonus || item.stats || {});
     const explicit = item.gradeExplicit === true;
-    return explicit ? (ITEM_GRADES[grade]?.powerMultiplier || 1) : 1;
+    return explicit && !item.workbookStats && !item.workbookBalanced ? (ITEM_GRADES[grade]?.powerMultiplier || 1) : 1;
   }
   function itemBonus(item = {}) {
     const raw = item && typeof item === 'object' ? (item.bonus || {}) : {};
@@ -5953,26 +4753,11 @@
     body: { name: 'ฝึกกายควบคู่', progress: .7, mastery: .9, risk: .65, body: 1.35 }
   };
   const TRAINING_LOCATION_MULTIPLIERS = { roadside: .72, retainer: .82, rented: .9, owned: 1, estate: 1.08, sect: 1.25, inn: .88, hidden_cave: 1.12 };
-  const TECHNIQUE_MASTERY_LEVELS = [
-    { min: 0, name: 'ยังไม่เข้าใจ' }, { min: 20, name: 'เริ่มต้น' }, { min: 50, name: 'คุ้นเคย' },
-    { min: 80, name: 'เชี่ยวชาญ' }, { min: 120, name: 'แตกฉาน' }
-  ];
-  const TECHNIQUE_TRAINING_RULES = {
-    breath: { kind: 'cultivation', minRootLevel: 1 }, swiftBreath: { kind: 'cultivation', minRootLevel: 2, requiresTeacher: true, requiresSect: true },
-    voidBreath: { kind: 'cultivation', minRootLevel: 3, requiresTeacher: true, cost: { spiritStone: 1, money: 2 } }, sword: { kind: 'combat' }, step: { kind: 'movement' },
-    cloudShield: { kind: 'defense' }, tigerBody: { kind: 'body' }, ironBody: { kind: 'body' }
-  };
-  const TECHNIQUE_SLOT_LABELS = { cultivation: 'วิชาบำเพ็ญ', combat: 'วิชาจู่โจม', movement: 'วิชาตัวเบา', defense: 'วิชาป้องกัน', support: 'วิชาสนับสนุน' };
-  const TECHNIQUE_SLOTS = {
-    survival: 'support', breath: 'cultivation', sword: 'combat', step: 'movement', cloudShield: 'defense', tigerBody: 'defense',
-    swiftBreath: 'cultivation', ironBody: 'defense', clanBlade: 'combat', starSword: 'combat', voidBreath: 'cultivation',
-    forbidden: 'combat', masterPendant: 'defense', seniorFlow: 'combat',
-    discovery_sword_uncommon: 'combat', discovery_sword_rare: 'combat', discovery_sword_epic: 'combat'
-  };
+  const { TECHNIQUE_MASTERY_LEVELS, TECHNIQUE_TRAINING_RULES, TECHNIQUE_SLOT_LABELS, TECHNIQUE_SLOTS } = window.OneLifeTechniqueCatalog.createTechniqueRules();
   // ปรับวิชาจากคัมภีร์อิสระตามชั้น โดยเก็บสัดส่วนเอกลักษณ์ของแต่ละวิชาไว้
   // วิชาบำเพ็ญใช้สเกลที่อ่อนกว่า เพราะโบนัสฝึกมีผลร่วมกับตัวคูณอื่น
   function balanceDiscoveryManualTechnique(technique) {
-    if (!technique.id.startsWith('discovery_') || technique.grade === 'legendary') return;
+    if (technique.workbookBalanceId || !technique.id.startsWith('discovery_') || technique.grade === 'legendary') return;
     const realm = manualRealmForTechnique(technique);
     const cultivation = techniqueSlot(technique) === 'cultivation';
     const multiplier = cultivation ? ([1, 1.25, 1.5][realm] ?? 1) : ([1, 2, 3][realm] ?? 1);
@@ -5986,14 +4771,37 @@
   }
   TECHNIQUES.forEach(technique => {
     if (technique.manualSlot) TECHNIQUE_SLOTS[technique.id] = technique.manualSlot;
-    balanceDiscoveryManualTechnique(technique);
     technique.grade = technique.grade || inferItemGrade(technique.bonus);
-    technique.gradeData = ITEM_GRADES[technique.grade];
     technique.category = techniqueCategory(technique);
     technique.subtype = techniqueSubtype(technique);
+    if (!technique.workbookStats && technique.category !== 'support') {
+      const workbookCategory = technique.category;
+      const workbookSubtype = workbookCategory === 'attack' && technique.subtype === 'sword' ? 'jian' : technique.subtype;
+      const candidates = Object.values(TECHNIQUE_LIBRARY_BY_ID).filter(item => item.category === workbookCategory);
+      const exactSubtype = candidates.filter(item => item.techniqueSubtype === workbookSubtype);
+      const pool = exactSubtype.length ? exactSubtype : candidates;
+      if (pool.length) {
+        const keys = ['attack', 'defense', 'agility', 'body', 'training'];
+        const reference = pool.map(item => ({ item, score: keys.reduce((sum, key) => sum + Math.abs((Number(technique.bonus?.[key]) || 0) - (Number(item.bonus?.[key]) || 0)), 0) }))
+          .sort((a, b) => a.score - b.score || a.item.id.localeCompare(b.item.id))[0].item;
+        const preservedModifiers = Object.fromEntries(Object.entries(technique.bonus || {}).filter(([key, value]) => !keys.includes(key) || Number(value) < 0));
+        technique.bonus = { ...reference.bonus, ...preservedModifiers };
+        technique.grade = reference.grade;
+        technique.workbookBalanceId = reference.id;
+        technique.workbookRequiredRealm = reference.manualRealm;
+        if (workbookCategory === 'cultivation') {
+          technique.maxRealm = reference.maxRealm;
+          technique.maxStage = reference.maxStage;
+        }
+      }
+    }
+    balanceDiscoveryManualTechnique(technique);
+    technique.gradeData = ITEM_GRADES[technique.grade];
     technique.categoryData = TECHNIQUE_CATEGORY_DEFS[technique.category];
     technique.subtypeName = technique.categoryData?.subtypes?.[technique.subtype] || technique.subtype;
     technique.manualCategory = 'technique_manual';
+    const labels = { attack: 'โจมตี', defense: 'ป้องกัน', body: 'กายา', agility: 'ว่องไว', training: 'ความเร็วฝึก', explore: 'สำรวจ' };
+    technique.effect = Object.entries(technique.bonus || {}).map(([key, value]) => `${labels[key] || key} ${Number(value) >= 0 ? '+' : ''}${value}${key === 'training' ? '%' : ''}`).join(' · ');
   });
   function techniqueSlot(t) { return TECHNIQUE_SLOTS[t.id] || 'support'; }
   function ensureTechniqueLoadout(s) {
@@ -6190,7 +4998,7 @@
         loadout[slot] = first?.id || null;
       });
     }
-    const slot = techniqueSlot(technique);
+    const slot = technique ? techniqueSlot(technique) : 'support';
     loadout[slot] = enteringLoadout ? id : loadout[slot] === id ? null : id;
     if (slot === 'cultivation' && loadout[slot] === id && !s.hero?.cultivationAccess) openCultivation(s, `ติดตั้งวิชา${technique.name}`, false);
     return true;
@@ -6238,15 +5046,8 @@
     return s;
   }
 
-  const DISCOVERY_MANUAL_IDS = {
-    'คัมภีร์กระบี่จากการสำรวจ ชั้นดี': 'discovery_sword_uncommon',
-    'คัมภีร์กระบี่จากการสำรวจ หายาก': 'discovery_sword_rare',
-    'คัมภีร์กระบี่จากการสำรวจ มหากาพย์': 'discovery_sword_epic',
-    'คัมภีร์กระบี่จากการสำรวจ มหัศจรรย์': 'discovery_sword_epic',
-    'คัมภีร์ปฐมเมฆา': 'manual_cloud_origin'
-  };
+  const { DISCOVERY_MANUAL_IDS, MANUAL_STUDY_TARGETS } = window.OneLifeTechniqueCatalog.createManualProgressionData();
   // Legendary manuals are authored separately; this only prepares the learning system.
-  const MANUAL_STUDY_TARGETS = { common: 6, uncommon: 12, rare: 18, epic: 24, legendary: 36 };
   // ชั้นคัมภีร์แยกจากเกรดสี คัมภีร์บทแรกยังเปิดทางบำเพ็ญได้ก่อนหลอมกาย
   function manualRealmForTechnique(technique) {
     if (Number.isInteger(technique?.manualRealm)) return clamp(technique.manualRealm, 0, REALMS.length);
@@ -6259,7 +5060,9 @@
   function manualLearningRequirement(s, manual) {
     const required = Number.isInteger(manual?.manualRealm) ? clamp(manual.manualRealm, 0, REALMS.length) : manualRealmForTechnique(TECHNIQUES.find(t => t.id === manual?.techniqueId));
     const current = s.hero?.cultivationAccess || s.flags?.basicCultivation ? Math.max(1, Number(s.hero?.realm) || 1) : 0;
-    return { required, name: manualRealmName(required), eligible: current >= required };
+    const requiredStage = Number.isInteger(manual?.manualStage) ? clamp(manual.manualStage, 0, 9) : 0;
+    const currentStage = current ? clamp(Number(s.hero?.stage) || 1, 1, 9) : 0;
+    return { required, requiredStage, name: manualRealmName(required), eligible: current > required || (current === required && currentStage >= requiredStage) };
   }
   function normalizeDiscoveryManuals(s) {
     s.learnedManualTechniques = Array.isArray(s.learnedManualTechniques) ? s.learnedManualTechniques : [];
@@ -6276,6 +5079,7 @@
       item.category = 'technique_manual'; item.subtype = technique.manualSubtype || def?.manualSubtype || (technique.manualSlot === 'cultivation' ? 'cultivation' : 'attack_jian');
       item.learningType = technique.learningType || def?.learningType || 'martial';
       item.manualRealm = manualRealmForTechnique(technique);
+      item.manualStage = Number.isInteger(technique.manualStage) ? technique.manualStage : 0;
       item.bonus = {};
     });
   }
@@ -6363,7 +5167,14 @@
     if (s.locations?.current && available.some(item => item.id === s.locations.current)) return s.locations.current;
     return available[0]?.id || 'roadside';
   }
-  function techniqueTrainingRule(technique) { return TECHNIQUE_TRAINING_RULES[technique?.id] || { kind: 'general', minRootLevel: 0 }; }
+  function techniqueTrainingRule(technique) {
+    if (TECHNIQUE_TRAINING_RULES[technique?.id]) return TECHNIQUE_TRAINING_RULES[technique.id];
+    const slot = techniqueSlot(technique);
+    const kind = slot === 'combat' ? 'combat' : slot === 'cultivation' ? 'cultivation'
+      : slot === 'movement' ? 'movement' : slot === 'defense' && technique?.subtype === 'body' ? 'body'
+        : slot === 'defense' ? 'defense' : 'general';
+    return { kind, minRootLevel: 0 };
+  }
   function techniqueIsTrainable(s, technique) {
     if (!technique || !technique.unlock(s)) return false;
     const rule = techniqueTrainingRule(technique);
@@ -7361,6 +6172,11 @@
   }
 
   let state = null;
+  let mobileView = 'summary';
+  let activeInfoPanelTab = 'overview';
+  let mobileUnlockState = null;
+  let knownMobileActivities = new Set();
+  let newlyUnlockedMobileActivities = new Set();
   let tickTimer = null;
   let selectedTalent = 'jade';
   let selectedRoot = 'human';
@@ -7412,417 +6228,6 @@
     war_shadow_survivor: '余烬见证 · ผู้เห็นเงาสงคราม', new_land_wanderer: '远界新生 · เริ่มชีวิตในแดนใหม่'
   };
 
-  const EVENTS = {
-    fallenHouse: {
-      month: 0, tag: 'ปฐมบท · อายุ 5 ขวบ', art: 'gate', title: 'คืนตระกูลหลินล่มสลาย',
-      text: 'กลางดึก เสียงเหล็กกระทบกันดังจากเรือนหน้า เปลวไฟลามถึงชายคาห้องนอน บิดาผลักเจ้าเข้าใต้เตียงก่อนประตูจะถูกถีบแตก บนแขนของคนชุดดำมีรอยสักงูพันเมฆ—ภาพสุดท้ายก่อนทุกอย่างกลายเป็นควัน',
-      choices: [
-        { text: 'คลานฝ่าควันไปหาลุงโจว คนรับใช้เก่าแก่', note: 'เปิดเส้นทางคนรับใช้ผู้ภักดี ลุงโจวจะร่วมเดินทางด้วย', effect: s => { s.flags.loyalRetainer = true; s.flags.retainerAlive = true; s.hero.health -= 14; s.relations.master += 2; addLog('ลุงโจวอุ้มเจ้าฝ่ากำแพงหลังเรือน เขาสาบานจะรักษาทายาทคนสุดท้ายด้วยชีวิต', true); } },
-        { text: 'ลอดช่องระบายน้ำ หนีออกไปเพียงลำพัง', note: 'เปิดเส้นทางเด็กเร่ร่อน (จะไม่ได้เดินทางกับลุงโจว)', effect: s => { s.flags.loneWanderer = true; s.flags.retainerAlive = false; s.flags.escapePrepared = true; s.hero.health -= 8; s.hero.money += 2; addLog('เด็กห้าขวบเดินออกจากเมืองที่กำลังไหม้โดยไม่มีใครจับมือ', true); } },
-        { text: 'ซ่อนตัวดูหน้าผู้สั่งฆ่าให้ชัด', note: 'อันตรายมาก แต่จำตรางูดำและเสียงหัวหน้าคนร้ายได้ (ลุงโจวพลัดหลง)', effect: s => { s.flags.houseEnemyKnown = true; s.flags.familyToken = true; s.flags.retainerAlive = false; s.hero.health -= 24; s.paths.insight += 1; addTreasure(s, 'ป้ายหยกตระกูลหลิน', {}); addLog('เจ้าจำเสียงของชายหน้ากากและกำป้ายหยกของมารดาไว้จนเลือดซึมมือ', true); } }
-      ]
-    },
-    firstRoad: {
-      month: 12, tag: 'วัยเด็ก · หนึ่งปีหลังบ้านแตก', title: 'ทางแยกใต้ฝนหนาว',
-      text: 'หนึ่งปีแห่งการหลบหนีทำให้เจ้าไม่เหมือนเด็กทั่วไป ข่าวประกาศตามหาทายาทหลินติดอยู่ทุกประตูเมือง ถนนสายหนึ่งทอดไปยังชุมชนคนไร้บ้านที่ไม่มีใครถามชื่อใคร',
-      choices: [
-        {
-          text: 'เดินทางกับลุงโจวในฐานะหลานพ่อค้าเร่',
-          note: 'เส้นทางผู้ภักดี: ได้รับการปกป้องและฝึกพื้นฐาน',
-          requires: s => s.flags.retainerAlive,
-          locked: 'เจ้าไม่ได้หนีมากับลุงโจวตั้งแต่คืนบ้านแตก',
-          effect: s => { s.flags.loyalRetainer = true; s.hero.powerBonus += 25; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 18); s.hero.money += 6; addLog('ลุงโจวสอนอ่านบัญชี ซ่อนมีด และไม่ไว้ใจป้ายประกาศของทางการ', true); }
-        },
-        {
-          text: 'แยกไปอยู่กับเด็กเร่ร่อน เปลี่ยนชื่อและลบร่องรอย',
-          note: 'เส้นทางเร่ร่อน: อิสระ เอาตัวรอดลำพัง',
-          effect: s => { s.flags.loneWanderer = true; s.flags.retainerAlive = false; s.hero.powerBonus += 15; s.hero.money += 9; s.hero.reputation -= 3; addLog('เจ้าหายเข้าไปในตรอกเมืองท่า เรียนรู้ว่าความหิวสอนคนได้เร็วกว่าตำรา', true); }
-        },
-        {
-          text: 'ช่วยเด็กอีกคนที่ถูกมือปราบไล่จับ',
-          note: 'เสียทรัพยากร แต่ได้สหายวัยเด็กและเบาะแสโลกใต้ดิน',
-          effect: s => { s.hero.money = Math.max(0, s.hero.money - 3); s.hero.health -= 6; s.hero.reputation += 4; s.paths.compassion += 1; s.flags.underworldContact = true; addLog('เด็กชื่ออาเถารอดไปได้ และมอบสัญลักษณ์ตลาดมืดให้เจ้าก่อนแยกทาง', true); }
-        }
-      ]
-    },
-    growingStep: {
-      month: 24, tag: 'วัยเด็ก · สองปีแห่งการเรียนรู้', art: 'gate', title: 'ก้าวแรกของชีวิตใหม่',
-      dynamicText: s => s.flags.retainerAlive
-        ? 'สองปีหลังบ้านแตก ลุงโจวพาเจ้ามาซ่อนตัวในเรือนเช่าเล็ก ๆ ชายชราหาบน้ำทำงานหนักเพื่อหาข้าวต้มให้เจ้าทุกวัน วันนี้เขาถามเจ้าว่าพร้อมจะเริ่มเรียนรู้สิ่งใดสำหรับชีวิตข้างหน้า'
-        : s.flags.loneWanderer
-        ? 'สองปีในตรอกของเด็กเร่ร่อน เจ้าเติบโตขึ้นด้วยความว่องไวและสายตาที่ระแวดระวัง ในเมืองท่ามีหลายทางรอดให้เด็กคนหนึ่งเลือกหยิบจับ'
-        : 'สองปีแห่งความเงียบงัน เจ้ากำป้ายหยกและรอยตราในความทรงจำไว้แน่น วันนี้ชีวิตในชุมชนชานเมืองเริ่มมีทางแยกให้เจ้าเลือกก้าวเดิน',
-      choices: [
-        {
-          text: 'เรียนอ่านตัวอักษรและช่วยงานร้านยา/ช่างฝีมือ',
-          note: 'ปูพื้นฐานปัญญาและทักษะสุจริต (เพิ่มความรู้และสุขภาพ)',
-          effect: s => {
-            s.paths.insight += 2;
-            s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8);
-            s.hero.attributes = s.hero.attributes || {};
-            s.hero.attributes.intellect = (s.hero.attributes.intellect || 10) + 1;
-            addLog('เจ้าหัดคัดอักษรและจำชื่อสมุนไพรพื้นฐาน ความรู้คือเกราะกำบังที่ไม่ต้องถือดาบ', true);
-          }
-        },
-        {
-          text: 'ฝึกยืดเส้นสาย วิ่งส่งของ และทำงานใช้แรงกาย',
-          note: 'ปูพื้นฐานร่างกายและความคล่องแคล่วตามวัยเด็ก',
-          effect: s => {
-            s.hero.combat = s.hero.combat || {};
-            s.hero.combat.body = (s.hero.combat.body || 0) + 1;
-            s.hero.combat.agility = (s.hero.combat.agility || 0) + 1;
-            s.hero.money += 4;
-            addLog('เจ้าช่วยงานขนส่งรอบตลาด ร่างกายแข็งแรงขึ้นตามวัยและได้รับเบี้ยเล็กน้อย', true);
-          }
-        },
-        {
-          text: 'ซ่อนตัว สังเกตผู้คน และจำเส้นทางหลบหนีในเมือง',
-          note: 'เตรียมทางรอดและระแวดระวังตัว',
-          effect: s => {
-            s.paths.freedom += 2;
-            s.flags.escapePrepared = true;
-            s.hero.reputation = (s.hero.reputation || 0) + 1;
-            addLog('เจ้าจดจำตรอกซอกซอยและทางระบายน้ำไว้ในใจ ไม่มีใครรู้ว่าเจ้าอยู่ที่ใดอย่างแท้จริง', true);
-          }
-        }
-      ]
-    },
-    // แก้ไขพล็อตลุงโจว: ปรับข้อความและตัวเลือกตามสถานะ retainerAlive อย่างถูกต้อง
-    winterChild: {
-      month: 36, tag: 'วัยเด็ก · ฤดูหนาวปีที่สาม', title: 'ข้าวหนึ่งชามกับชีวิตหนึ่งคน',
-      dynamicText: s => s.flags.retainerAlive
-        ? 'หิมะปิดถนน เสบียงเหลือเพียงชามเดียว ลุงโจวได้รับบาดเจ็บจากการล่อมือสังหารออกไป ขณะเดียวกันเด็กข้างถนนหลายคนอดอาหาร ไม่มีคำตอบใดช่วยทุกคนได้'
-        : 'หิมะปิดถนน เสบียงเหลือเพียงชามเดียว ในตรอกหนาวเหน็บ เด็กเร่ร่อนหลายคนนอนขดตัวสั่นเทาโดยไร้ผ้าห่ม ความหิวโหยเริ่มกัดกินสติของทุกคน',
-      choices: [
-        {
-          dynamicText: s => s.flags.retainerAlive ? 'แบ่งข้าวและยาให้ลุงโจวกับเด็ก ๆ' : 'แบ่งข้าวและผ้าห่มให้เด็กเร่ร่อนที่อ่อนแอกว่า',
-          note: 'ช่วยผู้อื่น แต่เจ้าจะอ่อนแอและเสียเงินทั้งหมด',
-          effect: s => {
-            s.hero.money = 0; s.hero.health -= 18; s.hero.reputation += 8;
-            if (s.flags.retainerAlive) {
-              addLog('เจ้าหิวจนหมดสติ แต่ทุกคนผ่านคืนนั้นมาได้ ลุงโจวไม่เคยลืมน้ำใจนี้', true);
-            } else {
-              addLog('เจ้าสละอาหารให้เพื่อนร่วมตรอก แม้ท้องจะกิ่ว แต่เด็ก ๆ ต่างมองเจ้าเป็นผู้นำ', true);
-            }
-          }
-        },
-        {
-          text: 'ขโมยเสบียงจากคฤหาสน์นายอำเภอ',
-          note: 'รอดแน่ แต่ชื่อเสียงลดและเริ่มคุ้นเคยกับทางมืด',
-          effect: s => { s.hero.money += 16; s.hero.health += 10; s.hero.reputation -= 10; s.flags.escapePrepared = true; s.flags.darkPastFromChildhood = true; addLog('เจ้ารอดฤดูหนาวจากของที่ขโมยมา และพบตรางูดำบนหีบของนายอำเภอ', true); }
-        },
-        {
-          text: 'ตามรอยมือสังหารเพื่อแลกข้อมูลกับอาหาร',
-          note: 'ได้เบาะแสตระกูล แต่เสี่ยงภัยอย่างยิ่ง',
-          effect: s => {
-            s.flags.houseEnemyKnown = true; s.hero.money += 8; s.hero.powerBonus += 20;
-            if (s.flags.retainerAlive) {
-              s.hero.health += 6; s.flags.retainerAlive = false; s.flags.retainerMissing = true;
-              addLog('เมื่อเจ้ากลับมา ลุงโจวหายไป เหลือเพียงรอยเลือดและข้อความให้มุ่งหน้าสำนักเมฆาคราม', true);
-            } else {
-              addLog('เบาะแสชี้ว่าผู้ทำลายตระกูลเกี่ยวข้องกับคนในสำนักเมฆาคราม', true);
-            }
-          }
-        }
-      ]
-    },
-    caravanBeacon: {
-      month: 48, tag: 'วัยเด็ก · เมืองหน้าด่าน', title: 'คาราวานแห่งทิศประจิม',
-      text: 'หลังฤดูหนาว เจ้าลากสังขารมาถึงเมืองหน้าด่าน คาราวานจากทิศประจิมกำลังพักม้า พ่อค้าพูดถึงชายชุดดำที่ตามล่าเด็กตระกูลหลิน และสำนักเมฆาครามบนยอดเขาที่ไม่ยอมก้มหัวให้เงามืด',
-      choices: [
-        { text: 'ช่วยขนฟืนและเสบียงให้คาราวาน', note: 'ได้ค่าจ้างเล็กน้อยและรู้ทิศทางไปภูเขาเมฆาคราม', effect: s => { s.flags.caravanBeacon = true; s.flags.blueCloudRoute = true; s.hero.money += 3; s.hero.combat = s.hero.combat || {}; s.hero.combat.body = (s.hero.combat.body || 0) + 1; addLog('คาราวานชี้ทางขึ้นภูเขาเมฆาครามให้เจ้า แม้จะบอกได้เพียงเส้นทางหลัก', true); } },
-        { text: 'ลอบขโมยอาหารและแผนที่จากพ่อค้า', note: 'ได้ของประทังชีวิต แต่ทิ้งร่องรอยให้คนทวงหนี้ตามกลิ่นมา', effect: s => { s.flags.caravanBeacon = true; s.flags.caravanTrace = true; s.flags.darkPastFromChildhood = true; s.hero.money += 6; s.hero.combat = s.hero.combat || {}; s.hero.combat.agility = (s.hero.combat.agility || 0) + 1; addLog('อาหารช่วยให้เจ้ารอด แต่รอยเท้าและแผนที่ที่หายไปทำให้มีคนเริ่มตามรอยเจ้า', true); } },
-        { text: 'แอบฟังข่าวและช่วยเด็กพลัดหลงในขบวน', note: 'ไม่ได้เส้นทางเต็มรูปแบบ แต่ฝากน้ำใจไว้กับคนเดินทาง', effect: s => { s.flags.caravanBeacon = true; s.flags.caravanChildSaved = true; s.flags.blueCloudRumor = true; s.paths.compassion += 1; s.hero.reputation += 2; addLog('เด็กในคาราวานพาเจ้าไปชี้ยอดเขาเมฆาคราม และคำขอบคุณยังติดอยู่ในใจ', true); } }
-      ]
-    },
-    oldDebt: {
-      month: 60, tag: 'ปมอดีตหวนคืน', title: 'จดหมายที่รอมาห้าปี',
-      dynamicText: s => {
-        const tokenClue = s.flags.familyToken
-          ? 'พร้อมตราครึ่งหนึ่งซึ่งเข้าคู่กับป้ายหยกตระกูลหลิน'
-          : 'พร้อมตราครึ่งหนึ่งซึ่งตรงกับรอยตราที่เจ้าจำได้จากบ้านเก่า แม้ป้ายหยกจะไม่อยู่กับเจ้าแล้ว';
-        return `จดหมายไร้นามระบุตำแหน่งหลุมศพปลอมของบิดา ภายในมีบันทึกว่า “งูดำซื้อคนในเมฆาครามแล้ว — ชื่อของอาจารย์เหวินจงอยู่ในบันทึกนี้ แต่ยังไม่มีหลักฐานว่าเป็นผู้ร่วมมือหรือผู้ถูกใส่ร้าย” ${tokenClue}${s.flags.caravanTrace ? ' รอยแผนที่ที่หายจากคาราวานทำให้เจ้ารู้ว่าคนทวงหนี้ตามมาถึงเมืองนี้ได้อย่างไร' : s.flags.blueCloudRoute || s.flags.blueCloudRumor ? ' ข่าวจากคาราวานยืนยันว่าทางขึ้นยอดเขาเมฆาครามมีอยู่จริง' : ''}`;
-      },
-      choices: [
-        {
-          text: 'ตามหาผู้ส่งและช่วยลุงโจว หากเขายังมีชีวิต',
-          note: 'ความภักดีในอดีต: ลุงโจวจะกลับมาช่วยเจ้า',
-          requires: s => s.flags.loyalRetainer && (s.flags.retainerAlive || s.flags.retainerMissing),
-          locked: 'เจ้าไม่ได้มีสายสัมพันธ์หรือเบาะแสของลุงโจว',
-          effect: s => { s.flags.retainerAlive = true; s.flags.retainerMissing = false; s.flags.houseEnemyKnown = true; s.hero.reputation += 6; s.hero.powerBonus += 30; addLog('จากรอยเลือดและเบาะแสที่สะสมมา เจ้าช่วยลุงโจวออกจากคุกลับ เขาเผยว่ามีคนในสำนักเมฆาครามช่วยผู้สั่งฆ่าปกปิดร่องรอย', true); }
-        },
-        {
-          text: 'ขายตราครึ่งหนึ่งให้ตลาดมืด แล้วเดินทางต่อคนเดียว',
-          note: 'ตัดอดีต ได้เงินมาก แต่สูญเสียหลักฐานสำคัญ',
-          effect: s => { s.flags.loneWanderer = true; s.flags.retainerAlive = false; s.flags.familyToken = false; s.treasures = (s.treasures || []).filter(item => (typeof item === 'string' ? item : item.name) !== 'ป้ายหยกตระกูลหลิน'); s.hero.money += 28; s.hero.reputation -= 8; addLog('ป้ายหยกถูกขายเปลี่ยนมือ อดีตเบาลง แต่ความจริงก็ไกลออกไป', true); }
-        },
-        {
-          text: 'เก็บหลักฐานและมุ่งหน้าสำนักเมฆาคราม',
-          note: 'เปิดปมผู้บงการและเตรียมแฝงตัวเข้าสำนัก',
-          effect: s => { s.flags.houseEnemyKnown = true; s.flags.familyToken = true; addTreasure(s, 'ป้ายหยกตระกูลหลิน', {}); s.flags.knowsTraitor = true; s.paths.insight += 2; addLog('เป้าหมายของเจ้าไม่ใช่เพียงฝึกตน แต่คือหาคนที่เปิดประตูให้ศัตรูในคืนนั้น', true); }
-        }
-      ]
-    },
-    foothills: {
-      month: 72, tag: 'ระหว่างทาง · เชิงเขาเมฆา', title: 'ข่าวลือใต้เงาเมฆา',
-      dynamicText: s => `สองปีหลังจากเรื่องหนี้เก่าผ่านไป เส้นทางของหลินอันมาถึงเมืองเชิงเขาเมฆา ที่นี่มีทั้งคนเตรียมสอบเข้าสำนัก คนทำมาหากินใต้เงาภูเขา และข่าวลือว่าสงครามกำลังขยับเข้ามาใกล้${s.flags.caravanTrace ? ' ชายชุดดำยังถามถึงแผนที่ที่หายไปจากคาราวาน' : ''}`,
-      choices: [
-        { text: 'เก็บเงินและเตรียมตัวสมัครเข้าสำนัก', note: 'เปิดเบาะแสการสอบและความสัมพันธ์กับผู้คนเชิงเขา', effect: s => { s.flags.foothillsPrepared = true; s.flags.blueCloudRoute = true; s.hero.money += 4; s.hero.reputation += 1; addLog('เจ้ารู้ว่าการเข้าสำนักไม่ได้มีเพียงประตูเดียว แต่ต้องมีทั้งเงิน ความพร้อม และคนรับรอง', true); } },
-        { text: 'รับงานคุ้มกันชาวบ้านรอบเชิงเขา', note: 'ฝึกกายและสร้างชื่อในฐานะนักยุทธ์ก่อนเลือกเส้นทาง', effect: s => { s.flags.foothillsMartial = true; s.hero.health = Math.max(1, s.hero.health - 4); s.hero.combat = s.hero.combat || {}; s.hero.combat.body = (s.hero.combat.body || 0) + 2; s.hero.reputation += 3; addLog('ชาวบ้านเชิงเขาจำฝีมือของเจ้าได้ แม้ยังไม่มีใครเรียกเจ้าว่าผู้บำเพ็ญ', true); } },
-        { text: 'ออกจากเมืองตามเส้นทางชายแดน', note: 'ปูทางผู้พเนจรและเปิดข้อมูลดินแดนใหม่', effect: s => { s.flags.foothillsDeparted = true; s.flags.escapePrepared = true; s.paths.freedom += 1; s.hero.money = Math.max(0, s.hero.money - 2); addLog('เจ้าซื้อเสบียงแล้วมองเลยยอดเขาไปยังถนนที่ไม่มีชื่อสำนักใดครอบครอง', true); } }
-      ]
-    },
-    arrival: {
-      month: 84, tag: 'อายุ 12 ปี · เหตุการณ์สำคัญ', art: 'gate', title: 'ก้าวแรกใต้เมฆาคราม',
-      dynamicText: s => adaptiveDialogue(s, 'สำนักเมฆาครามเป็นเพียงสำนักระดับต่ำ ประมุขมีพลังราวขั้นสร้างรากฐาน ขั้น 1 และศิษย์นอกอยู่ขั้นหลอมกาย ศิษย์ในรวบรวมวิญญาณขั้น 1–5 ศิษย์เอกรวบรวมวิญญาณขั้น 6–9 ศิษย์สืบทอดควบแน่นวิญญาณขั้น 1–5 ส่วนอาจารย์และผู้อาวุโสอยู่ขั้นควบแน่นวิญญาณขั้น 6–9 อาจารย์เหวินมองเจ้าอยู่ครู่หนึ่ง ก่อนยื่นป้ายไม้ศิษย์นอกพร้อมเคล็ดรวบรวมปราณพื้นฐาน “ที่นี่ให้โอกาส แต่ไม่เคยรับรองชะตาของผู้ใด”'),
-      choices: [
-        { text: 'คำนับและขอคำชี้แนะเรื่องการฝึก', note: 'อาจารย์จดจำความมุ่งมั่นของเจ้า', effect: s => { s.relations.master += 12; s.hero.cultivation += 10; addLog('อาจารย์ชี้แนะจังหวะลมหายใจ ทำให้พื้นฐานมั่นคงขึ้น', true); } },
-        { text: 'ช่วยศิษย์พี่ขนของเข้าสำนัก', note: 'เสียแรงเล็กน้อย แต่ได้รู้จักผู้คน', effect: s => { s.relations.senior += 14; s.hero.health -= 4; s.hero.money += 3; addLog('ศิษย์พี่เซี่ยหลันตอบแทนด้วยอาหารและตำลึงเล็กน้อย', true); } },
-        { text: 'สำรวจทางหนีทีไล่รอบประตู', note: 'เริ่มต้นด้วยความระวังตัว', effect: s => { s.flags.escapePrepared = true; s.hero.reputation -= 2; addLog('เจ้าจดจำทางลับด้านกำแพงตะวันตกไว้เงียบ ๆ', true); } },
-        { text: 'ปฏิเสธสำนัก กลับไปสร้างชีวิตธรรมดา', note: 'เปิดเส้นทางงาน บ้าน และครัวเรือน — ไม่เปิดรากวิญญาณหรือปราณ', effect: s => { s.flags.linAnRoute = 'mortal-peace'; s.flags.sectDeclined = true; s.hero.cultivationAccess = false; s.paths.compassion += 1; addLog('หลินอันคำนับขอบคุณ แต่เลือกกลับไปสร้างชายคาที่ตนดูแลได้จริง', true); } },
-        { text: 'ปฏิเสธสำนัก ฝึกกายเป็นนักยุทธ์พเนจร', note: 'เปิดเส้นทางฝึกกาย/วิชาต่อสู้ — ยังไม่เข้าสู่การบำเพ็ญ', effect: s => { s.flags.linAnRoute = 'nameless-martial'; s.flags.sectDeclined = true; s.hero.cultivationAccess = false; s.paths.freedom += 2; addLog('หลินอันเลือกฝึกกายและฝีมือด้วยตนเอง ไม่ขอรับเคล็ดรวบรวมปราณ', true); } },
-        { text: 'ออกเดินทางไปดินแดนใหม่', note: 'เปิดเส้นทางเดินทาง เสบียง เมืองใหม่ และการตัดอดีต', effect: s => { s.flags.linAnRoute = 'new-land'; s.flags.sectDeclined = true; s.hero.cultivationAccess = false; s.flags.escapePrepared = true; s.paths.freedom += 2; addLog('หลินอันหันหลังให้ประตูสำนัก แล้วเลือกถนนที่ไม่มีใครรู้จักชื่อของตน', true); } },
-        { text: 'ปฏิเสธสำนัก เข้าสู่เครือข่ายใต้ดิน', note: 'เลือกเส้นทางค้าข่าวและงานเสี่ยง แลกเงินกับชื่อเสียงและความปลอดภัย', effect: s => { s.flags.linAnRoute = 'underworld'; s.flags.sectDeclined = true; s.hero.cultivationAccess = false; s.paths.freedom += 2; addLog('หลินอันหันไปหาคนที่ทำมาหากินอยู่ใต้กฎหมายของเมือง', true); } }
-      ]
-    },
-    wounded: {
-      month: 88, tag: 'เหตุการณ์', title: 'ศิษย์ร่วมรุ่นผู้บาดเจ็บ',
-      text: 'ระหว่างกลับจากป่าหลังเขา เจ้าพบเฉินหยู ศิษย์ร่วมรุ่นนอนบาดเจ็บอยู่ข้างทาง รอยกรงเล็บสีดำบนแขนของเขาไม่เหมือนสัตว์ป่าทั่วไป',
-      choices: [
-        { text: 'ใช้สมุนไพรช่วยรักษาและพากลับสำนัก', note: 'ใช้ 6 ตำลึง หรือเสียสุขภาพหากเงินไม่พอ', effect: s => { if (s.hero.money >= 6) s.hero.money -= 6; else s.hero.health -= 12; s.relations.friend += 25; s.flags.helpedFriend = true; addLog('เฉินหยูรอดชีวิต เขาติดค้างบุญคุณเจ้าครั้งใหญ่', true); } },
-        { text: 'สอบถามต้นตอของรอยแผลก่อน', note: 'อาจได้ข้อมูล แต่เขาจะจดจำความลังเล', effect: s => { s.flags.knowsTraitor = true; s.relations.friend += 5; s.hero.reputation += 2; addLog('ก่อนหมดสติ เฉินหยูเอ่ยถึงชายสวมหน้ากากกับตรางูดำ', true); } },
-        { text: 'รีบกลับไปแจ้งสำนัก ไม่เสี่ยงแตะต้อง', note: 'ปลอดภัยกว่า แต่ช้าเกินช่วยเขา', effect: s => { s.relations.master += 4; s.relations.friend -= 18; s.hero.reputation += 4; addLog('หน่วยลาดตระเวนมาถึงช้า เฉินหยูหายตัวไปจากป่า', true); } }
-      ]
-    },
-    manual: {
-      month: 93, tag: 'เหตุการณ์สำคัญ', title: 'คัมภีร์ในหอฝุ่น',
-      text: 'หลังฝึกเคล็ดรวบรวมปราณพื้นฐานมาระยะหนึ่ง สำนักอนุญาตให้ศิษย์เลือกวิชาเฉพาะทางได้หนึ่งแขนง วิชาแต่ละสายเปลี่ยนแนวทางเติบโตอย่างชัดเจน',
-      choices: [
-        { text: 'เลือก “กระบี่ธารไหล”', note: 'สายโจมตี: โจมตี +6', effect: s => { s.flags.swordLearned = true; s.relations.master += 8; addLog('คมกระบี่ของเจ้าลื่นไหลดั่งสายน้ำ', true); } },
-        { text: 'เลือก “ม่านเมฆคุ้มกาย”', note: 'สายป้องกัน: ป้องกัน +8', effect: s => { s.flags.shieldLearned = true; s.relations.senior += 6; addLog('ม่านปราณบางเบารับแรงกระแทกแทนร่างของเจ้า', true); } },
-        { text: 'เลือก “กายาพยัคฆ์หิน”', note: 'สายร่างกาย: กายา +8 ป้องกัน +3', effect: s => { s.flags.bodyLearned = true; s.hero.maxHealth += 12; s.hero.health += 12; addLog('เลือดลมหนักแน่น กล้ามเนื้อและกระดูกแข็งดุจศิลา', true); } },
-        { text: 'เลือก “โคจรปราณเก้าชีพจร”', note: 'สายบำเพ็ญ: ความเร็วฝึกตน +22%', effect: s => { s.flags.cultivationLearned = true; s.relations.master += 4; addLog('เส้นทางโคจรใหม่ทำให้การดูดซับปราณเร็วขึ้นมาก', true); } }
-      ]
-    },
-    sectSparring: {
-      month: 100, tag: 'ชีวิตในสำนัก · ลานไผ่', title: 'มิตรภาพใต้เงาไผ่',
-      text: 'ก่อนข่าวสงครามจะกลบทุกเสียง สำนักจัดการประลองคัดเลือกในลานไผ่ ศิษย์พี่เซี่ยหลันวางค่ายกลทดสอบ ส่วนเฉินหยูส่งเสียงเชียร์อยู่ข้างสนาม นี่อาจเป็นวันที่สงบสุขที่สุดก่อนพายุมาเยือน',
-      choices: [
-        { text: 'ทุ่มสุดกำลัง ประลองเพื่อศักดิ์ศรี', note: 'ชื่อเสียงสำนักและความไว้วางใจจากศิษย์พี่เพิ่มขึ้น', effect: s => { s.flags.sectSparringWon = true; s.flags.sectSparringWitnessed = true; s.relations.senior += 10; s.hero.powerBonus += 20; addLog('เจ้าชนะการประลองอย่างสง่างาม ชื่อของเจ้าถูกพูดถึงทั่วลานไผ่', true); } },
-        { text: 'ยับยั้งกระบวนท่า ชี้แนะจุดบกพร่องให้เฉินหยู', note: 'เฉินหยูฝากของแทนใจไว้ ซึ่งช่วยให้ถอยจากดักซุ่มได้ดีขึ้น', effect: s => { s.flags.friendKeepsake = true; s.flags.sectSparringMercy = true; s.paths.compassion += 1; s.relations.friend += 14; addTreasure(s, 'ถุงขนมเมฆา', { restHealth: 4, restQi: 3 }); addLog('เฉินหยูจำคำชี้แนะของเจ้าไว้ และมอบถุงขนมเมฆาเป็นของแทนใจ', true); } },
-        { text: 'ซ่อนเร้นฝีมือ หาจังหวะพลิกแพลงตามใจ', note: 'เก็บไพ่ตายไว้ แลกกับชื่อเสียงที่ไม่โดดเด่น', effect: s => { s.flags.sparringRead = true; s.paths.insight += 2; s.paths.freedom += 1; s.relations.senior += 3; addLog('เจ้าจบการประลองโดยไม่มีใครอ่านทางได้หมด เหลือเพียงความลับในใจ', true); } }
-      ]
-    },
-    trader: {
-      month: 98, tag: 'ข่าวลือจากโลกภายนอก', title: 'พ่อค้าใต้แสงตะเกียง',
-      text: 'พ่อค้าเร่จากชายแดนเสนอขายแผนที่เก่าซึ่งทำเครื่องหมายอุโมงค์ใต้สำนัก เขายืนยันว่ากองโจรงูดำกำลังรวบรวมคน แต่ราคาของข้อมูลคือทุกอย่างที่เจ้ามีเกือบทั้งหมด',
-      choices: [
-        { text: 'ซื้อแผนที่ในราคา 18 ตำลึง', requires: s => s.hero.money >= 18, locked: 'ต้องมี 18 ตำลึง', effect: s => { s.hero.money -= 18; s.flags.foundMap = true; s.flags.escapePrepared = true; addLog('แผนที่เผยทั้งทางลับเข้าคลังและเส้นทางออกจากเขา', true); } },
-        { text: 'ต่อรองด้วยข้อมูลที่เจ้ารู้', requires: s => s.flags.knowsTraitor || s.flags.underworldContact || s.hero.reputation >= 10, locked: 'ต้องมีข้อมูลจากเบาะแส โลกใต้ดิน หรือชื่อเสียง 10', effect: s => { s.flags.foundMap = true; s.hero.reputation += 3; addLog('พ่อค้ายอมแลกแผนที่กับข่าวของชายหน้ากากและสัญลักษณ์จากโลกใต้ดิน', true); } },
-        { text: 'ปฏิเสธ ข้อมูลไร้หลักฐานไม่น่าเชื่อถือ', effect: s => { s.hero.money += 2; addLog('เจ้าประหยัดเงินไว้ แต่ความกังวลยังติดอยู่ในใจ'); } }
-      ]
-    },
-    council: {
-      month: 104, tag: 'จุดเปลี่ยนของชะตา', title: 'เงางูดำในที่ประชุม',
-      dynamicText: s => adaptiveDialogue(s, 'กลางที่ประชุม ศิษย์พี่เซี่ยหลันเผยว่ามีคนส่งข่าวจากในสำนักให้ศัตรู อาจารย์เหวินถามความเห็นของเจ้า ทว่าการกล่าวหาโดยไร้หลักฐานอาจทำให้ผู้บริสุทธิ์ถูกลงโทษ'),
-      choices: [
-        { text: 'เผยทุกข้อมูลและเสนอให้ตรวจคลังเสบียง', note: 'ยิ่งมีเบาะแส ผลยิ่งดี', effect: s => { if (s.flags.knowsTraitor || s.flags.foundMap) { s.flags.warnedMaster = true; s.relations.master += 18; s.hero.reputation += 12; addLog('หลักฐานเชื่อมไปถึงผู้ดูแลหลัว สำนักเริ่มเตรียมรับศึกทันเวลา', true); } else { s.hero.reputation -= 8; s.relations.master -= 5; addLog('คำเตือนขาดหลักฐาน ผู้คนมองว่าเจ้าตื่นตูม'); } } },
-        { text: 'อาสาสืบเงียบ ๆ กับศิษย์พี่เซี่ยหลัน', note: 'ต้องอาศัยความสัมพันธ์กับศิษย์พี่', requires: s => s.relations.senior >= 8, locked: 'ความสัมพันธ์กับศิษย์พี่ยังไม่พอ', effect: s => { s.flags.warnedMaster = true; s.relations.senior += 15; s.hero.powerBonus += 40; addLog('เจ้ากับเซี่ยหลันพบรอยส่งข่าวจากคลัง จึงเพิ่มเวรยามและหยุดแผนเผาเสบียงไว้ก่อน แต่ยังต้องหาหลักฐานมัดตัวผู้ดูแลหลัว', true); } },
-        { text: 'เก็บเรื่องไว้ และเตรียมทางรอดของตน', effect: s => { s.flags.escapePrepared = true; s.relations.master -= 12; s.hero.money += 8; addLog('เจ้าซ่อนเสบียงไว้ตามทางลับ เตรียมพร้อมสำหรับวันที่เลวร้าย', true); } }
-      ]
-    },
-    vow: {
-      month: 110, tag: 'คำสัตย์', title: 'คำถามของอาจารย์',
-      dynamicText: s => adaptiveDialogue(s, 'อาจารย์เหวินพาเจ้าไปยังผาเมฆา “เมื่อภัยมาถึง สำนักมิใช่อาคาร แต่คือผู้คน เจ้ายินดีแบกชะตาของพวกเขาหรือไม่?” ลมหนาวพัดชายเสื้อของท่านพลิ้วไหว'),
-      choices: [
-        { text: 'ข้าจะอยู่และปกป้องผู้คนที่นี่', note: 'ผูกชะตากับสำนัก · เพิ่มกำลังใจ', effect: s => { s.flags.choseLoyalty = true; s.relations.master += 20; s.hero.reputation += 10; s.hero.powerBonus += 50; addLog('อาจารย์ถ่ายทอดเคล็ดรวมปราณฉบับสมบูรณ์ให้เจ้า', true); } },
-        { text: 'ข้าจะช่วยเท่าที่กำลังเอื้อ แล้วรักษาชีวิตไว้', effect: s => { s.flags.escapePrepared = true; s.relations.master += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8); addLog('อาจารย์พยักหน้า แม้แววตาจะเจือความผิดหวัง'); } },
-        { text: 'ยุทธภพกว้างใหญ่ ข้าไม่ยอมตายที่นี่', effect: s => { s.flags.escapePrepared = true; s.relations.master -= 15; s.hero.money += 6; addLog('เจ้าตัดสินใจแล้วว่าจะออกจากเขาก่อนทุกอย่างสายเกินไป', true); } }
-      ]
-    },
-    // รีบาลานซ์ค่าพลังในเหตุการณ์ดักซุ่ม (Ambush) ให้สมดุลกับสเกลพลังใหม่
-    ambush: {
-      month: 116, tag: 'อันตราย', title: 'ลูกศรกลางป่าสน',
-      text: 'ระหว่างทางกลับสำนัก ลูกศรอาบพิษพุ่งออกจากเงาไม้ ขุนพลย่อยงูดำสามคนปิดทาง เจ้าต้องตัดสินใจในชั่วลมหายใจ',
-      choices: [
-        { text: 'ชักอาวุธ สู้เต็มกำลัง', note: 'พลัง 1,000 ขึ้นไปจึงมีโอกาสรอด หากฝืนสู้ทั้งที่พลังไม่ถึงจะเสียชีวิตทันที', effect: s => { if (s.hero.power < 1000) { s.hero.health = 0; endGame('death_battle', { cause: 'ฝืนสู้กับขุนพลย่อยงูดำทั้งที่พลังไม่ถึง 1,000 ถูกสังหารกลางป่าสน' }); } else { resolveAmbush(s, 'fight'); } } },
-        { text: 'ใช้ภูมิประเทศถ่วงเวลาแล้วถอย', note: 'มีแผนที่ วิชาย่างก้าว ของแทนใจสหาย พรสวรรค์ดวงตาเฉียบคม หรือว่องไวอย่างน้อย 12 จะช่วยให้ถอยได้ดี มิฉะนั้นเสียสุขภาพ 32', effect: s => resolveAmbush(s, 'flee') },
-        { text: 'อ้างว่ามีข้อมูลของสำนัก แลกกับชีวิต', note: 'รอดง่าย แต่เสียชื่อเสียง', effect: s => { s.flags.survivedAmbush = true; s.hero.reputation -= 18; s.relations.master -= 15; s.hero.health -= 8; addLog('คำลวงซื้อเวลาให้เจ้าหนี แต่ข่าวความขลาดแพร่กลับถึงสำนัก', true); } }
-      ]
-    },
-    refugees: {
-      month: 122, tag: 'ผลจากโลกภายนอก', title: 'ผู้ลี้ภัยใต้กำแพง',
-      text: 'ผู้รอดชีวิตจากหมู่บ้านตะวันตกมาถึงสำนักหลายสิบคน เสบียงของสำนักมีจำกัด และบางคนหวาดกลัวว่าศัตรูแฝงตัวมากับฝูงชน สิ่งที่เจ้าสั่งวันนี้จะกำหนดว่าใครยืนอยู่ข้างสำนักในวันศึก',
-      choices: [
-        { text: 'ใช้เงินสร้างที่พักและแบ่งเสบียง', note: 'ใช้ 12 ตำลึง ผู้คนจะจดจำความเมตตา', requires: s => s.hero.money >= 12, locked: 'ต้องมี 12 ตำลึง', effect: s => { s.hero.money -= 12; s.flags.shelterBuilt = true; s.flags.civiliansSaved = true; s.relations.friend += 12; s.hero.reputation += 12; addLog('เรือนพักชั่วคราวกลายเป็นชุมชนเล็ก ๆ ที่พร้อมช่วยสำนัก', true); } },
-        { text: 'คัดผู้แข็งแรงเข้าหน่วยอาสา', note: 'ได้กำลังรบ แต่ผู้ชราและเด็กต้องพึ่งตนเอง', effect: s => { s.flags.alliesRecruited = true; s.hero.reputation += 8; s.hero.powerBonus += 60; s.relations.senior += 6; addLog('หน่วยอาสาสามสิบคนเริ่มฝึกใต้คำสั่งของเซี่ยหลัน', true); } },
-        { text: 'ปิดประตู เก็บเสบียงไว้ให้ศิษย์สำนัก', note: 'ทรัพยากรปลอดภัย แต่ชื่อของเจ้าจะถูกจดจำอีกแบบ', effect: s => { s.hero.money += 8; s.hero.reputation -= 15; s.relations.friend -= 10; s.flags.escapePrepared = true; addLog('เสียงร่ำไห้ด้านนอกกำแพงเงียบลงในคืนที่สาม', true); } }
-      ]
-    },
-    pilgrimage: {
-      month: 128, tag: 'บททดสอบแห่งเต๋า', title: 'ผาไร้นาม',
-      text: 'อาจารย์เหวินบาดเจ็บจากพิษเก่าและมอบกุญแจถ้ำบรรพชนให้เจ้า ภายในมีน้ำพุรักษาโรค ค่ายกลทดสอบจิต และวิชาต้องห้ามที่ดูดพลังจากอายุขัย เจ้าพาได้เพียงสิ่งเดียวกลับลงเขา',
-      choices: [
-        {
-          text: 'นำน้ำพุกลับไปรักษาอาจารย์และผู้บาดเจ็บ',
-          note: 'อาจารย์เหวินจะฟื้นฟูเต็มร้อย · กำลังรบหลักของสำนักจะมั่นคงในศึกสุดท้าย',
-          effect: s => {
-            s.flags.masterHealed = true;
-            s.flags.masterCrippled = false;
-            s.relations.master += 28;
-            s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 25);
-            if (s.flags.helpedFriend) s.relations.friend += 14;
-            addLog('อาจารย์เหวินฟื้นตัวจากพิษร้าย พลังยุทธ์ฟื้นคืนเต็มสิบส่วน สำนักมีความหวังอีกครั้ง และมอบตราแสดงความไว้วางใจให้เจ้า', true);
-          }
-        },
-        {
-          text: 'ผ่านค่ายกลเพื่อค้นคำเตือนของบรรพชน',
-          note: 'ใช้ข้อมูลเตรียมรับกลศึกงูดำ (แต่อาจารย์จะไม่ได้รับการรักษา เกิดแผลเรื้อรัง)',
-          effect: s => {
-            s.flags.masterHealed = false;
-            s.flags.masterCrippled = true;
-            s.flags.knowsTraitor = true;
-            s.flags.foundMap = true;
-            s.hero.cultivation += 28;
-            s.hero.powerBonus += 80;
-            addLog('ภาพในค่ายกลเผยประตูที่ศัตรูจะใช้ แต่อาจารย์เหวินทรุดหนักลงเพราะขาดโอสถรักษา กำลังรบสำนักลดฮวบ!', true);
-          }
-        },
-        {
-          text: 'ฝึกวิชาต้องห้าม แลกอายุขัยสิบปี',
-          note: 'พลังมหาศาลเพื่อตนเอง (แต่อาจารย์จะไม่ได้รับการรักษา เสาหลักสำนักจะทรุด)',
-          effect: s => {
-            s.flags.masterHealed = false;
-            s.flags.masterCrippled = true;
-            s.flags.forbiddenPower = true;
-            ensureLifespanState(s); s.hero.lifespanMonths = Math.max(s.hero.ageMonths, s.hero.lifespanMonths - 120); s.hero.lifespan = s.hero.lifespanMonths / 12;
-            s.hero.powerBonus += 450;
-            s.relations.master -= 18;
-            addLog('พลังเย็นเยียบไหลเข้าชีพจร ขณะที่อาจารย์เหวินบาดเจ็บเรื้อรังไร้คนเยียวยา เสาหลักสำนักกำลังจะสั่นคลอน', true);
-          }
-        }
-      ]
-    },
-    betrayal: {
-      month: 196, tag: 'ผลจากเบาะแสในอดีต', title: 'คืนหน้ากากหลุด',
-      text: 'ผู้ดูแลหลัวเรียกเจ้าไปพบลับ ๆ เขายอมรับว่าเป็นสายของงูดำ แต่กล่าวว่าสำนักเคยทำลายตระกูลของเขา หากเจ้ามีหลักฐานมากพอ เจ้าสามารถเปิดโปงหรือใช้เขาส่งข่าวลวงได้ มิฉะนั้นเหลือเพียงการรับข้อเสนอหนีร่วมกัน',
-      dynamicText: s => {
-        const proof = s.flags.familyToken
-          ? 'เจ้าประกบป้ายหยกตระกูลหลินกับรอยตราในบัญชีลับ รอยบิ่นตรงกันพอดี หลักฐานนี้ยืนยันว่าคำสั่งเผาตระกูลมาจากชายหน้ากากงูดำ และผู้ดูแลหลัวเป็นคนส่งเส้นทางให้'
-          : 'เซี่ยหลันนำบัญชีเวรยามฉบับต้นและใบส่งยาที่มีตราหอยามาเทียบกัน ทั้งสองฉบับยืนยันว่าชายหน้ากากงูดำสั่งเผาตระกูล และหลัวเป็นคนส่งเส้นทางให้ แม้ไม่มีป้ายหยก เจ้าก็ตรวจความจริงจากเอกสารเหล่านี้ได้';
-        const tokenMeaning = s.flags.familyToken
-          ? 'ป้ายหยกของมารดาทำให้ความจริงนี้ไม่ใช่เพียงคดีในเอกสาร แต่เป็นมรดกที่ผูกเจ้ากับหนี้เลือดของตระกูลโดยตรง'
-          : 'เมื่อไม่มีป้ายหยก ความจริงยังยืนอยู่ได้ด้วยบัญชีเวรยามและใบส่งยา แต่หลักฐานของเจ้าจะเป็นความทรงจำและเอกสารแทนมรดกของตระกูล';
-        const masterState = s.flags.masterCrippled
-          ? 'อาจารย์เหวินนั่งนิ่งอยู่ข้างเสา มือข้างหนึ่งยังสั่นจากพิษเก่าและไม่อาจนำกำลังรบได้เต็มที่'
-          : s.flags.masterHealed
-            ? 'อาจารย์เหวินยืนอยู่หลังเจ้าอย่างมั่นคง พิษเก่าถูกขับออกจนพร้อมรับผิดชอบต่อสำนักด้วยตนเอง'
-            : 'อาจารย์เหวินยังฝืนยืนคุมสำนักด้วยร่างกายที่อ่อนแรง แม้พิษเก่าจะยังไม่หายดี';
-        return `${EVENTS.betrayal.text}
-
-${masterState} ${proof} ชื่อเหวินจงอยู่ในรายชื่อผู้ส่งยาช่วยผู้รอดชีวิต มิใช่รายชื่อผู้สมรู้ร่วมคิด หลัวตัดข้อความส่วนนี้ออกเพื่อให้เจ้าระแวงอาจารย์ ความจริงปรากฏแล้ว แต่เจ้าจะใช้มันอย่างไรยังเป็นการตัดสินใจของเจ้า ${tokenMeaning}`;
-      },
-      choices: [
-        { text: 'เปิดโปงต่อหน้าทุกคนพร้อมหลักฐาน', note: 'ต้องมีแผนที่ เบาะแส หรือเคยเตือนอาจารย์', requires: s => s.flags.foundMap || s.flags.knowsTraitor || s.flags.warnedMaster, locked: 'หลักฐานยังไม่พอ', effect: s => { s.flags.traitorExposed = true; s.flags.warnedMaster = true; s.hero.reputation += 18; s.relations.master += 15; addLog('หลักฐานจากหลายปีต่อกันแน่นหนา ผู้ดูแลหลัวถูกจับก่อนเปิดประตู', true); } },
-        { text: 'บีบให้เขาส่งข่าวลวงกลับไป', note: 'เสี่ยงสูง ความหยั่งรู้หรือความสัมพันธ์มีผล และข่าวลวงจะลดกำลังศัตรูในศึกสุดท้าย แต่ตัวตนของหลัวยังไม่ถูกเปิดโปงต่อสาธารณะ', requires: s => s.paths.insight >= 7 || s.relations.senior >= 20, locked: 'ต้องมีความหยั่งรู้ 7 หรือศิษย์พี่ไว้วางใจ', effect: s => { s.flags.misdirectionSuccessful = true; s.flags.alliesRecruited = true; s.hero.powerBonus += 60; s.relations.senior += 10; addLog('ข่าวลวงทำให้กำลังหลักของงูดำหลงเข้าหุบเขากับดัก แต่ผู้ดูแลหลัวยังเป็นความลับ', true); } },
-        { text: 'รับข้อเสนอ เก็บทรัพย์แล้วเตรียมหนี', note: 'ได้เงินและเส้นทางปลอดภัย แต่สำนักเสียความได้เปรียบ', effect: s => { s.hero.money += 25; s.flags.escapePrepared = true; s.relations.master -= 25; s.hero.reputation -= 12; addLog('เจ้าเก็บป้ายผ่านทางของงูดำไว้ใต้เสื้อ โดยไม่มีใครเห็น', true); } },
-        {
-          text: 'เข้าร่วมงูดำเต็มตัว รับตำแหน่งแลกกับการเปิดประตู',
-          note: 'ต้องมีอดีตด้านมืดวัยเด็ก ชื่อเสียงงูดำอย่างน้อย 10 และชื่อเสียงสำนักไม่เกิน -5 หรือแนวทางอิสระอย่างน้อย 8',
-          requires: s => {
-            const f = updateFactionReputation(s);
-            const hasDarkPast = s.flags.darkPastFromChildhood === true;
-            return hasDarkPast && f.serpent >= 10 && (f.sect <= -5 || s.paths.freedom >= 8);
-          },
-          locked: 'งูดำไม่ไว้ใจเจ้า! ต้องเคยร่วมมือกับโลกมืดและสร้างสัมพันธ์กับงูดำตั้งแต่เนิ่นๆ',
-          effect: s => {
-            s.flags.betrayedSect = true;
-            s.flags.workedUnderworld = true;
-            s.hero.money += 40;
-            s.hero.reputation -= 30;
-            s.relations.master -= 50;
-            s.relations.senior -= 35;
-            s.relations.friend -= 25;
-            addLog('เจ้ารับตรางูดำและจำตำแหน่งเวรยามทุกจุดไว้ในใจ', true);
-          }
-        }
-      ]
-    },
-    lanternVow: {
-      month: 210, tag: 'คืนก่อนศึก · แสงตะเกียง', title: 'คำมั่นใต้แสงตะเกียง',
-      dynamicText: s => {
-        const masterState = s.flags.masterCrippled ? 'อาจารย์เหวินนั่งอยู่ข้างหน้าต่าง มือข้างหนึ่งยังสั่นจากพิษเก่า' : s.flags.masterHealed ? 'อาจารย์เหวินยืนต้อนรับเจ้าอย่างมั่นคง แม้แววตาจะซ่อนความเหนื่อยล้า' : 'อาจารย์เหวินยกถ้วยชาขึ้นช้า ๆ ร่างกายยังไม่หายจากบาดแผลทั้งหมด';
-        return `${masterState} หลินอันถือโคมไฟไปยังเรือนพักของอาจารย์ หลังความจริงในคดีตระกูลเปิดเผย ทั้งสองมีเวลาเพียงคืนเดียวที่จะพูดสิ่งที่ค้างอยู่ในใจ`;
-      },
-      choices: [
-        { text: 'คุกเข่ารินชา ขอขมาที่เคยสงสัยอาจารย์', note: 'คลี่คลายความระแวงและรับตราคำสอนเป็นไอเทมป้องกัน', effect: s => { s.flags.wenDoubtResolved = true; s.flags.masterBondGiven = true; s.relations.master += 25; s.paths.compassion += 1; addTreasure(s, 'ตราคำสอนเหวินจง', { defense: 8, body: 4 }); addLog('คำขอโทษไม่ได้ลบอดีต แต่ทำให้ความไว้วางใจระหว่างศิษย์กับอาจารย์กลับคืนมา', true); } },
-        { text: 'อ้อนวอนขอให้อาจารย์หนีผ่านทางลับไปด้วยกัน', note: 'เปิดเส้นทางอพยพ แต่ยังไม่ล็อกบทจบ', effect: s => { s.flags.escapeRouteKnown = true; s.flags.escapePrepared = true; s.relations.master += 5; s.paths.freedom += 2; addLog('อาจารย์เผยทางลับสายเก่าที่ใช้ได้จริง แต่ยังให้เจ้าเป็นผู้ตัดสินใจในคืนศึก', true); } },
-        { text: 'สบตาอาจารย์และให้คำมั่นว่าจะเป็นกระบี่เล่มสุดท้ายของท่าน', note: 'เพิ่มความมุ่งมั่นผู้พิทักษ์ ซึ่งจะช่วยประเมินศึกสุดท้าย', effect: s => { s.flags.guardianCommitment = true; s.flags.choseLoyalty = true; s.relations.master += 18; s.paths.duty += 4; addLog('คำมั่นของเจ้าไม่ใช่คำสั่งจากชะตา แต่เป็นเจตจำนงที่เลือกเองก่อนเสียงระฆังศึก', true); } }
-      ]
-    },
-    lastwinter: {
-      month: 212, tag: 'ฤดูหนาวสุดท้าย', title: 'หนึ่งคำสั่งก่อนหิมะละลาย',
-      dynamicText: s => adaptiveDialogue(s, 'เสบียงเหลือพอสำหรับงานใหญ่เพียงอย่างเดียว ข่าวยืนยันว่าศัตรูจะมาถึงเมื่อหิมะละลาย เจ้าได้รับสิทธิ์ตัดสินใจว่าจะใช้แรงคนทั้งหมดไปกับอะไร การอพยพวันนี้เป็นเพียงการพาผู้ลี้ภัยกลุ่มแรกออกไป ผู้คนส่วนหนึ่งยังคงอยู่ในสำนักและต้องรอการตัดสินใจในคืนศึก'),
-      choices: [
-        { text: 'อพยพชาวบ้านกลุ่มแรกและเตรียมหอยา', note: 'ช่วยผู้ลี้ภัยบางส่วนก่อน แต่ยังมีผู้คนเหลืออยู่ในสำนัก', effect: s => { s.flags.civiliansSaved = true; s.hero.reputation += 15; s.relations.friend += 15; addLog('เฉินหยูนำขบวนผู้ลี้ภัยกลุ่มแรกข้ามเขา ตามทางที่เจ้าวางไว้ ขณะที่คนอีกส่วนยังรออยู่ในสำนัก', true); } },
-        { text: 'เสริมกำแพงและฝึกหน่วยรบทั้งวันคืน', note: 'เพิ่มโอกาสรักษาสำนักในศึกสุดท้าย', effect: s => { s.flags.alliesRecruited = true; s.hero.powerBonus += 100; s.relations.senior += 12; s.hero.health -= 8; addLog('กำแพงตะวันตกถูกเสริมใหม่ หน่วยอาสาพร้อมยืนแนวหน้า', true); } },
-        { text: 'ซ่อนเสบียงตามทางลับสามจุด', note: 'เส้นทางถอยพร้อม แต่ไม่มีใครรู้ว่าใครจะได้ใช้', effect: s => { s.flags.escapePrepared = true; s.hero.money += 12; s.hero.health += 5; addLog('เสบียงลับทำให้การจากไปยังเป็นทางเลือกเสมอ', true); } }
-      ]
-    },
-    siege: {
-      month: 216, tag: 'มหันตภัย', title: 'คืนสำนักแตก',
-      dynamicText: s => adaptiveDialogue(s, 'เปลวไฟลุกขึ้นพร้อมเสียงระฆังเตือนภัย แม่ทัพงูดำขั้นสร้างรากฐาน ขุนพลขั้นควบแน่น 10 คน และทหารขั้นรวบรวม 50 คน ทะลักเข้าสู่ประตูเขา หากสำนักและหลินอันไม่ได้เตรียมพร้อมอย่างแท้จริง การเลือกสู้คือความตาย'),
-      choices: [
-        { text: 'รวมศิษย์เข้าต้านศัตรู เคียงข้างอาจารย์', note: 'ตัดสินชะตาด้วยพลังของสำนักและหลินอันร่วมกัน', dynamicNote: s => siegeBattleOmen(s), requires: s => updateFactionReputation(s).sect >= 0, locked: 'ชื่อเสียงต่อสำนักต่ำเกินกว่าจะรวมผู้คน', effect: s => finishBattle(s) },
-        { text: 'พาผู้คนหนีผ่านอุโมงค์ลับ', note: 'ต้องมีแผนที่หรือเสบียง และเส้นทางพร้อม และ (ว่องไว ≥ 6 หรือเมตตา ≥ 6) และ (กายา ≥ 4 หรือพลังรวม ≥ 300); ชื่อเสียงต่ำกว่า -15 จะกลายเป็น Outlaw', requires: s => (s.flags.foundMap || s.flags.escapePrepared), locked: 'ยังไม่มีเส้นทางหรือเสบียงสำหรับพาผู้คนหนี', effect: s => finishEscape(s, true) },
-        { text: 'ฉวยเสบียงแล้วหนีเพียงลำพัง', note: 'ต้องมี (ว่องไว ≥ 6 หรือเส้นทางพร้อม) และ (กายา ≥ 4 หรือพลังรวม ≥ 300); ชื่อเสียงต่ำกว่า -15 จะกลายเป็น Outlaw', effect: s => finishEscape(s, false) },
-        { text: 'ส่งสัญญาณ เปิดประตูให้กองโจรงูดำ', note: 'ทรยศสำนักและรับรางวัลจากศัตรู', requires: s => s.flags.betrayedSect, locked: 'ต้องเข้าร่วมงูดำเสียก่อน', effect: s => endGame('traitor_kingpin', { battleScore: 0 }) }
-      ]
-    }
-  };
-
-  // เส้นทาง M84 ที่ไม่เข้าสำนักใช้ Core เดียวกัน แต่เปลี่ยนแรงผลักของ Event
-  // ให้กิจกรรม งาน สุขภาพ เงิน ความสัมพันธ์ และการเดินทางมีความหมายแทนการบำเพ็ญ
-  // ช่วงชีวิตที่เพิ่มขึ้นให้หลินอันเตรียมตัวได้หลายทาง ก่อนสงครามในปีที่ 18
-  Object.assign(EVENTS, {
-    years_of_service: {
-      month: 150, tag: 'ชีวิตในสำนัก · ปีที่สิบสาม', title: 'สิ่งที่สำนักขาด',
-      text: 'หลายปีผ่านไป สำนักต้องรับทั้งผู้บาดเจ็บ ผู้ลี้ภัย และข่าวจากชายแดน เจ้าช่วยได้เพียงงานเดียวในเดือนนี้',
-      choices: [
-        { text: 'ช่วยดูแลผู้ลี้ภัยและจัดที่พัก', note: 'สร้างแนวหลังและความไว้วางใจ แลกกับแรงกาย', effect: s => { s.flags.shelterBuilt = true; s.hero.health = Math.max(1, s.hero.health - 4); s.paths.compassion += 3; s.relations.friend += 3; addLog('ผู้ลี้ภัยมีที่พักและคนในสำนักเริ่มร่วมมือกัน', true); } },
-        { text: 'รวบรวมข่าวจากชายแดนให้สำนัก', note: 'ช่วยให้สำนักเตรียมพร้อมและเพิ่มความเข้าใจ', effect: s => { s.flags.warnedMaster = true; s.paths.insight += 3; s.relations.master += 3; addLog('ข่าวจากชายแดนถึงมือผู้ดูแลสำนักก่อนจะสายเกินไป', true); } },
-        { text: 'รับงานหาเสบียงและดูแลตัวเอง', note: 'เพิ่มเงินและฟื้นกำลัง โดยไม่ได้เตรียมแนวรบ', effect: s => { s.hero.money += 8; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 5); addLog('เจ้าช่วยจัดเสบียงและเก็บแรงไว้สำหรับวันข้างหน้า'); } }
-      ]
-    },
-    years_of_choice: {
-      month: 174, tag: 'ชีวิตในสำนัก · หนทางของตน', title: 'เมื่อการฝึกไม่ใช่ทุกอย่าง',
-      text: 'สำนักเปิดโอกาสให้ศิษย์เลือกว่าจะใช้เวลาช่วงนี้กับสิ่งใด ความสามารถ ความสัมพันธ์ และชีวิตนอกสนามฝึกต่างมีความหมาย',
-      choices: [
-        { text: 'ฝึกพื้นฐานและศึกษาอย่างรอบคอบ', note: 'เพิ่มพื้นฐานและความเข้าใจ', effect: s => { s.trainingFoundation = (s.trainingFoundation || 0) + 6; s.paths.insight += 2; s.hero.health = Math.max(1, s.hero.health - 3); addLog('เจ้ากลับไปทบทวนพื้นฐาน แทนการเร่งเอาชนะผู้อื่น'); } },
-        { text: 'ใช้เวลากับสหายและช่วยงานส่วนรวม', note: 'เพิ่มความสัมพันธ์และความไว้วางใจ', effect: s => { s.relations.friend += 7; s.relations.senior += 4; s.paths.compassion += 2; addLog('ผู้คนที่เคยร่วมทุกข์ร่วมสุขเริ่มพึ่งพากันได้มากขึ้น'); } },
-        { text: 'พักและรับงานสุจริตนอกเวลา', note: 'ฟื้นสุขภาพและเพิ่มเงิน', effect: s => { s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8); s.hero.money += 6; addLog('เจ้าหาเลี้ยงตัวและให้ร่างกายได้พัก'); } }
-      ]
-    },
-    border_preparation: {
-      month: 186, tag: 'เงาศึก · การเตรียมตัว', title: 'คนที่อยู่หลังแนวหน้า',
-      text: 'เส้นทางชายแดนไม่ปลอดภัยอีกต่อไป ศิษย์ได้รับมอบหมายให้ตัดสินใจว่าจะช่วยเตรียมสำนักอย่างไร',
-      choices: [
-        { text: 'ชักชวนอาสาสมัครเสริมแนวป้องกัน', note: 'เพิ่มกำลังป้องกัน แลกกับสุขภาพ', effect: s => { s.flags.alliesRecruited = true; s.hero.health = Math.max(1, s.hero.health - 6); s.paths.duty += 2; addLog('อาสาสมัครเข้าร่วมฝึกและเตรียมแนวป้องกัน', true); } },
-        { text: 'สำรวจเส้นทางอพยพและซ่อนเสบียง', note: 'เตรียมทางหนีและช่วยผู้คนในภายหลัง', effect: s => { s.flags.escapePrepared = true; s.paths.freedom += 2; s.paths.compassion += 1; addLog('เส้นทางอพยพและจุดพักถูกทำเครื่องหมายไว้', true); } },
-        { text: 'ช่วยจัดหายาและพักรักษาตัว', note: 'ฟื้นสุขภาพและช่วยงานสำนัก', effect: s => { s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 7); s.relations.master += 3; addLog('ยาที่รวบรวมได้ถูกส่งไปยังหอรักษา'); } }
-      ]
-    },
-    before_the_storm: {
-      month: 204, tag: 'เงาศึก · ทางเลือก', title: 'ก่อนเสียงระฆัง',
-      text: 'ข่าวการเคลื่อนทัพเริ่มแน่ชัด ไม่มีใครทำทุกอย่างได้ทัน เจ้าต้องเลือกว่าจะฝากแรงที่เหลือไว้กับสิ่งใด',
-      choices: [
-        { text: 'เตรียมป้องกันประตูเขา', note: 'เพิ่มความมุ่งมั่นและกำลังแนวหน้า', effect: s => { s.flags.choseLoyalty = true; s.paths.duty += 3; s.hero.powerBonus += 30; addLog('เจ้าร่วมฝึกกับผู้ที่จะยืนรักษาประตูเขา', true); } },
-        { text: 'เตรียมช่วยคนที่สู้ไม่ได้', note: 'สร้างที่พักสำหรับผู้ลี้ภัย', effect: s => { s.flags.shelterBuilt = true; s.paths.compassion += 3; s.relations.friend += 3; addLog('แนวหลังเตรียมรับผู้บาดเจ็บและผู้ที่ต้องอพยพ', true); } },
-        { text: 'เตรียมเส้นทางถอยให้ยังเลือกได้', note: 'เปิดทางหลบหนีและเพิ่มความคล่องตัว', effect: s => { s.flags.escapePrepared = true; s.paths.freedom += 3; s.hero.attributes.agility = Math.min(126, (s.hero.attributes.agility || 0) + 1); addLog('เจ้าจดจำเส้นทางถอยไว้ เผื่อถึงเวลาที่ต้องเลือก', true); } }
-      ]
-    }
-  });
-
   function addHerb(s, name, qty = 1) {
     ensureInventory(s);
     s.materials.herb = (s.materials.herb || 0) + qty;
@@ -7831,1296 +6236,6 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     ensureInventory(s);
     s.materials.iron = (s.materials.iron || 0) + qty;
   }
-
-  const ALTERNATE_ROUTE_EVENTS = {
-    // ==========================================
-    // 1. เส้นทางชีวิตสงบใต้ชายคา (Mortal Peace)
-    // ==========================================
-    route_mortal_peace_m90: {
-      month: 90, route: 'mortal-peace', tag: 'ชีวิตสงบ · วัยสิบสองปี', art: 'road',
-      title: 'เพิงเช่ากับงานแรก',
-      text: 'หลินอันอายุสิบสอง ตัดสินใจไม่ขึ้นเขาเมฆาคราม เขายืนอยู่กลางตลาดเมืองหน้าด่าน มีเงินติดตัวเพียงเล็กน้อยและต้องเลือกงานแรกเพื่อประทังชีพและเริ่มต้นชีวิตธรรมดา',
-      choices: [
-        {
-          text: 'รับจ้างคัดแยกสมุนไพรในร้านยาหมอเฒ่า',
-          note: 'ปูทางสายหมอยา: ได้สมุนไพร ทักษะปรุงยา และสุขภาพฟื้นฟู',
-          effect: s => {
-            s.paths.compassion += 2; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 10);
-            s.hero.money += 4; addHerb(s, null, 3); ensureCraftingState(s).knowledge.alchemy += 1; s.flags.mortalPeaceRole = 'healer';
-            ensureHousehold(s).householdSkill = (ensureHousehold(s).householdSkill || 0) + 2;
-            addLog('หลินอันเรียนรู้การดมกลิ่นและคัดสมุนไพรในร้านยา หมอเฒ่าชมความจำของเจ้า', true);
-          }
-        },
-        {
-          text: 'ช่วยซ่อมเครื่องมือและคัดแร่เหล็กในโรงช่าง',
-          note: 'ปูทางสายช่างฝีมือ: ได้วัสดุช่าง ทักษะช่าง และร่างกายแข็งแรง',
-          effect: s => {
-            s.hero.combat = s.hero.combat || {}; s.hero.combat.body = (s.hero.combat.body || 0) + 1;
-            s.hero.money += 5; addMaterial(s, null, 2); ensureCraftingState(s).knowledge.smithing += 1; s.flags.mortalPeaceRole = 'artisan';
-            ensureHousehold(s).householdSkill = (ensureHousehold(s).householdSkill || 0) + 2;
-            addLog('หลินอันช่วยซ่อมเครื่องมือและคัดแร่เหล็ก เรียนรู้งานช่างและได้ค่าแรงสุจริต', true);
-          }
-        },
-        {
-          text: 'หาบของเร่ขายและหัดทำบัญชีสินค้าในตลาด',
-          note: 'ปูทางสายพ่อค้า: ได้เงินทอง ทักษะค้าขาย และรู้จักราคาสินค้า',
-          effect: s => {
-            s.hero.money += 9; s.paths.insight += 1; s.flags.mortalPeaceRole = 'merchant';
-            ensureHousehold(s).householdSkill = (ensureHousehold(s).householdSkill || 0) + 2;
-            addLog('หลินอันหาบตะกร้าขายของในตลาด เรียนรู้กลไกราคาและกำไรขาดทุน', true);
-          }
-        }
-      ]
-    },
-    route_mortal_peace_m108: {
-      month: 108, route: 'mortal-peace', tag: 'ชีวิตสงบ · สัญญาตั้งตัว', art: 'road',
-      title: 'สัญญาเช่าห้องแถวไม้',
-      text: 'สองปีแห่งความมุมานะ ห้องแถวไม้เก่าท้ายตลาดว่างลง เจ้าของยินดีให้เซ้งสิทธิ์เช่าราคา 15 ตำลึง นี่คือโอกาสมีหน้าร้านและที่พัก',
-      choices: [
-        {
-          text: 'ยอมกู้เงินเล็กน้อยเพื่อเซ้งห้องแถวเปิดร้านของตนเอง',
-          note: 'จ่าย 7 ตำลึง กู้ 8 ตำลึง และมีค่าเช่ารายเดือน',
-          requires: s => s.hero.money >= 7, locked: 'ต้องมีเงิน 7 ตำลึงเพื่อร่วมจ่ายค่าเซ้ง',
-          effect: s => {
-            const h = ensureHousehold(s); h.housing = 'rented'; h.debt = (h.debt || 0) + 8;
-            s.hero.money -= 7; s.flags.hasShop = true; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('ป้ายชื่อร้านเล็ก ๆ ถูกแขวนขึ้นใต้ชายคา แม้มีหนี้สินแต่มีหลังคาคุ้มหัวตนเอง', true);
-          }
-        },
-        {
-          text: 'เช่าห้องแถวรายเดือนธรรมดา ไม่ยอมมีหนี้สินผูกมัด',
-          note: 'จ่าย 3 ตำลึงและมีค่าเช่ารายเดือน โดยไม่ก่อหนี้เพิ่ม',
-          requires: s => s.hero.money >= 3, locked: 'ต้องมีเงิน 3 ตำลึง',
-          effect: s => {
-            ensureHousehold(s).housing = 'rented'; s.hero.money -= 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 5);
-            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 1;
-            addLog('หลินอันเลือกเช่าแบบสบายใจ ไร้หนี้สินกวนใจในยามหลับ', true);
-          }
-        },
-        {
-          text: 'ชวนเพื่อนบ้านลงขันร่วมหุ้น แบ่งเบาภาระและแบ่งกำไร',
-          note: 'สร้างสัมพันธ์ชุมชนและได้หุ้นส่วนช่วยงาน',
-          effect: s => {
-            s.relations.friend += 8; s.paths.compassion += 2; s.flags.hasPartner = true; s.flags.hasShop = true;
-            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('เพื่อนบ้านตอบรับคำชวน ร่วมกันเปิดร้านและเป็นหูเป็นตาให้กัน', true);
-          }
-        }
-      ]
-    },
-    route_mortal_peace_m126: {
-      month: 126, route: 'mortal-peace', tag: 'ชีวิตสงบ · ภัยหนาว', art: 'road',
-      title: 'ไข้หวัดป่าลามตลาด',
-      text: 'ลมหนาวพัดพาโรคไข้หวัดป่าระบาดทั่วเมือง ร้านยาใหญ่กักตุนสินค้าเพื่อโก่งราคา ชาวบ้านยากจนนอนรอความหวังอยู่หน้าประตู',
-      choices: [
-        {
-          text: 'ต้มยาสมุนไพรแจกจ่ายผู้ยากไร้หน้าเรือน',
-          note: 'ใช้เงิน 5 ตำลึงจัดหายาและช่วยเหลือชาวบ้าน',
-          requires: s => s.hero.money >= 5,
-          locked: 'ต้องมีเงิน 5 ตำลึงเพื่อจัดหายา',
-          effect: s => {
-            s.hero.money -= 5;
-            s.hero.reputation += 15; s.paths.compassion += 4; s.relations.friend += 12;
-            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 3; s.flags.belovedCitizen = true;
-            addLog(s.flags.hasShop ? 'ชาวบ้านที่ได้รับยามาขอบคุณหน้าร้าน ความช่วยเหลือนี้ถูกจดจำทั่วตลาด' : 'ชาวบ้านที่ได้รับยามาขอบคุณ ความช่วยเหลือนี้ถูกจดจำทั่วตลาด', true);
-          }
-        },
-        {
-          text: 'รับจ้างช่วยพ่อค้าขายยาและของใช้ในราคาทุน',
-          note: 'ช่วยขายของให้พ่อค้า ได้ค่าจ้าง 6 ตำลึงและชื่อเสียง',
-          effect: s => {
-            s.hero.money += 6; s.hero.reputation += 6; s.paths.compassion += 1;
-            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('หลินอันช่วยพ่อค้าจัดของในราคาทุนและได้รับค่าจ้าง ผู้คนจดจำความสุจริตนี้', true);
-          }
-        },
-        {
-          text: 'อยู่ที่พักและดูแลสุขภาพตนเอง',
-          note: 'ปลอดภัยสูงสุด สุขภาพแข็งแรงสมบูรณ์',
-          effect: s => {
-            s.hero.health = s.hero.maxHealth; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 1;
-            addLog('หลินอันดูแลสุขภาพในเรือนจนทุกคนปลอดภัยจากไข้หวัดป่า');
-          }
-        }
-      ]
-    },
-    route_mortal_peace_m144: {
-      month: 144, route: 'mortal-peace', tag: 'ชีวิตสงบ · ซ่อมแซมเรือน', art: 'road',
-      title: 'ลมฝนกระหน่ำหลังคา',
-      text: s => ensureHousehold(s).housing === 'shelter' ? 'พายุฤดูฝนพัดหลังคาที่พักชั่วคราวจนเสียหาย น้ำฝนเริ่มซึมถึงข้าวของ หากไม่ซ่อมก่อนลมหนาวอุปกรณ์อาจเสียหาย' : 'พายุฤดูฝนพัดกระเบื้องหลังคาปลิวไปครึ่งแถบ น้ำฝนรั่วซึมลงห้องเก็บของ หากไม่ซ่อมแซมก่อนลมหนาว ข้าวของและเครื่องมือจะเสียหาย',
-      choices: [
-        {
-          text: 'ลงแรงปีนซ่อมแซมหลังคาเองและช่วยบ้านข้างเคียง',
-          note: 'ช่วยซ่อมหลังคา เสียสุขภาพ 6 จุดและสัมพันธ์เพื่อนบ้านดีขึ้น',
-          effect: s => {
-            s.hero.health = Math.max(1, s.hero.health - 6);
-            s.relations.friend += 6; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('หลังคาใหม่ถูกมุงด้วยกระเบื้องหนาแน่น ฝนหยุดรั่วและเรือนอบอุ่นขึ้น', true);
-          }
-        },
-        {
-          text: 'จ้างช่างฝีมือมาซ่อมแซมอย่างประณีต',
-          note: 'เสียเงิน 6 ตำลึง ได้งานเรียบร้อยสมบูรณ์โดยไม่เจ็บตัว',
-          requires: s => s.hero.money >= 6, locked: 'ต้องมีเงิน 6 ตำลึง',
-          effect: s => {
-            s.hero.money -= 6;
-            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('ช่างฝีมือซ่อมแซมคานและหลังคาอย่างแน่นหนา บ้านปลอดภัยไร้กังวล', true);
-          }
-        },
-        {
-          text: 'นำผ้าใบและฟางมาคลุมกันฝนชั่วคราว',
-          note: 'ประหยัดเงิน แต่บ้านยังมีความเสี่ยงในฤดูหนาว',
-          effect: s => {
-            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 1;
-            addLog('ผ้าใบช่วยกันฝนได้ชั่วคราว หลินอันเก็บเงินไว้ใช้ยามจำเป็น');
-          }
-        }
-      ]
-    },
-    route_mortal_peace_m162: {
-      month: 162, route: 'mortal-peace', tag: 'ชีวิตสงบ · เงาอดีต', art: 'road',
-      title: 'คนคุ้นเคยแวะเยือน',
-      text: s => `ยามพลบค่ำ ${s.flags.retainerAlive ? 'ลุงโจว' : 'คนรู้จักเก่าในวัยเด็ก'}มาเคาะประตูเรือนในสภาพเปียกฝน เขาหนีสายสืบงูดำมาและต้องการที่หลบภัยชั่วคราว`,
-      choices: [
-        {
-          text: 'เปิดประตูรับเข้าเรือน ทายาและจัดห้องพักให้อย่างอบอุ่น',
-          note: 'รักษาคนสำคัญ ปกป้องผู้มีพระคุณ เพิ่มสายสัมพันธ์ลึกซึ้ง',
-          effect: s => {
-            if (s.flags.retainerAlive) s.flags.retainerSheltered = true; else s.relations.friend += 3; s.paths.compassion += 3;
-            s.hero.health = Math.max(1, s.hero.health - 4); s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog(s.flags.retainerAlive ? 'ลุงโจวน้ำตาซึมเมื่อเห็นเด็กที่ตนเคยอุ้มมีบ้านที่คุ้มภัยให้เขา' : 'คนรู้จักเก่าขอบใจหลินอันที่เปิดบ้านให้พักพิง', true);
-          }
-        },
-        {
-          text: 'มอบเงินเสบียงและยา แล้วพาไปซ่อนที่เพิงพักนอกเมือง',
-          note: 'ช่วยเหลืออย่างระมัดระวัง ไม่ดึงอันตรายเข้าสู่เรือนตนเอง',
-          requires: s => s.hero.money >= 8, locked: 'ต้องมีเงิน 8 ตำลึง',
-          effect: s => {
-            s.hero.money -= 8; s.paths.insight += 2;
-            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('เสบียงและเงินทองช่วยให้เขาหลบหนีต่อไปได้อย่างปลอดภัย โดยไม่ทิ้งร่องรอยมาถึงร้าน', true);
-          }
-        },
-        {
-          text: 'มอบอาหารแห้งและชี้ทางหลบหนี แต่ปฏิเสธไม่ให้พักในเรือน',
-          note: 'เด็ดขาด ปกป้องร้านและความสงบของครอบครัวเป็นหลัก',
-          effect: s => {
-            s.paths.freedom += 1; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 1;
-            addLog('หลินอันเลือกปกป้องความปลอดภัยของเรือน คนรู้จักเข้าใจและจากไปอย่างเงียบงัน');
-          }
-        }
-      ]
-    },
-    route_mortal_peace_m180: {
-      month: 180, route: 'mortal-peace', tag: 'ชีวิตสงบ · เงาศึก', art: 'road',
-      title: 'ข่าวไฟสงครามจากยอดเขา',
-      text: 'ข่าวความขัดแย้งระหว่างสำนักเมฆาครามกับพรรคงูดำเริ่มตึงเครียด กองคาราวานชะลอตัว ข้าวสารและสมุนไพรในตลาดเริ่มขาดแคลน',
-      choices: [
-        {
-          text: 'ซื้อสมุนไพรเก็บไว้สำหรับชาวบ้านในชุมชน',
-          note: 'ใช้เงิน 6 ตำลึง ซื้อสมุนไพรทั่วไป 5 ชิ้น',
-          requires: s => s.hero.money >= 6, locked: 'ต้องมีเงิน 6 ตำลึง',
-          effect: s => {
-            s.hero.money -= 6; addHerb(s, null, 5);
-            s.flags.medicineReserve = true; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('หลินอันเก็บสมุนไพรเตรียมไว้ให้คนในชุมชน', true);
-          }
-        },
-        {
-          text: 'รับจ้างช่วยจัดหาสินค้าจำเป็นให้ตลาด',
-          note: 'รับค่าจ้าง 10 ตำลึงจากการช่วยจัดหาของ',
-          effect: s => {
-            s.hero.money += 10; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('หลินอันช่วยจัดหาสินค้าให้ตลาดและได้รับค่าจ้าง', true);
-          }
-        },
-        {
-          text: 'ซ่อนทรัพย์สิน ขุดห้องใต้ดินลับไว้ใต้เรือน',
-          note: 'เตรียมที่หลบภัยฉุกเฉิน ปลอดภัยสูงสุด',
-          effect: s => {
-            s.flags.escapePrepared = true; s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 1;
-            addLog('ห้องใต้ดินลับถูกสร้างเสร็จ มีช่องระบายอากาศและทางหนีออกหลังสวน');
-          }
-        }
-      ]
-    },
-    route_mortal_peace_m198: {
-      month: 198, route: 'mortal-peace', tag: 'ชีวิตสงบ · ผู้อพยพ', art: 'road',
-      title: 'คลื่นผู้อพยพใต้ชายคา',
-      text: 'หกเดือนก่อนศึกใหญ่ ผู้อพยพจากหมู่บ้านเชิงเขาหนีตายลงมาที่ตลาด เด็กและคนชราไร้ที่พักพิง นั่งกอดเข่าหนาวสั่นอยู่ตามชายคา',
-      choices: [
-        {
-          text: 'ช่วยตั้งโรงทานในลานชุมชนและดูแลผู้ลี้ภัย',
-          note: 'ชุมชนยกย่องเป็นเสาหลักแห่งตลาด',
-          effect: s => {
-            s.hero.health = Math.max(1, s.hero.health - 6); s.paths.compassion += 4;
-            s.relations.friend += 15; s.flags.civiliansSaved = true;
-            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 3;
-            addLog('โรงทานในลานชุมชนกลายเป็นที่พึ่งของผู้ลี้ภัย หลินอันช่วยเท่าที่กำลังมี', true);
-          }
-        },
-        {
-          text: 'จัดจ้างผู้อพยพที่แข็งแรงมาช่วยงานในร้านและจ่ายค่าแรงเป็นอาหาร',
-          requires: s => !!s.flags.hasShop, locked: 'ต้องมีร้านที่เปิดไว้ก่อน',
-          note: 'สร้างงานอย่างยั่งยืน ช่วยเหลือเกื้อกูลกันอย่างมีศักดิ์ศรี',
-          effect: s => {
-            s.hero.money += 8; s.relations.friend += 8; s.flags.civiliansSaved = true;
-            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 2;
-            addLog('ผู้อพยพได้งานทำ ร้านค้าขยายกำลังผลิต ทุกฝ่ายผ่านพ้นวิกฤตไปด้วยกัน', true);
-          }
-        },
-        {
-          text: 'กลับที่พักและรักษาความปลอดภัยของตนเอง',
-          note: 'เน้นความปลอดภัยของครอบครัวตนเอง ไร้ความเสี่ยง',
-          effect: s => {
-            s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 6);
-            s.flags.mortalPeaceProgress = (s.flags.mortalPeaceProgress || 0) + 1;
-            addLog('เรือนของหลินอันปลอดภัยท่ามกลางความวุ่นวายภายนอก');
-          }
-        }
-      ]
-    },
-    route_mortal_peace_m216: {
-      month: 216, route: 'mortal-peace', tag: 'ชีวิตสงบ · บทสรุป', art: 'road',
-      title: 'รุ่งอรุณหลังสงคราม — ชีวิตใต้ชายคา',
-      text: s => s.flags.hasShop ? 'ควันไฟบนยอดเขาเมฆาครามมอดดับลง สงครามยุติแล้ว หลินอันมองตลาดและร้านที่ร่วมสร้างขึ้นผ่านคืนอันยาวนาน' : 'ควันไฟบนยอดเขาเมฆาครามมอดดับลง สงครามยุติแล้ว หลินอันกลับมามองผู้คนในตลาดที่พยายามเริ่มต้นชีวิตอีกครั้ง',
-      choices: [
-        {
-          text: 'ช่วยฟื้นฟูชุมชนหลังสงคราม',
-          note: 'บทสรุปชีวิตสงบสุขที่สมบูรณ์แบบ',
-          effect: s => {
-            const h = ensureHousehold(s);
-            const isAffluent = s.hero.money >= 20 || h.housing === 'owned' || h.housing === 'estate';
-            if (isAffluent && s.hero.health >= 20) {
-              endGame('quiet_roof', { cause: s.flags.hasShop ? 'หลินอันรักษาร้านและช่วยชุมชนผ่านไฟสงคราม' : 'หลินอันช่วยชุมชนตั้งหลักและผ่านไฟสงคราม' });
-            } else {
-              endGame('war_shadow_survivor', { cause: s.flags.hasShop ? 'แม้มีบาดแผลจากสงคราม ร้านและชายคาของหลินอันยังคงมีคนกลับมาได้' : 'แม้มีบาดแผลจากสงคราม หลินอันยังคงอยู่ช่วยผู้คนในชุมชน' });
-            }
-          }
-        },
-        {
-          text: 'เก็บออมทรัพย์สิน ใช้ชีวิตเรียบง่ายสงบสุขกับคนที่รัก',
-          note: 'บทสรุปชีวิตธรรมดาที่เปี่ยมสุข',
-          effect: s => {
-            endGame('quiet_roof', { cause: 'หลินอันเลือกใช้ชีวิตเรียบง่าย ไม่แสวงหาความยิ่งใหญ่ในยุทธภพ' });
-          }
-        },
-        {
-          text: 'มอบร้านให้ลูกศิษย์ดูแลต่อ แล้วออกเดินทางท่องเที่ยวตามใจปรารถนา',
-          requires: s => !!s.flags.hasShop, locked: 'ต้องมีร้านที่เปิดไว้ก่อน',
-          note: 'บทสรุปกึ่งเกษียณและมีอิสรภาพ',
-          effect: s => {
-            endGame('quiet_roof', { cause: 'หลินอันวางมือจากงาน ส่งต่อร้านให้คนรุ่นหลัง แล้วใช้ชีวิตบั้นปลายอย่างสงบ' });
-          }
-        }
-      ]
-    },
-
-    // ==========================================
-    // 2. เส้นทางนักยุทธ์ไร้นาม (Nameless Martial)
-    // ==========================================
-    route_nameless_martial_m90: {
-      month: 90, route: 'nameless-martial', tag: 'นักยุทธ์ไร้นาม · วัยสิบสองปี', art: 'road',
-      title: 'ลานดินกับเสาไม้',
-      text: 'หลินอันปฏิเสธการฝึกปราณเซียน แต่มุ่งมั่นฝึกฝนร่างกายและกระบวนท่า เขายืนหน้าเสาไม้ที่ลานดินท้ายเมือง หมัดและเหงื่อคือคำตอบของทุกคำถาม',
-      choices: [
-        {
-          text: 'ต่อยเสาไม้และยกหิน ฝึกกระดูกเหล็กและพลังหมัด',
-          note: 'เน้นพลังกาย: กายา +1 สุขภาพสูงสุดเพิ่มขึ้น',
-          effect: s => {
-            s.hero.combat = s.hero.combat || {}; s.hero.combat.body = (s.hero.combat.body || 0) + 1;
-            s.hero.maxHealth += 10; s.hero.health += 10; s.hero.powerBonus += 20;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
-            addLog('หมัดกระแทกเสาไม้จนผิวแตกด้าน ร่างกายของหลินอันเริ่มแกร่งดั่งศิลา', true);
-          }
-        },
-        {
-          text: 'วิ่งหลบกิ่งไผ่และกระโดดข้ามขอนไม้ ฝึกย่างก้าวพริบตา',
-          note: 'เน้นความคล่องตัว: ว่องไว +1 หลบหลีกแม่นยำ',
-          effect: s => {
-            s.hero.combat = s.hero.combat || {}; s.hero.combat.agility = (s.hero.combat.agility || 0) + 1;
-            s.paths.freedom += 2; s.hero.powerBonus += 15;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
-            addLog('ปลายเท้าแตะพื้นเบาดั่งนกนางแอ่น ย่างก้าวของหลินอันรวดเร็วคล่องแคล่ว', true);
-          }
-        },
-        {
-          text: 'รับจ้างเป็นคู่ซ้อมในค่ายมวย แลกเงินและประสบการณ์จริง',
-          note: 'ได้เงินทองและประสบการณ์ปะทะจริง แลกกับรอยฟกช้ำ',
-          effect: s => {
-            s.hero.money += 8; s.hero.health = Math.max(1, s.hero.health - 6); s.hero.powerBonus += 15;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 1;
-            addLog('การรับหมัดจริงทำให้หลินอันคุ้นชินกับความเจ็บปวดและจับทางคู่ต่อสู้ได้');
-          }
-        }
-      ]
-    },
-    route_nameless_martial_m108: {
-      month: 108, route: 'nameless-martial', tag: 'นักยุทธ์ไร้นาม · คุ้มกันคาราวาน', art: 'road',
-      title: 'คมดาบแรกคุ้มกันคาราวาน',
-      text: 'คาราวานพ่อค้าถูกโจรป่าดักซุ่มที่ช่องเขาเสือหมอบ เสียงดาบปะทะกันดังสนั่น นี่คือสนามรบจริงครั้งแรกของหลินอัน',
-      choices: [
-        {
-          text: 'ชักดาบพุ่งเข้าชาร์จหัวหน้าโจรด้วยพลังกายล้วน ๆ',
-          note: 'โจรพ่ายแพ้ ได้ชื่อเสียง พลังรบ และเงินรางวัล',
-          effect: s => {
-            s.hero.reputation += 8; s.hero.powerBonus += 30; s.hero.money += 6;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
-            addLog('เพลงดาบหนักแน่นผ่าอาวุธหัวหน้าโจรหักครึ่ง โจรป่าแตกพ่าย ชื่อเสียงเริ่มเลื่องลือ', true);
-          }
-        },
-        {
-          text: 'ใช้ความคล่องตัวล่อโจรแยกกลุ่มแล้วจัดการทีละคน',
-          note: 'แยกจัดการโจร ได้เงินรางวัลและพลังรบ',
-          effect: s => {
-            s.hero.money += 10; s.paths.insight += 2; s.hero.powerBonus += 25;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
-            addLog('หลินอันเคลื่อนไหวประดุจเงา ปราบโจรป่าทีละคนโดยขบวนสินค้าไม่เสียหาย', true);
-          }
-        },
-        {
-          text: 'ยืนคุ้มกันข้างเกวียน ไม่ผลีผลาม รักษาชีวิตคนในคาราวาน',
-          note: 'สุขุมรอบคอบ ได้รับความไว้วางใจจากพ่อค้า',
-          effect: s => {
-            s.relations.friend += 8; s.paths.compassion += 2; s.hero.money += 7;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 1;
-            addLog('พ่อค้าซาบซึ้งใจ มอบเงินรางวัลและยกย่องหลินอันว่าเป็นคนรักษาคำสัตย์', true);
-          }
-        }
-      ]
-    },
-    route_nameless_martial_m126: {
-      month: 126, route: 'nameless-martial', tag: 'นักยุทธ์ไร้นาม · ครูดาบพเนจร', art: 'road',
-      title: 'ยอดคนพเนจรในโรงเตี๊ยม',
-      text: 'จอมยุทธ์ชราไร้สังกัดนั่งดื่มสุราอยู่มุมมืด เมื่อเห็นกระบวนท่าของหลินอัน เขาเอ่ยทัก: "เพลงดาบเจ้าหนักแน่น แต่วิถียังขาดความเด็ดเดี่ยว เจ้าฝึกเพื่อสิ่งใด?"',
-      choices: [
-        {
-          text: 'คุกเข่ารินสุรา ขอคำชี้แนะวิชาหมัดและดาบไร้นาม',
-          note: 'ได้รับการถ่ายทอดวิชาลับ: เพิ่มพลังรบมหาศาล',
-          effect: s => {
-            s.hero.powerBonus += 80; s.hero.combat = s.hero.combat || {};
-            s.hero.combat.body = (s.hero.combat.body || 0) + 1;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 3;
-            addLog('จอมยุทธ์เฒ่าถ่ายทอด "เพลงดาบไร้นาม" ให้ คมดาบคมกล้าขึ้นในชั่วข้ามคืน', true);
-          }
-        },
-        {
-          text: 'ขอประลองแลกเปลี่ยนกระบวนท่าด้วยความเคารพ',
-          note: 'ประลองแลกเปลี่ยน ได้ชื่อเสียงและพลังรบ',
-          effect: s => {
-            s.hero.reputation += 6; s.hero.powerBonus += 50; s.paths.insight += 2;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
-            addLog('การประลองจบลงด้วยรอยยิ้ม เฒ่าพเนจรชมเชยวาสนาและความมุ่งมั่นของเจ้า', true);
-          }
-        },
-        {
-          text: 'เลี้ยงสุราและนั่งฟังประสบการณ์อันโชกโชนในยุทธภพ',
-          note: 'ได้ฟังประสบการณ์และมุมมองของจอมยุทธ์ชรา',
-          effect: s => {
-            s.paths.insight += 4; s.paths.freedom += 2;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 1;
-            addLog('เรื่องเล่าของเฒ่าพเนจรเปิดมุมมองยุทธภพที่แท้จริงให้หลินอันตระหนัก');
-          }
-        }
-      ]
-    },
-    route_nameless_martial_m144: {
-      month: 144, route: 'nameless-martial', tag: 'นักยุทธ์ไร้นาม · ประลองลานเปิด', art: 'road',
-      title: 'งานประลองลานเปิดเมืองชายแดน',
-      text: 'เมืองชายแดนจัดการประลองยุทธ์ชาวบ้าน ศิษย์สำนักต่าง ๆ มาร่วมประลองเพื่อโอ้อวด หลินอันถูกท้าทายให้ขึ้นลานในฐานะตัวแทนจอมยุทธ์ไร้สังกัด',
-      choices: [
-        {
-          text: 'ขึ้นลานประลอง สยบคู่ต่อสู้ด้วยวิชากายาล้วน ๆ',
-          note: 'ชื่อเสียงยุทธภพพุ่งสูง เอาชนะใจผู้ชมชาวบ้าน',
-          effect: s => {
-            s.hero.reputation += 14; s.hero.powerBonus += 60;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 3;
-            addLog('เพลงดาบธรรมดาแต่ไร้ช่องโหว่ล้มศิษย์สำนักลง ชื่อของหลินอันก้องทั่วลานประลอง', true);
-          }
-        },
-        {
-          text: 'ยับยั้งดาบไว้ที่คอคู่แข่ง ชนะอย่างมีคุณธรรมและให้เกียรติ',
-          note: 'ได้ชื่อเสียงและความเคารพจากทั้งสำนักและชาวบ้าน',
-          effect: s => {
-            s.hero.reputation += 10; s.paths.compassion += 3; s.hero.powerBonus += 40;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
-            addLog('คู่ต่อสู้ยอมรับความพ่ายแพ้ด้วยความนับถือ หลินอันได้ชื่อว่าเป็นจอมยุทธ์ผู้มีคุณธรรม', true);
-          }
-        },
-        {
-          text: 'ปฏิเสธการขึ้นลาน ไม่หลงใหลในชื่อเสียงจอมปลอม',
-          note: 'รักษาความลับ ไม่เปิดเผยตัวตน อิสรภาพเพิ่มขึ้น',
-          effect: s => {
-            s.paths.freedom += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8);
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 1;
-            addLog('หลินอันยืนดูอยู่เงียบ ๆ คมดาบที่แท้จริงมีไว้ปกป้อง มิใช่เพื่อโอ้อวด');
-          }
-        }
-      ]
-    },
-    route_nameless_martial_m162: {
-      month: 162, route: 'nameless-martial', tag: 'นักยุทธ์ไร้นาม · สยบโจร', art: 'road',
-      title: 'โจรเข้างูดำปล้นเสบียง',
-      text: 'หน่วยสอดแนมงูดำปลอมเป็นโจรดักปล้นเกวียนยาและข้าวของชาวบ้าน พวกมันมีทั้งอาวุธพิษและกำลังพลเหนือกว่า ชาวบ้านไร้ทางสู้',
-      choices: [
-        {
-          text: 'รวบรวมจอมยุทธ์พเนจร วางแผนซุ่มโจมตีกำจัดพวกมัน',
-          note: 'ตัดกำลังงูดำ ช่วยชาวบ้านสำเร็จ ได้ฉายา "จอมยุทธ์ไร้นาม"',
-          effect: s => {
-            s.hero.reputation += 12; s.flags.survivedAmbush = true; s.hero.powerBonus += 70;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 3;
-            addLog('การซุ่มโจมตีเด็ดขาด กองโจรแตกพ่าย ชาวบ้านปลอดภัยและก้มกราบขอบคุณ', true);
-          }
-        },
-        {
-          text: 'ลอบสังหารหัวหน้าหน่วยในความมืด ปล่อยให้ลูกน้องแตกพ่าย',
-          note: 'เด็ดขาด ว่องไว ได้ของกลางและเงินทอง',
-          effect: s => {
-            s.hero.money += 14; s.hero.powerBonus += 50; s.paths.insight += 2;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
-            addLog('หัวหน้าโจรล้มลงโดยไม่ทันร้อง กองโจรไร้ผู้นำหนีเตลิดไปคนละทิศ', true);
-          }
-        },
-        {
-          text: 'ช่วยชาวบ้านขนย้ายเสบียงหลบหนีเข้าป่าลึก',
-          note: 'รักษาชีวิตคนเป็นหลัก ไม่เสี่ยงปะทะกับศัตรู',
-          effect: s => {
-            s.paths.compassion += 3; s.relations.friend += 8;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 1;
-            addLog('ชาวบ้านทุกคนรอดชีวิต ข้าวของปลอดภัยแม้ต้องลำบากย้ายที่พัก');
-          }
-        }
-      ]
-    },
-    route_nameless_martial_m180: {
-      month: 180, route: 'nameless-martial', tag: 'นักยุทธ์ไร้นาม · มิตรสหาย', art: 'road',
-      title: 'คำชวนจากสำนักเมฆาคราม',
-      text: 'ศิษย์เซี่ยหลันลงเขามาพบหลินอันหลังได้ยินเรื่องฝีมือจากผู้เดินทาง เธอชวนเขาช่วยผู้คนรับศึกใหญ่ที่ใกล้เข้ามา',
-      choices: [
-        {
-          text: 'ปฏิเสธฐานะศิษย์ แต่สัญญาจะช่วยป้องกันชาวบ้านเชิงเขา',
-          note: 'รักษาจุดยืนอิสระและสร้างความสัมพันธ์กับเซี่ยหลัน',
-          effect: s => {
-            s.relations.senior += 12; s.paths.duty += 3; s.paths.freedom += 2;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
-            addLog('เซี่ยหลันพยักหน้าเข้าใจ "อยู่ข้างล่าง คุ้มครองผู้คน นั่นคือเต๋าของเจ้า"', true);
-          }
-        },
-        {
-          text: 'รับเงินว่าจ้างเป็นหน่วยรบนอกสำนัก คอยตีตัดเสบียงศัตรู',
-          note: 'ได้เงินทอง 18 ตำลึง และช่วยตัดกำลังงูดำ',
-          effect: s => {
-            s.hero.money += 18; s.hero.powerBonus += 60;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
-            addLog('หลินอันรับงานตัดเสบียงงูดำ เป็นคมดาบนอกสำนักที่ศัตรูคาดไม่ถึง', true);
-          }
-        },
-        {
-          text: 'เตือนเธอให้ระวังคนทรยศในสำนัก แต่ไม่ขอเข้าร่วมศึกใด ๆ',
-          requires: s => !!(s.flags.knowsTraitor || s.flags.houseEnemyKnown), locked: 'ต้องมีเบาะแสเกี่ยวกับคนทรยศก่อน',
-          note: 'มอบเบาะแสสำคัญ รักษาระยะห่างเพื่ออิสรภาพ',
-          effect: s => {
-            s.flags.knowsTraitor = true; s.paths.insight += 3; s.paths.freedom += 3;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 1;
-            addLog('คำเตือนเรื่องคนทรยศถูกส่งถึงเซี่ยหลัน หลินอันหันหลังกลับสู่เส้นทางของตน');
-          }
-        }
-      ]
-    },
-    route_nameless_martial_m198: {
-      month: 198, route: 'nameless-martial', tag: 'นักยุทธ์ไร้นาม · ช่องแคบ', art: 'road',
-      title: 'ดาบเล่มสุดท้ายหน้าช่องแคบ',
-      text: 'ก่อนวันศึกใหญ่ กองทหารแนวหน้างูดำพยายามยึดช่องแคบเชิงเขาเพื่อปิดทางหนีของชาวบ้าน หลินอันยืนตระหง่านอยู่หน้าช่องแคบนั้นเพียงลำพัง',
-      choices: [
-        {
-          text: 'ปักดาบลงดิน ยืนขวางช่องแคบสกัดทหารศัตรู',
-          note: 'สกัดทัพงูดำ ช่วยชาวบ้าน และได้ชื่อเสียงกับพลังรบ',
-          effect: s => {
-            s.hero.powerBonus += 100; s.hero.reputation += 18; s.flags.civiliansSaved = true;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 3;
-            addLog('ดาบเดียวขวางพันคน ทหารงูดำไม่อาจผ่านช่องแคบ ชาวบ้านนับร้อยหนีรอดปลอดภัย', true);
-          }
-        },
-        {
-          text: 'วางกับดักหินถล่มปิดช่องแคบ ชะลอศัตรูด้วยปัญญา',
-          note: 'ฉลาด รอบคอบ ชะลอศัตรูได้โดยไม่ต้องเสี่ยงบาดเจ็บ',
-          effect: s => {
-            s.paths.insight += 3; s.flags.civiliansSaved = true; s.hero.powerBonus += 50;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 2;
-            addLog('หินผาถล่มลงมาปิดช่องแคบ ทหารงูดำต้องเสียเวลาอ้อมทาง ชาวบ้านหนีพ้น', true);
-          }
-        },
-        {
-          text: 'พาชาวบ้านข้ามช่องแคบหนีไปก่อนที่ทหารจะมาถึง',
-          note: 'ช่วยชีวิตผู้คนสำเร็จ เน้นความปลอดภัยเป็นหลัก',
-          effect: s => {
-            s.paths.compassion += 3; s.flags.civiliansSaved = true;
-            s.flags.namelessMartialProgress = (s.flags.namelessMartialProgress || 0) + 1;
-            addLog('หลินอันนำทางพาชาวบ้านข้ามเขาอย่างปลอดภัยในคืนที่มืดมิด');
-          }
-        }
-      ]
-    },
-    route_nameless_martial_m216: {
-      month: 216, route: 'nameless-martial', tag: 'นักยุทธ์ไร้นาม · บทสรุป', art: 'road',
-      title: 'เพลงดาบใต้จันทรา — บทสรุปของนักยุทธ์ไร้นาม',
-      text: 'ศึกบนเขาเมฆาครามจบลงแล้ว เสียงระฆังเงียบหาย ผู้คนตามโรงน้ำชาและตลาดเล่าเรื่องนักยุทธ์ไร้นามผู้เคยผ่านเชิงเขา',
-      choices: [
-        {
-          text: 'สะพายดาบออกเดินทางท่องยุทธภพ ช่วยเหลือผู้ยากไร้ต่อไป',
-          note: 'บทสรุปตำนานจอมยุทธ์ไร้นาม',
-          effect: s => {
-            if (s.hero.reputation >= 20 && s.hero.powerBonus >= 150) {
-              endGame('nameless_martial', { cause: 'หลินอันยืนหยัดด้วยกระบวนท่าและคุณธรรม กลายเป็นตำนานจอมยุทธ์ไร้นามที่ผู้คนเล่าขาน' });
-            } else if (s.hero.reputation < -5) {
-              endGame('outlaw', { cause: 'เพลงดาบเด็ดขาด แต่ความขัดแย้งทำให้ต้องเดินทางในฐานะจอมยุทธ์นอกทำเนียบ' });
-            } else {
-              endGame('war_shadow_survivor', { cause: 'ดาบหักแต่ชีวิตยังอยู่ หลินอันรอดจากศึกใหญ่โดยไม่ต้องก้มหัวให้สำนักใด' });
-            }
-          }
-        },
-        {
-          text: 'เปิดสำนักดาบธรรมดาสอนวิชาป้องกันตัวให้คนรุ่นหลัง',
-          note: 'บทสรุปอาจารย์ผู้ถ่ายทอดวิถียุทธ์',
-          effect: s => {
-            endGame('nameless_martial', { cause: 'หลินอันเปิดค่ายมวยธรรมดา ถ่ายทอดวิชาต่อสู้ให้ลูกหลานชาวบ้านยืนหยัดได้ด้วยตนเอง' });
-          }
-        },
-        {
-          text: 'วางดาบ ใช้ชีวิตสงบในหมู่บ้านที่เคยปกป้อง',
-          note: 'บทสรุปจอมยุทธ์วางมือ',
-          effect: s => {
-            endGame('war_shadow_survivor', { cause: 'หลินอันเก็บดาบเข้าฝัก ใช้ชีวิตเรียบง่ายเคียงข้างชาวบ้านที่ตนเคยช่วยชีวิต' });
-          }
-        }
-      ]
-    },
-
-    // ==========================================
-    // 3. เส้นทางถนนสู่ดินแดนใหม่ (New Land)
-    // ==========================================
-    route_new_land_m90: {
-      month: 90, route: 'new-land', tag: 'ดินแดนใหม่ · วัยสิบสองปี', art: 'road',
-      title: 'ก้าวแรกพ้นประตูด่าน',
-      text: 'หลินอันหันหลังให้ภูเขาเมฆาคราม มุ่งหน้าสู่ประตูด่านทิศประจิม ดินแดนที่ไม่มีใครรู้จักตระกูลหลินและไม่มีใครถามถึงอดีต',
-      choices: [
-        {
-          text: 'สมัครเป็นเด็กช่วยงานคาราวานใหญ่แลกที่พักและอาหาร',
-          note: 'เดินทางปลอดภัย ได้เงินและแผนที่เส้นทางข้ามแดน',
-          effect: s => {
-            s.hero.money += 8; s.flags.foundMap = true; s.paths.freedom += 2;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('หลินอันช่วยตรวจตราเกวียนและเสบียง คาราวานต้อนรับเด็กหนุ่มผู้ขยันขันแข็ง', true);
-          }
-        },
-        {
-          text: 'ซื้อเสบียงม้าและออกเดินทางร่วมกับกลุ่มนักเดินทางอิสระ',
-          note: 'เน้นความเร็ว อิสรภาพพุ่งสูง',
-          effect: s => {
-            s.paths.freedom += 4; s.hero.money = Math.max(0, s.hero.money - 3);
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('สายลมทะเลทรายพัดผ่านใบหน้า หลินอันสูดหายใจแห่งอิสรภาพเป็นครั้งแรก', true);
-          }
-        },
-        {
-          text: 'รับจ้างนำทางและขนน้ำข้ามทะเลทรายผืนแรก',
-          note: 'ได้ทักษะเอาตัวรอด ทรัพยากรน้ำและเสบียง',
-          effect: s => {
-            s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8); s.hero.money += 5;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 1;
-            addLog('หลินอันจดจำตำแหน่งบ่อน้ำและโอเอซิส ทักษะการเดินทางพัฒนาขึ้น');
-          }
-        }
-      ]
-    },
-    route_new_land_m110: {
-      month: 110, route: 'new-land', tag: 'ดินแดนใหม่ · พายุทราย', art: 'road',
-      title: 'พายุทรายแห่งช่องเขาหมาป่า',
-      text: 'พายุทรายสีเหลืองกระหน่ำช่องเขา ขบวนคาราวานหลงทิศ ม้าเริ่มตื่นตระหนก หลินอันต้องช่วยตัดสินใจทิศทางรอด',
-      choices: [
-        {
-          text: 'ใช้เข็มทิศดวงดาวและสังเกตเนินหิน นำขบวนเข้าถ้ำบังลม',
-          note: 'ช่วยคาราวานรอดพ้น ได้รับความนับถือจากหัวหน้าขบวน',
-          effect: s => {
-            s.paths.insight += 3; s.hero.money += 10; s.relations.friend += 8;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('ถ้ำหินช่วยชีวิตทุกคนในคาราวาน หัวหน้าขบวนมอบส่วนแบ่งพิเศษให้หลินอัน', true);
-          }
-        },
-        {
-          text: 'ปลดเกวียนสินค้าที่หนักทิ้ง รักษาม้าและชีวิตคนเดินทาง',
-          note: 'เสียสินค้าบางส่วน แต่ทุกคนปลอดภัยไร้รอยขีดข่วน',
-          effect: s => {
-            s.paths.compassion += 2; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 6);
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('ทุกคนรอดพ้นพายุทราย ม้าและคนเดินทางปลอดภัยครบถ้วน', true);
-          }
-        },
-        {
-          text: 'ฝ่าพายุทรายไปข้างหน้า เสี่ยงเพื่อไปถึงโอเอซิสก่อนใคร',
-          note: 'เสี่ยงสูง หากรอดได้รับกำไรจากการค้าพิเศษ',
-          effect: s => {
-            s.hero.money += 18; s.hero.health = Math.max(1, s.hero.health - 8);
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('ขบวนฝ่าพายุมาถึงโอเอซิสได้ก่อนใคร ขายสินค้าได้ราคาสูงลิ่ว', true);
-          }
-        }
-      ]
-    },
-    route_new_land_m130: {
-      month: 130, route: 'new-land', tag: 'ดินแดนใหม่ · โอเอซิส', art: 'road',
-      title: 'เมืองโอเอซิสศิลาทอง',
-      text: 'เมืองการค้ากลางทะเลทรายเต็มไปด้วยผู้คนหลากภาษา พ่อค้า หยก และผ้าไหม หลินอันเริ่มมองเห็นโอกาสตั้งตัวในแดนไกล',
-      choices: [
-        {
-          text: 'นำเงินสะสมเปิดแผงค้าและนายหน้าแลกเปลี่ยนสินค้า',
-          note: 'เริ่มกิจการค้าขายข้ามแดน ได้เงินสม่ำเสมอ',
-          effect: s => {
-            s.hero.money += 15; s.flags.hasShop = true;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('แผงค้าของหลินอันเปิดขึ้นในตลาดโอเอซิส สินค้าแปลกตาทำกำไรได้ดี', true);
-          }
-        },
-        {
-          text: 'เรียนรู้ภาษาต่างแดนและกฎหมายการค้าของชนเผ่าทะเลทราย',
-          note: 'ได้ความรู้และเปิดเส้นทางการค้าลับในแดนประจิม',
-          effect: s => {
-            s.paths.insight += 3; s.relations.acquaintance += 8;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('หลินอันพูดคุยกับหัวหน้าเผ่าทะเลทรายได้อย่างคล่องแคล่ว เส้นทางค้าใหม่เปิดออก', true);
-          }
-        },
-        {
-          text: 'ซื้อสถานีพักม้าและบ่อน้ำเพื่อให้บริการคาราวาน',
-          note: 'สร้างหลักประกันถาวรในเมืองใหม่',
-          effect: s => {
-            s.hero.money = Math.max(0, s.hero.money - 6); s.flags.hasStable = true;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('สถานีพักม้ามีคาราวานแวะเวียนมาไม่ขาดสาย รายได้มั่นคงยั่งยืน');
-          }
-        }
-      ]
-    },
-    route_new_land_m150: {
-      month: 150, route: 'new-land', tag: 'ดินแดนใหม่ · ขบวนเกวียน', art: 'road',
-      title: 'ขบวนเกวียนเหยี่ยวดำ',
-      text: 'หลินอันจัดตั้งคาราวานของตนเองชื่อ "คาราวานเหยี่ยวดำ" มีเกวียนสินค้าสิบเล่มพร้อมคนนำทาง ถึงเวลาเลือกเส้นทางค้าใหญ่',
-      choices: [
-        {
-          text: 'ขนส่งหยกและผ้าไหมข้ามเทือกเขาหิมะ',
-          note: 'กำไรมหาศาล เงินทองเพิ่มพูน',
-          effect: s => {
-            s.hero.money += 25; s.hero.reputation += 8;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 3;
-            addLog('ผ้าไหมและหยกถูกขายในราคาทองคำ คาราวานเหยี่ยวดำมีชื่อเสียงข้ามแดน', true);
-          }
-        },
-        {
-          text: 'รับส่งจดหมายและผู้โดยสารที่ต้องการเริ่มต้นชีวิตใหม่',
-          note: 'รายได้มั่นคง ได้มิตรภาพทั่วดินแดน',
-          effect: s => {
-            s.hero.money += 14; s.relations.friend += 10; s.paths.compassion += 2;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('ผู้แสวงโชคหลายสิบคนขอบคุณหลินอันที่พาพวกเขามาถึงดินแดนแห่งความหวัง', true);
-          }
-        },
-        {
-          text: 'บุกเบิกเส้นทางลัดสายใหม่ที่ไม่เคยมีในแผนที่',
-          note: 'ค้นพบหุบเขาลับ ได้สมบัติโบราณล้ำค่า',
-          effect: s => {
-            s.paths.freedom += 4; addTreasure(s, 'หยกดวงดาวประจิม', { moneyValue: 30 });
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('หุบเขาลับเผยซากอารยธรรมโบราณ หลินอันได้หยกดวงดาวล้ำค่า', true);
-          }
-        }
-      ]
-    },
-    route_new_land_m170: {
-      month: 170, route: 'new-land', tag: 'ดินแดนใหม่ · จดหมาย', art: 'road',
-      title: 'จดหมายจากแดนไกล',
-      text: 'นกพิราบสื่อสารบินข้ามทะเลทรายมาถึง นำจดหมายข่าวจากแผ่นดินเดิม: พรรคงูดำกำลังรวบรวมไพร่พลและเตรียมถล่มสำนักเมฆาคราม',
-      choices: [
-        {
-          text: 'เผาจดหมายทิ้ง ละทิ้งความแค้นในอดีต มุ่งสู่อนาคตใหม่',
-          note: 'อิสรภาพเต็มร้อย ตัดขาดจากหนี้เลือดในอดีต',
-          effect: s => {
-            s.paths.freedom += 5; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 10);
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('เถ้ากระดาษปลิวหายไปกับสายลมทะเลทราย หลินอันเป็นอิสระจากเงาอดีตโดยสิ้นเชิง', true);
-          }
-        },
-        {
-          text: 'ส่งทองคำและเสบียงผ่านคนรู้จักกลับไปช่วยลุงโจวเงียบ ๆ',
-          note: 'ส่งความช่วยเหลือโดยไม่เปิดเผยตัว ไม่ลืมบุญคุณ',
-          requires: s => s.hero.money >= 15 && s.flags.retainerAlive, locked: 'ต้องมีเงิน 15 ตำลึงและลุงโจวยังมีชีวิต',
-          effect: s => {
-            s.hero.money -= 15; s.paths.compassion += 3;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('ทองคำและเสบียงถูกส่งถึงมือลุงโจวอย่างปลอดภัยในเงามืด', true);
-          }
-        },
-        {
-          text: 'เตือนพ่อค้าข้ามแดนให้ยุติการส่งสินค้าเข้าไปในเขตสงคราม',
-          note: 'ปกป้องขบวนการค้าของตนและพันธมิตร',
-          effect: s => {
-            s.paths.insight += 3; s.relations.acquaintance += 6;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 1;
-            addLog('คาราวานสินค้าหลีกเลี่ยงเส้นทางสงครามได้ทันเวลา ลดความเสียหายได้มหาศาล');
-          }
-        }
-      ]
-    },
-    route_new_land_m186: {
-      month: 186, route: 'new-land', tag: 'ดินแดนใหม่ · ปิดด่าน', art: 'road',
-      title: 'ด่านชายแดนปิดตาย',
-      text: 'ทหารชายแดนปิดประตูด่านห้ามคนเข้าออกเนื่องจากภัยสงคราม คาราวานสินค้าจำนวนมากติดค้างอยู่กลางทะเลทราย',
-      choices: [
-        {
-          text: 'ใช้เส้นทางลับใต้เทือกเขาที่ตนเคยสำรวจ นำคาราวานอ้อมด่าน',
-          note: 'พ้นด่านสำเร็จ สินค้าทำกำไรทวีคูณเพราะเป็นเจ้าเดียวที่ข้ามได้',
-          effect: s => {
-            s.hero.money += 30; s.hero.reputation += 10;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 3;
-            addLog('คาราวานเหยี่ยวดำข้ามพ้นด่านผ่านทางลับ สินค้าขายได้ราคาทองคำ', true);
-          }
-        },
-        {
-          text: 'ตั้งค่ายพักแรมชั่วคราวและเปิดตลาดค้าขายหน้าประตูด่าน',
-          note: 'เปลี่ยนวิกฤตเป็นโอกาส ค้าขายกับคนที่ติดค้าง',
-          effect: s => {
-            s.hero.money += 18; s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('ค่ายพักกลายเป็นตลาดชั่วคราวที่คึกคัก หลินอันกอบโกยกำไรเป็นกอบเป็นกำ', true);
-          }
-        },
-        {
-          text: 'ช่วยเหลือแจกจ่ายน้ำและเสบียงให้ผู้ลี้ภัยที่ด่าน',
-          note: 'ได้ความรักและความภักดีจากผู้คนข้ามแดน',
-          effect: s => {
-            s.paths.compassion += 4; s.relations.friend += 10;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('ผู้ลี้ภัยนับร้อยรอดตายจากความเมตตาของหลินอัน ต่างสาบานว่าจะช่วยเหลืองานในอนาคต');
-          }
-        }
-      ]
-    },
-    route_new_land_m202: {
-      month: 202, route: 'new-land', tag: 'ดินแดนใหม่ · ยุคทอง', art: 'road',
-      title: 'พายุหมุนแห่งทิศประจิม',
-      text: 'สงครามในแผ่นดินเดิมทำให้พ่อค้า ช่างฝีมือ และผู้มีปัญญาอพยพมายังแดนประจิม เมืองใหม่เติบโตเป็นศูนย์กลางอารยธรรมแห่งใหม่',
-      choices: [
-        {
-          text: 'รวบรวมช่างฝีมือและพ่อค้า จัดตั้งสมาคมการค้าเหยี่ยวดำ',
-          note: 'ก้าวขึ้นเป็นผู้นำการค้าข้ามแดนแห่งยุค',
-          effect: s => {
-            s.hero.money += 40; s.hero.reputation += 20;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 3;
-            addLog('สมาคมการค้าเหยี่ยวดำกลายเป็นกลุ่มอิทธิพลการค้าที่ใหญ่ที่สุดในแดนประจิม', true);
-          }
-        },
-        {
-          text: 'ซื้อบ้านในโอเอซิสสำหรับตนเอง',
-          note: 'ใช้เงิน 45 ตำลึงเพื่อซื้อบ้าน พร้อมค่าดูแลรายเดือน',
-          requires: s => s.hero.money >= 45, locked: 'ต้องมีเงิน 45 ตำลึง',
-          effect: s => {
-            s.hero.money -= 45; const h = ensureHousehold(s); h.housing = 'owned';
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('หลินอันซื้อบ้านในเมืองโอเอซิสเป็นที่พักของตน', true);
-          }
-        },
-        {
-          text: 'สนับสนุนทุนให้คนรุ่นใหม่ที่เดินทางมาแสวงโชค',
-          note: 'สร้างเครือข่ายพันธมิตรรุ่นต่อไป',
-          effect: s => {
-            s.paths.compassion += 3; s.relations.friend += 12;
-            s.flags.newLandProgress = (s.flags.newLandProgress || 0) + 2;
-            addLog('คนรุ่นใหม่นับร้อยได้รับโอกาส ต่างนับถือหลินอันดั่งบิดาบุญธรรม');
-          }
-        }
-      ]
-    },
-    route_new_land_m216: {
-      month: 216, route: 'new-land', tag: 'ดินแดนใหม่ · บทสรุป', art: 'road',
-      title: 'ขอบฟ้าใหม่ที่ไม่มีป้ายหลิน — บทสรุปแห่งดินแดนใหม่',
-      text: 'ข่าวสงครามบนยอดเขาเมฆาครามมาถึงในฐานะเรื่องเล่าของแผ่นดินโบราณ หลินอันยืนอยู่บนกำแพงเมืองโอเอซิส มองดูกองคาราวานของตนมุ่งหน้าสู่ขอบฟ้าใหม่',
-      choices: [
-        {
-          text: 'ขยายกองคาราวานสู่ทะเลใหญ่ทิศประจิม บุกเบิกเส้นทางใหม่ต่อไป',
-          note: 'บทสรุปผู้บุกเบิกแห่งขอบฟ้า',
-          effect: s => {
-            if (s.hero.money >= 30 || s.paths.freedom >= 10) {
-              endGame('new_land_wanderer', { cause: 'หลินอันตัดอดีตสำเร็จ สร้างชื่อและคาราวานในแดนใหม่ด้วยตนเอง' });
-            } else {
-              endGame('war_shadow_survivor', { cause: 'ข้ามพ้นแดนมาได้ แม้ยังต้องสะสมเงินทองใหม่ แต่ขอบฟ้าข้างหน้าเป็นของตนเอง' });
-            }
-          }
-        },
-        {
-          text: 'ปักหลักเป็นคหบดีใหญ่ผู้คุมการค้าเมืองโอเอซิส',
-          note: 'บทสรุปเจ้าเมืองการค้าผู้มั่งคั่ง',
-          effect: s => {
-            endGame('new_land_wanderer', { cause: 'หลินอันกลายเป็นเจ้าแห่งการค้าโอเอซิส มีชีวิตที่มั่งคั่งและสงบสุขไร้ผู้ใดรบกวน' });
-          }
-        },
-        {
-          text: 'ใช้ชีวิตอิสระ เดินทางสำรวจดินแดนลับต่อไป',
-          note: 'บทสรุปนักเดินทางแห่งทะเลทราย',
-          effect: s => {
-            endGame('war_shadow_survivor', { cause: 'หลินอันไม่ผูกมัดกับสิ่งใด ขี่ม้าคู่ใจมุ่งหน้าสู่ดินแดนลับสุดขอบฟ้า' });
-          }
-        }
-      ]
-    },
-
-    // ==========================================
-    // 4. เส้นทางเงาตลาดมืด (Underworld)
-    // ==========================================
-    route_underworld_m90: {
-      month: 90, route: 'underworld', tag: 'เงาตลาดมืด · วัยสิบสองปี', art: 'road',
-      title: 'ตรอกจันทร์ดับกับสัญลักษณ์ลับ',
-      text: 'หลินอันนำตราตลาดมืดที่เคยได้ในวัยเด็ก ก้าวเข้าสู่ตรอกจันทร์ดับหลังโรงเตี๊ยม ที่นี่ไม่มีกฎหมาย มีเพียงผลประโยชน์ ความลับ และคนที่อยู่ในเงา',
-      choices: [
-        {
-          text: 'รับงานส่งจดหมายลับและฟังข่าวในบ่อน',
-          note: 'ได้เงินทองและความปลอดภัย เริ่มสร้างประวัติในโลกมืด',
-          effect: s => {
-            s.hero.money += 10; s.paths.insight += 2;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 2;
-            addLog('หลินอันส่งจดหมายลับสำเร็จ รู้จักคนกลางและเส้นทางหลบหนีในตรอก', true);
-          }
-        },
-        {
-          text: 'แอบดูโกดังสินค้าเถื่อนและจดบัญชีลับ',
-          note: 'ได้ข้อมูลสำคัญ เสี่ยงถูกสงสัย',
-          effect: s => {
-            s.flags.knowsSmuggling = true; s.hero.money += 6; s.hero.health = Math.max(1, s.hero.health - 4);
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 2;
-            addLog('บัญชีสินค้าเถื่อนถูกจดจำไว้ในสมอง ข้อมูลนี้มีค่าดั่งทองคำในอนาคต', true);
-          }
-        },
-        {
-          text: 'ช่วยเด็กรับใช้ในบ่อนที่กำลังถูกรังแก',
-          note: 'ได้สายสืบเด็กผู้ภักดีในตรอกคอยส่งข่าว',
-          effect: s => {
-            s.paths.compassion += 2; s.relations.friend += 8;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 1;
-            addLog('เด็กรับใช้ซาบซึ้งใจ สัญญาจะเป็นหูเป็นตาให้หลินอันในทุกบ่อนการพนัน', true);
-          }
-        }
-      ]
-    },
-    route_underworld_m108: {
-      month: 108, route: 'underworld', tag: 'เงาตลาดมืด · ค้าข่าว', art: 'road',
-      title: 'ราคาของข่าวสาร',
-      text: 'ข่าวการเคลื่อนไหวของสายสืบงูดำและข้อมูลคลังเสบียงสำนักมีคนยินดีจ่ายหนัก หลินอันได้เบาะแสสำคัญชิ้นแรก',
-      choices: [
-        {
-          text: 'ขายข่าวการเคลื่อนทัพงูดำให้คนในสำนักแบบนิรนาม',
-          note: 'ได้เงิน ได้ช่วยสำนักทางอ้อมโดยไม่เปิดเผยตัว',
-          effect: s => {
-            s.hero.money += 12; s.flags.warnedMaster = true; s.hero.reputation += 4;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 2;
-            addLog('จดหมายนิรนามถูกส่งถึงหอผู้ตรวจการสำนัก หลินอันได้เงินและไม่ลืมคุณธรรม', true);
-          }
-        },
-        {
-          text: 'ขายข่าวการส่งยาของสำนักให้ตลาดมืดเพื่อผลตอบแทนสูงสุด',
-          note: 'ได้เงินทองมหาศาล แต่ชื่อเสียงทางสว่างลดลง',
-          effect: s => {
-            s.hero.money += 22; s.hero.reputation -= 8;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 3;
-            addLog('ทองคำหนักในย่ามแลกกับข่าวลับ หลินอันเริ่มคุ้นชินกับกลิ่นคาวเลือดของเงิน', true);
-          }
-        },
-        {
-          text: 'เก็บข้อมูลไว้เป็นหลักฐานเพื่อแบล็กเมลในอนาคต',
-          note: 'ได้ไพ่ตายสำหรับการเผชิญหน้าครั้งต่อไป',
-          effect: s => {
-            s.paths.insight += 4; s.flags.knowsTraitor = true;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 1;
-            addLog('ข้อมูลถูกซ่อนไว้ใต้แผ่นกระเบื้อง นี่คือมีดสั้นที่พร้อมปักหลังศัตรูในยามจำเป็น');
-          }
-        }
-      ]
-    },
-    route_underworld_m126: {
-      month: 126, route: 'underworld', tag: 'เงาตลาดมืด · ศึกชิงถิ่น', art: 'road',
-      title: 'หนี้เลือดในโรงน้ำชา',
-      text: 'หัวหน้าแก๊งคุมบ่อนเดิมพยายามบีบหลินอันให้ยอมจำนนและส่งส่วนแบ่งทั้งหมดให้ พวกมันส่งอันธพาลมาล้อมโรงน้ำชา',
-      choices: [
-        {
-          text: 'วางแผนส่งหลักฐานบ่อนผิดกฎหมายให้นายอำเภอบุกจับ',
-          note: 'กำจัดศัตรูด้วยมือทางการ ไม่ต้องเปื้อนเลือดเอง',
-          effect: s => {
-            s.paths.insight += 3; s.hero.reputation += 6;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 2;
-            addLog('ทางการบุกทลายบ่อนคู่แข่ง หลินอันเข้ายึดกิจการต่ออย่างราบรื่น', true);
-          }
-        },
-        {
-          text: 'นำคนในตรอกบุกถล่มโรงบ่อน ยึดอำนาจเบ็ดเสร็จ',
-          note: 'อำนาจใต้ดินพุ่งสูง แต่บาดเจ็บเล็กน้อย',
-          effect: s => {
-            s.hero.health = Math.max(1, s.hero.health - 8); s.hero.money += 18;
-            s.hero.powerBonus += 40; s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 3;
-            addLog('หลินอันลงมือเด็ดขาด อันธพาลยอมสยบ เขาขึ้นเป็นผู้คุมตรอกคนใหม่', true);
-          }
-        },
-        {
-          text: 'เจรจาขอแบ่งเขตการค้าและทำข้อตกลงร่วมกัน',
-          note: 'ประนีประนอม ได้พันธมิตรในเงามืด',
-          effect: s => {
-            s.relations.friend += 8; s.hero.money += 8;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 1;
-            addLog('ข้อตกลงลับถูกลงนาม ทั้งสองฝ่ายแบ่งปันผลประโยชน์ร่วมกัน');
-          }
-        }
-      ]
-    },
-    route_underworld_m144: {
-      month: 144, route: 'underworld', tag: 'เงาตลาดมืด · ประมูลมืด', art: 'road',
-      title: 'การประมูลในห้องใต้ดิน',
-      text: 'ของมีค่าที่ถูกปล้นมาจากตระกูลหลินหลุดมาในงานประมูลมืด: ป้ายหยกประจำตระกูลหลินชิ้นที่สอง',
-      choices: [
-        {
-          text: 'ทุ่มเงินประมูลกลับคืนมาด้วยความภาคภูมิ',
-          note: 'ได้มรดกตระกูลกลับคืนมาอย่างถูกต้อง',
-          requires: s => s.hero.money >= 20, locked: 'ต้องมีเงิน 20 ตำลึง',
-          effect: s => {
-            s.hero.money -= 20; s.flags.familyToken = true; addTreasure(s, 'ป้ายหยกตระกูลหลินสมบูรณ์', { defense: 6 });
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 2;
-            addLog('ป้ายหยกกลับคืนสู่มือทายาท หลินอันลูบรอยตราด้วยน้ำตาซึม', true);
-          }
-        },
-        {
-          text: 'ลอบวางเพลิงแล้วขโมยป้ายหยกออกมาในความวุ่นวาย',
-          note: 'ได้ของโดยไม่เสียเงิน แต่สร้างความวุ่นวายในโลกมืด',
-          effect: s => {
-            s.flags.familyToken = true; addTreasure(s, 'ป้ายหยกตระกูลหลินสมบูรณ์', { defense: 6 }); s.hero.reputation -= 10; s.hero.money += 10;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 3;
-            addLog('เพลิงไหม้เบี่ยงเบนความสนใจ หลินอันคว้าป้ายหยกหายเข้าเงามืดอย่างลอยนวล', true);
-          }
-        },
-        {
-          text: 'ปล่อยให้คนอื่นประมูลไป แล้วตามไปรีดไถข้อมูลจากผู้ชนะ',
-          note: 'ได้ข้อมูลเส้นทางเงินของงูดำแทน',
-          effect: s => {
-            s.paths.insight += 4; s.hero.money += 12;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 1;
-            addLog('ข้อมูลเส้นทางเงินของงูดำถูกบันทึกไว้ หลินอันเริ่มมองเห็นโครงข่ายของศัตรู');
-          }
-        }
-      ]
-    },
-    route_underworld_m162: {
-      month: 162, route: 'underworld', tag: 'เงาตลาดมืด · ข้อเสนองูดำ', art: 'road',
-      title: 'ข้อตกลงกับอสรพิษ',
-      text: 'ตัวแทนพรรคงูดำติดต่อหลินอันโดยตรง ยื่นทองคำก้อนโตเพื่อขอใช้เส้นทางใต้ดินในการลอบส่งกำลังพลเข้าโจมตีสำนัก',
-      choices: [
-        {
-          text: 'ปฏิเสธอย่างเด็ดขาดและส่งข่าวเตือนชาวเมืองลับ ๆ',
-          note: 'รักษาศีลธรรม ไม่ยอมร่วมมืองูดำ',
-          effect: s => {
-            s.paths.compassion += 4; s.hero.reputation += 8; s.flags.warnedMaster = true;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 2;
-            addLog('หลินอันปฏิเสธทองคำเปื้อนเลือด ส่งข่าวเตือนชาวเมืองให้เตรียมรับมือ', true);
-          }
-        },
-        {
-          text: 'รับทองคำและยอมเปิดเส้นทางลับให้พวกมัน',
-          note: 'ได้เงินทองมหาศาล 35 ตำลึง ก้าวสู่อำนาจมืดเต็มตัว',
-          effect: s => {
-            s.hero.money += 35; s.hero.reputation -= 20; s.flags.betrayedSect = true;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 4;
-            addLog('ทองคำหนักในหีบแลกกับเส้นทางลับ หลินอันเลือกข้างผู้ชนะตามสัญชาตญาณมืด', true);
-          }
-        },
-        {
-          text: 'รับเงินทองมา แล้วแจ้งทางการและจัดกับดักซุ่มโจมตี',
-          note: 'ตลบหลังศัตรู ได้ทั้งเงินทองและตัดกำลังงูดำ',
-          effect: s => {
-            s.hero.money += 20; s.flags.misdirectionSuccessful = true; s.hero.powerBonus += 50;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 3;
-            addLog('หลินอันตลบหลังงูดำ กองกำลังศัตรูหลงเข้ากับดักในอุโมงค์มืด', true);
-          }
-        }
-      ]
-    },
-    route_underworld_m180: {
-      month: 180, route: 'underworld', tag: 'เงาตลาดมืด · เจ้าพ่อเงา', art: 'road',
-      title: 'เครือข่ายใต้ดินแผ่ขยาย',
-      text: 'หลินอันกลายเป็น "นายหน้าหลิน" แห่งตลาดมืด ข่าวสารและสินค้าเถื่อนทั่วชายแดนต้องผ่านการอนุมัติจากเขา',
-      choices: [
-        {
-          text: 'จัดระเบียบตลาดมืด ห้ามค้ายาพิษและค้าทาส คุมเฉพาะข่าวสารและของมีค่า',
-          note: 'กลายเป็น "เจ้าพ่อคุณธรรม" ได้รับความเคารพจากคนทุกระดับ',
-          effect: s => {
-            s.paths.compassion += 3; s.hero.reputation += 10; s.hero.money += 15;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 2;
-            addLog('ตลาดมืดมีกฎระเบียบชัดเจน ผู้คนในตรอกยกย่องหลินอันดั่งผู้พิทักษ์ในเงามืด', true);
-          }
-        },
-        {
-          text: 'ขยายธุรกิจทุกประเภท กอบโกยกำไรมหาศาลเพื่อความมั่งคั่งสูงสุด',
-          note: 'เงินทองล้นคลัง มีอิทธิพลล้นฟ้าในโลกมืด',
-          effect: s => {
-            s.hero.money += 35; s.hero.reputation -= 12;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 3;
-            addLog('ทองคำไหลเข้าคลังดั่งสายน้ำ อำนาจของหลินอันในโลกมืดไม่มีผู้ใดกล้าท้าทาย', true);
-          }
-        },
-        {
-          text: 'ใช้เครือข่ายช่วยเหลือผู้ถูกรังแกและคุ้มกันคนยากไร้ในเงามืด',
-          note: 'ได้ความจงรักภักดีจากชาวตรอกมืดอย่างแท้จริง',
-          effect: s => {
-            s.relations.friend += 14; s.paths.compassion += 4;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 2;
-            addLog('คนยากจนในตรอกมืดต่างสาบานจะยอมตายแทนหลินอัน เครือข่ายสายลับเหนียวแน่น');
-          }
-        }
-      ]
-    },
-    route_underworld_m198: {
-      month: 198, route: 'underworld', tag: 'เงาตลาดมืด · ก่อนสงคราม', art: 'road',
-      title: 'กำไรก่อนสงครามหรือทางรอดของผู้คน',
-      text: 'สงครามใหญ่ใกล้ระเบิด ราคาตั๋วหนีเมือง อาวุธ และเสบียงในตลาดมืดพุ่งสูงขึ้นหลายเท่าตัว พ่อค้าหน้าเลือดกักตุนสินค้า',
-      choices: [
-        {
-          text: 'ควบคุมราคาอาวุธและจัดเส้นทางอพยพราคาถูกให้คนจน',
-          note: 'เสียสละกำไร ได้รับการจดจำดั่งเทพพิทักษ์แห่งตรอกมืด',
-          effect: s => {
-            s.flags.civiliansSaved = true; s.hero.reputation += 15; s.paths.compassion += 4;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 3;
-            addLog('คนจนนับร้อยหนีพ้นไฟสงครามผ่านทางลับของหลินอัน ชื่อของเขาถูกจารึกด้วยน้ำตาซาบซึ้ง', true);
-          }
-        },
-        {
-          text: 'ขายข่าวและเส้นทางหนีให้ขุนนางและเศรษฐีในราคาสูงลิ่ว',
-          note: 'กอบโกยทองคำนับร้อยตำลึง มั่งคั่งสูงสุด',
-          effect: s => {
-            s.hero.money += 50; s.hero.reputation -= 10;
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 3;
-            addLog('หีบทองคำจากเศรษฐีวางเรียงรายในคลังลับ หลินอันรวยล้นฟ้าก่อนวันสงคราม', true);
-          }
-        },
-        {
-          text: 'จัดเตรียมเรือและทางลับสำหรับตนเองและคนใกล้ชิด',
-          note: 'เน้นความปลอดภัยส่วนตัวสูงสุด',
-          effect: s => {
-            s.flags.escapePrepared = true; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8);
-            s.flags.underworldProgress = (s.flags.underworldProgress || 0) + 1;
-            addLog('ทางลับและเรือเร็วพร้อมออกเดินทาง หลินอันเตรียมพร้อมสำหรับทุกสถานการณ์');
-          }
-        }
-      ]
-    },
-    route_underworld_m216: {
-      month: 216, route: 'underworld', tag: 'เงาตลาดมืด · บทสรุป', art: 'road',
-      title: 'ราตรีแห่งการชำระแค้น — ผู้คุมตลาดมืดในคืนไฟสงคราม',
-      text: 'คืนสำนักแตก ไฟสงครามลามถึงเชิงเขา หลินอันยืนอยู่บนหลังคาโรงเตี๊ยมจันทร์ดับ มองดูผู้คนและกองกำลังที่เคลื่อนไหวในความมืดตามคำสั่งของเขา',
-      choices: [
-        {
-          text: 'ส่งคนในเครือข่ายเข้าช่วยคุ้มกันชาวบ้านและผู้ลี้ภัยจากสงคราม',
-          note: 'บทสรุปผู้พิทักษ์แห่งเงามืด',
-          effect: s => {
-            if (s.flags.betrayedSect) {
-              endGame('traitor_kingpin', { cause: 'หลินอันเลือกอำนาจและผลประโยชน์ เปิดทางให้งูดำยึดเมืองจนขึ้นเป็นใหญ่' });
-            } else if (s.hero.reputation < -10) {
-              endGame('outlaw', { cause: 'หลินอันเป็นคนในเงามืด แม้มีชีวิตรอดแต่ต้องอยู่นอกกฎหมายไปตลอดชีวิต' });
-            } else {
-              endGame('outlaw', { cause: 'หลินอันใช้ชีวิตในเงามืด แต่ตรอกมืดยังจำได้ว่าเขาไม่เคยทอดทิ้งพวกพ้อง' });
-            }
-          }
-        },
-        {
-          text: 'นำกำลังใต้ดินเข้ากวาดล้างศัตรูที่เหลือ ยึดอำนาจคุมเมืองอย่างเบ็ดเสร็จ',
-          note: 'บทสรุปเจ้าพ่อตลาดมืดผู้ไร้เทียมทาน',
-          effect: s => {
-            if (s.flags.betrayedSect) {
-              endGame('traitor_kingpin', { cause: 'หลินอันกวาดล้างทุกขั้วอำนาจ สถาปนาตนเป็นขุนพลคุมแดนเหนือในเงามืด' });
-            } else {
-              endGame('outlaw', { cause: 'หลินอันขึ้นเป็นเจ้าพ่อคุมโลกใต้ดิน ยึดกุมเศรษฐกิจเงาของเมืองไว้ในมือ' });
-            }
-          }
-        },
-        {
-          text: 'เก็บกวาดทรัพย์สินและหลักฐาน แล้วหายตัวไปในเงามืดอย่างไร้ร่องรอย',
-          note: 'บทสรุปนายหน้าเงาผู้สาบสูญ',
-          effect: s => {
-            endGame('war_shadow_survivor', { cause: 'สงครามเปลี่ยนมือผู้คุมเมือง หลินอันรอดมาได้พร้อมทรัพย์สินและความลับมากมาย' });
-          }
-        }
-      ]
-    }
-  };
-
-  const SOCIAL_EVENTS = [
-    {
-      id: 'social_new_contact', minAge: 12, activity: 'social', minMonth: 0, rarity: 'uncommon',
-      title: 'คนแปลกหน้าที่จำชื่อเจ้าได้', text: s => { const route = socialRoute(s); return `${route.log} ที่นั่นมี${route.group}คนหนึ่งจำชื่อเจ้าได้ และยื่นโอกาสให้รู้จักผู้คนมากขึ้น`; },
-      choices: [
-        { text: 'รับไมตรีและแลกข่าวสาร', check: { stat: 'charm', difficulty: 18 }, effects: [{ type: 'relation', key: 'acquaintance', value: 4 }, { type: 'stat', path: 'hero.reputation', value: 2 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { const social = ensureSocialState(s); social.newContacts++; social.lastTarget = socialRoute(s).key; addLog('ได้คนรู้จักใหม่จากการวางตัวอย่างเหมาะสม', true); } },
-        { text: 'ถอยก่อน ไม่เสี่ยงผูกพัน', effects: [{ type: 'stat', path: 'hero.health', value: 1 }], effect: s => addLog('เจ้ารักษาระยะห่าง จึงปลอดภัยแต่พลาดโอกาสสร้างสายสัมพันธ์') }
-      ]
-    },
-    {
-      id: 'social_rumor', minAge: 12, activity: 'social', minMonth: 6, rarity: 'uncommon',
-      title: 'ข่าวลือใต้ถ้วยชา', text: s => { const route = socialRoute(s); return `ที่${route.name} ข่าวลือเรื่องศัตรู เส้นทางค้า และความเคลื่อนไหวของสำนักกำลังแพร่ไปในหมู่${route.group}`; },
-      choices: [
-        { text: 'ฟังอย่างมีสติและตรวจสอบต้นทาง', check: { stat: 'intellect', difficulty: 20 }, effects: [{ type: 'path', key: 'insight', value: 3 }, { type: 'stat', path: 'hero.reputation', value: 1 }, { type: 'flag', key: 'socialRumorVerified', value: true }], effect: s => { ensureSocialState(s).rumors++; addLog('เจ้าคัดข่าวลือที่ตรวจสอบแล้ว เก็บเบาะแสไว้ใช้ภายหลัง', true); } },
-        { text: 'เล่าต่อเพื่อซื้อความนิยม', effects: [{ type: 'stat', path: 'hero.reputation', value: 3 }, { type: 'stat', path: 'hero.karma', value: -1 }], effect: s => { ensureSocialState(s).rumors++; addLog('ข่าวลือแพร่เร็วขึ้น ชื่อเสียงเพิ่มขึ้น แต่การแพร่ข่าวที่ยังไม่ยืนยันส่งผลต่อกรรม'); } }
-      ]
-    },
-    {
-      id: 'social_conflict', minAge: 12, activity: 'social', minMonth: 12, rarity: 'extraordinary',
-      title: 'โต๊ะเดียวกับคนที่ไม่ลงรอย', text: 'การพบปะครั้งนี้พาเจ้าเผชิญหน้ากับคนที่เคยขัดแย้งกัน ความเงียบหนึ่งช่วงอาจกลายเป็นพันธมิตร หรือศัตรูที่จำชื่อเจ้าไปตลอดชีวิต',
-      choices: [
-        { text: 'ยอมลดทิฐิและเจรจา', check: { stat: 'charm', difficulty: 25 }, effects: [{ type: 'relation', key: 'enemy', value: 4 }, { type: 'relation', key: 'friend', value: 3 }, { type: 'path', key: 'compassion', value: 3 }], effect: s => { const social = ensureSocialState(s); social.reconciliations++; social.conflicts = Math.max(0, social.conflicts - 1); s.flags.socialReconciled = true; addLog('ความขัดแย้งคลี่คลาย กลายเป็นความเข้าใจที่ยังต้องพิสูจน์ต่อไป', true); } },
-        { text: 'ประกาศจุดยืนและไม่ยอมถอย', effects: [{ type: 'relation', key: 'enemy', value: -5 }, { type: 'stat', path: 'hero.reputation', value: 4 }, { type: 'path', key: 'duty', value: 2 }], effect: s => { ensureSocialState(s).conflicts++; s.flags.socialRival = true; addLog('การปะทะคารมจบลงด้วยคู่แข่งใหม่ แต่ชื่อเสียงเรื่องความเด็ดขาดเพิ่มขึ้น'); } }
-      ]
-    },
-    {
-      id: 'social_alliance', minAge: 12, activity: 'social', minMonth: 36, rarity: 'epic',
-      title: 'ข้อเสนอจากผู้มีอิทธิพล', text: s => `ผู้คนที่เจ้าสั่งสมความไว้วางใจมาพบกันที่${socialRoute(s).name} พวกเขาเสนอให้รวมกำลังเป็นพันธมิตร โดยต้องใช้ทั้งชื่อเสียง ความเข้ากันได้ และทรัพยากร`,
-      conditions: s => (s.hero?.reputation || 0) >= 15 && ((s.relations?.friend || 0) + (s.relations?.companion || 0)) >= 8,
-      choices: [
-        { text: 'ลงทุนทรัพยากรเพื่อสร้างพันธมิตร', requires: s => s.hero.money >= 5, locked: 'ต้องมีเงินอย่างน้อย 5 ตำลึง', note: 'ใช้เงิน 5 ตำลึงแม้เจรจาไม่สำเร็จ', check: { stat: 'charm', difficulty: 30 }, failureEffects: [{ type: 'stat', path: 'hero.money', value: -5 }], effects: [{ type: 'stat', path: 'hero.money', value: -5 }, { type: 'faction', key: 'jianghu', value: 5 }, { type: 'stat', path: 'hero.reputation', value: 5 }, { type: 'flag', key: 'alliesRecruited', value: true }], effect: s => { ensureSocialState(s).alliances++; addLog('พันธมิตรใหม่ตอบรับคำเชิญและจะช่วยเหลือเมื่อโลกเข้าสู่ภาวะวิกฤต', true); } },
-        { text: 'ปฏิเสธอย่างสุภาพ เก็บทรัพยากรไว้ก่อน', effects: [{ type: 'path', key: 'insight', value: 2 }], effect: s => addLog('เจ้ายังไม่ผูกมัดตนเองกับพันธมิตรที่อาจเรียกร้องมากเกินไป') }
-      ]
-    },
-    {
-      id: 'social_family_visit', minAge: 12, activity: 'social', minMonth: 6, rarity: 'uncommon',
-      conditions: s => (s.relations?.parents || 0) > 0 || (s.relations?.relatives || 0) > 0,
-      title: 'จดหมายจากคนในสายเลือด', text: 'ญาติผู้ใหญ่ส่งข่าวผ่านตลาดมายังเจ้า พวกเขาไม่ได้ขอเงินทอง เพียงอยากรู้ว่าเจ้าจะยังนับตนเป็นคนในเรือนหรือไม่',
-      choices: [
-        { text: 'กลับไปเยี่ยมและรับฟังเรื่องในบ้าน', effects: [{ type: 'relation', key: 'parents', value: 3 }, { type: 'relation', key: 'relatives', value: 3 }, { type: 'path', key: 'compassion', value: 2 }], effect: s => { s.flags.familyContactRestored = true; addLog('สายเลือดที่ห่างหายกลับมามีเสียงในชีวิตของเจ้าอีกครั้ง', true); } },
-        { text: 'ส่งทรัพยากรไปแทนการกลับไปพบ', requires: s => s.hero.money >= 3, locked: 'ต้องมีเงินอย่างน้อย 3 ตำลึง', effects: [{ type: 'stat', path: 'hero.money', value: -3 }, { type: 'relation', key: 'parents', value: 1 }, { type: 'relation', key: 'relatives', value: 1 }], effect: s => { s.flags.familySupportSent = true; addLog('สิ่งของถูกส่งถึงเรือนเดิม แม้ตัวเจ้ายังกลับไปไม่ได้'); } }
-      ]
-    },
-    {
-      id: 'social_friend_gathering', minAge: 12, activity: 'social', minMonth: 12, rarity: 'uncommon',
-      conditions: s => (s.relations?.friend || 0) > 0 || (s.relations?.companion || 0) > 0,
-      title: 'นัดพบของสหายร่วมทาง', text: 'สหายและคนที่เคยร่วมทางกับเจ้าชวนมาพบกัน พวกเขามีทั้งเรื่องที่อยากเล่าและคำถามว่าควรเดินไปทางใดต่อ',
-      choices: [
-        { text: 'เปิดใจแบ่งปันเสบียงและแผนการ', requires: s => s.hero.money >= 2, locked: 'ต้องมีเงินอย่างน้อย 2 ตำลึง', effects: [{ type: 'relation', key: 'friend', value: 3 }, { type: 'relation', key: 'companion', value: 3 }, { type: 'stat', path: 'hero.money', value: -2 }], effect: s => { s.flags.friendCircleKept = true; addLog('วงสหายยังไม่แตก แม้แต่ละคนต้องเดินคนละเส้นทาง', true); } },
-        { text: 'ถามข่าวสารก่อน ไม่ผูกมัดตนเอง', effects: [{ type: 'relation', key: 'acquaintance', value: 2 }, { type: 'path', key: 'insight', value: 2 }], effect: s => { s.flags.friendRumorNetwork = true; addLog('เจ้าเก็บเครือข่ายข่าวของสหายไว้โดยยังไม่เปิดไพ่ทั้งหมด'); } }
-      ]
-    },
-    {
-      id: 'social_sect_mentor', minAge: 12, activity: 'social', minMonth: 84, rarity: 'extraordinary',
-      conditions: s => !!s.flags?.metSect && ((s.relations?.master || 0) > 0 || (s.relations?.senior || 0) > 0),
-      title: 'คำเตือนหลังศาลาสำนัก', text: 'อาจารย์และศิษย์พี่ไม่ได้เรียกเจ้าไปฝึก พวกเขาอยากรู้ว่าชื่อเสียงและความสัมพันธ์ที่เจ้าสร้างนอกสำนักจะยืนข้างสำนักในวันศึกหรือไม่',
-      choices: [
-        { text: 'ยืนยันว่าจะรักษาคนของสำนัก', effects: [{ type: 'relation', key: 'master', value: 3 }, { type: 'relation', key: 'senior', value: 3 }, { type: 'faction', key: 'sect', value: 2 }, { type: 'flag', key: 'warnedMaster', value: true }], effect: s => addLog('คำตอบของเจ้าทำให้อาจารย์และศิษย์พี่เริ่มวางใจในเครือข่ายของเจ้า', true) },
-        { text: 'ขอรักษาอิสระ ไม่รับปากแทนผู้ใด', effects: [{ type: 'relation', key: 'master', value: -1 }, { type: 'relation', key: 'senior', value: 1 }, { type: 'path', key: 'freedom', value: 2 }], effect: s => { s.flags.sectTrustCautious = true; addLog('สำนักยังไม่ถือว่าเจ้าเป็นศัตรู แต่จะจับตาดูเส้นทางของเจ้าใกล้ขึ้น'); } }
-      ]
-    },
-    {
-      id: 'social_subordinate_rival', minAge: 12, activity: 'social', minMonth: 24, rarity: 'extraordinary',
-      conditions: s => (s.relations?.subordinate || 0) > 0 || (s.relations?.enemy || 0) < 0,
-      title: 'คนใต้มือกับคู่แข่งเก่า', text: 'คนที่เคยเดินตามคำสั่งของเจ้าและคู่แข่งที่เคยขวางทางปรากฏในวงสนทนาเดียวกัน หากจัดการไม่ดี ความไม่พอใจจะกลายเป็นศัตรูถาวร',
-      choices: [
-        { text: 'ให้คนของตนพูดก่อน แล้วเปิดทางคืนดี', check: { stat: 'charm', difficulty: 24 }, effects: [{ type: 'relation', key: 'subordinate', value: 4 }, { type: 'relation', key: 'enemy', value: 3 }, { type: 'flag', key: 'subordinateLoyal', value: true }], effect: s => { ensureSocialState(s).reconciliations++; addLog('ผู้ติดตามรู้ว่าคำสั่งของเจ้ามีที่ว่างให้ความเห็น และคู่แข่งยอมลดกำแพงลง'); } },
-        { text: 'กดทุกคนให้ยอมรับอำนาจ', effects: [{ type: 'relation', key: 'subordinate', value: -2 }, { type: 'relation', key: 'enemy', value: -4 }, { type: 'stat', path: 'hero.reputation', value: 3 }], effect: s => { ensureSocialState(s).conflicts++; s.flags.socialRival = true; addLog('อำนาจทำให้คนเงียบลง แต่คู่แข่งจดจำวิธีที่เจ้าปฏิบัติต่อผู้ใต้มือ'); } }
-      ]
-    }
-  ];
-
-  const INFANT_LEGENDARY_EVENTS = [
-    {
-      id: 'mysterious_swordsman', activity: 'any', rarity: 'legendary', minMonth: 1, maxMonth: 23,
-      unlock: s => !s.flags?.mysteriousSwordsmanMet && (s.hero?.ageMonths || 0) >= 1 && (s.hero?.ageMonths || 0) <= 23,
-      tag: 'ตำนาน · วัยทารก', art: 'sword-cloud', title: 'ผู้เฒ่าผ่านเมฆา',
-      dynamicText: s => `${s.hero?.gender === 'female' ? 'แสงจันทร์เหนือเปลของเจ้าสั่นไหวราวกับถูกคมกระบี่กรีดผ่าน' : s.hero?.gender === 'male' ? 'เงาคมกระบี่พาดผ่านหลังคาเหนือเปลของเจ้า ก่อนชายชราคนหนึ่งจะยืนอยู่กลางอากาศ' : 'เงาคมกระบี่และแสงประหลาดสั่นไหวเหนือเปลของเจ้า ก่อนชายชราคนหนึ่งจะปรากฏขึ้นกลางอากาศ'} ชายชราผู้หนึ่งยืนอยู่บนกระบี่สีหม่น แขนเสื้อปลิวอยู่เหนือเรือน เขามองผ่านหลังคาและหยุดสายตาลงที่เจ้า ราวกับมองเห็นบางสิ่งในร่างทารกที่ยังไม่มีผู้ใดค้นพบ\n\nเขายื่นนิ้วแตะกลางหน้าผากของเจ้า เสียงกระบี่นับหมื่นเล่มดังก้องขึ้นในจิตใจ ทั้งที่รอบตัวมีเพียงเสียงลม\n\n“เด็กน้อย…เจ้ามาเกิดผิดยุค หรือยุคนี้ต่างหากที่กำลังรอเจ้าอยู่”`,
-      choices: [
-        { text: 'พ่นน้ำลายใส่เขา', note: 'ชายชราหัวเราะและทิ้งของวิเศษไว้ข้างเปล', effect: s => { ensureRelationshipState(s); s.flags.mysteriousSwordsmanMet = true; s.relations.mysteriousSwordsman = 50; s.relationshipState.mysteriousSwordsman.lastTouched = s.month; addTreasure(s, 'แผ่นหยกฟังเสียงกระบี่', { attack: 18, agility: 8, training: 14 }, { grade: 'legendary' }); addLog('ชายชราหัวเราะเมื่อถูกเจ้าพ่นน้ำลายใส่ เขาทิ้งแผ่นหยกฟังเสียงกระบี่ไว้ข้างเปล และความสัมพันธ์กับชายแก่ขี่กระบี่เริ่มต้นที่ 50/100', true); } },
-        { text: 'ฉี่รดแขนเสื้อของชายชรา', note: 'เขาตกใจเล็กน้อย แต่ทิ้งยันต์คุ้มครองไว้ให้', effect: s => { ensureRelationshipState(s); s.flags.mysteriousSwordsmanMet = true; s.relations.mysteriousSwordsman = 50; s.relationshipState.mysteriousSwordsman.lastTouched = s.month; addTreasure(s, 'ยันต์คุ้มครองผู้ไร้เดียงสา', { defense: 16, body: 10, luck: 12 }, { grade: 'epic' }); addLog('ชายชราถอนหายใจหลังถูกเจ้าฉี่รด แต่ยังทิ้งยันต์คุ้มครองผู้ไร้เดียงสาไว้ให้ ความสัมพันธ์เริ่มต้นที่ 50/100', true); } },
-        { text: 'เอื้อมมือคว้าปลายกระบี่', note: 'ได้รับเส้นไหมกระบี่และบันทึกความสัมพันธ์กับชายชรา', effect: s => { ensureRelationshipState(s); s.flags.mysteriousSwordsmanMet = true; s.flags.swordsmanSecretHint = true; s.relations.mysteriousSwordsman = 50; s.relationshipState.mysteriousSwordsman.lastTouched = s.month; addTreasure(s, 'เส้นไหมกระบี่เมฆา', { attack: 20, defense: 12, agility: 10 }, { grade: 'legendary' }); addLog('ปลายนิ้วของเจ้าสัมผัสคมกระบี่ ชายชราทิ้งเส้นไหมกระบี่เมฆาและคำชี้แนะลับไว้ ความสัมพันธ์เริ่มต้นที่ 50/100', true); } },
-        { text: 'ร้องไห้จนหลับไป', note: 'ไม่ได้รับของ แต่บันทึกความสัมพันธ์กับชายชรา', effect: s => { ensureRelationshipState(s); s.flags.mysteriousSwordsmanMet = true; s.flags.swordsmanMayReturn = true; s.relations.mysteriousSwordsman = 50; s.relationshipState.mysteriousSwordsman.lastTouched = s.month; addLog('ชายชรายิ้มบาง ๆ ก่อนหายไปพร้อมกลิ่นสนจาง ๆ เขาจดจำเจ้าไว้ และความสัมพันธ์เริ่มต้นที่ 50/100', true); } }
-      ]
-    },
-    {
-      id: 'bell_house_visitor', activity: 'any', rarity: 'legendary', minMonth: 6, maxMonth: 18,
-      unlock: s => !s.flags?.bellHouseVisited && (s.hero?.ageMonths || 0) >= 6 && (s.hero?.ageMonths || 0) <= 18,
-      tag: 'ตำนาน · วัยทารก', art: 'bell-house', title: 'ระฆังจากเรือนที่ไม่มีผู้คน',
-      text: 'ในคืนหนึ่ง เสียงระฆังดังขึ้นจากท้ายหมู่บ้าน ทั้งที่บริเวณนั้นไม่มีวัด ไม่มีศาลเจ้า และไม่มีผู้ใดอาศัยอยู่มานานหลายสิบปี ผู้ใหญ่ในเรือนตื่นขึ้นพร้อมกัน แต่ไม่มีใครกล้าออกไปดู มีเพียงเจ้าที่ยังคงหลับอยู่ในเปล ราวกับเสียงนั้นกำลังเรียกหาเจ้าเพียงผู้เดียว\n\nเมื่อเสียงระฆังดังเป็นครั้งที่สาม เงาร่างสีขาวปรากฏอยู่ข้างหน้าต่าง นางมีรูปร่างคล้ายหญิงชรา ทว่าใบหน้ากลับเลือนรางราวกับถูกหมอกบดบัง นางวางกล่องไม้เก่าแก่ไว้ใต้หน้าต่าง แล้วกล่าวด้วยเสียงที่ไม่มีใครได้ยิน\n\n“ของสิ่งนี้เป็นของผู้ที่ยังไม่เคยก่อหนี้กับโลก”',
-      choices: [
-        { text: 'ให้ผู้ดูแลเปิดกล่องแทนเจ้า', note: 'ได้รับระฆังระดับตำนานและบันทึกความสัมพันธ์กับผู้มาเยือน', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellDebt = true; s.relations.bellMatron = 30; s.relationshipState.bellMatron.lastTouched = s.month; addTreasure(s, 'ระฆังคืนหนี้', { luck: 16, spirit: 12, defense: 10 }, { grade: 'legendary' }); s.hero.karma += 2; addLog('ผู้ดูแลเปิดกล่องและพบระฆังคืนหนี้ ของวิเศษระดับตำนาน ความสัมพันธ์กับหญิงชราแห่งเรือนระฆังเริ่มต้นที่ 30/100', true); } },
-        { text: 'เก็บกล่องไว้โดยไม่เปิด', note: 'ได้รับกล่องปริศนาที่ยังปิดผนึก', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellBoxSealed = true; s.relations.bellMatron = 20; s.relationshipState.bellMatron.lastTouched = s.month; addTreasure(s, 'กล่องเรือนนิรันดร์', { luck: 12, intellect: 12, defense: 8 }, { grade: 'legendary', sealed: true }); addLog('ครอบครัวเก็บกล่องเรือนนิรันดร์ไว้โดยไม่เปิด หญิงชราแห่งเรือนระฆังจดจำการตัดสินใจนี้ ความสัมพันธ์เริ่มต้นที่ 20/100', true); } },
-        { text: 'นำกล่องไปคืนยังเรือนร้าง', note: 'ไม่ได้รับของ เพิ่มกรรมและความสัมพันธ์กับหญิงชรา', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellMatronAwakened = true; s.relations.bellMatron = 40; s.relationshipState.bellMatron.lastTouched = s.month; s.hero.karma += 5; s.hero.reputation += 1; addLog('ครอบครัวนำกล่องกลับคืนเรือนร้าง เสียงระฆังเงียบลง และหญิงชราแห่งเรือนระฆังเริ่มจดจำชื่อของเจ้า ความสัมพันธ์ 40/100', true); } },
-        { text: 'ปล่อยให้กล่องถูกเผาไปพร้อมกับเครื่องเซ่น', note: 'ได้รับเถ้าระฆังไร้เสียงและบันทึกความสัมพันธ์กับหญิงชรา', effect: s => { ensureRelationshipState(s); s.flags.bellHouseVisited = true; s.flags.bellAshWard = true; s.relations.bellMatron = 5; s.relationshipState.bellMatron.lastTouched = s.month; addTreasure(s, 'เถ้าระฆังไร้เสียง', { karma: 10, luck: 8, defense: 8 }, { grade: 'epic', singleUse: true }); s.hero.karma += 1; addLog('กล่องไม้กลายเป็นเถ้าระฆังไร้เสียง หญิงชราแห่งเรือนระฆังไม่พอใจ ความสัมพันธ์เหลือ 5/100', true); } }
-      ]
-    }
-  ];
-
-  const INFANT_EPIC_EVENTS = [
-    {
-      id: 'infant_warm_jade', activity: 'any', rarity: 'epic', minMonth: 1, maxMonth: 23,
-      unlock: s => !s.flags?.infantWarmJade && (s.hero?.ageMonths || 0) >= 1 && (s.hero?.ageMonths || 0) <= 23,
-      tag: 'มหากาพย์ · วัยทารก', art: 'jade-warm', title: 'หยกอุ่นใต้หมอน',
-      text: 'ในคืนที่ลมหนาวพัดลอดหน้าต่าง ผู้ดูแลพบหยกชิ้นหนึ่งซ่อนอยู่ใต้หมอนของเจ้า ทั้งที่ไม่มีใครนำมันเข้ามา\n\nหยกนั้นอุ่นราวกับเพิ่งถูกถือไว้ในมือ และมีแสงสีเขียวจาง ๆ ไหลอยู่ภายในเนื้อหยก เมื่อเจ้ากำมือรอบมัน อาการไข้ก็ลดลง ราวกับมีใครบางคนฝากคำอวยพรไว้กับเด็กที่ยังพูดไม่ได้',
-      choices: [
-        { text: 'ให้ผู้ดูแลวางหยกไว้ข้างตัวเจ้า', note: 'รับการคุ้มครองจากหยกและฟื้นสุขภาพ', effect: s => { s.flags.infantWarmJade = true; addTreasure(s, 'หยกอุ่นคุ้มชีพ', { defense: 8, body: 6, luck: 4 }, { grade: 'epic' }); s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 12); addLog('ผู้ดูแลวางหยกอุ่นไว้ข้างตัวเจ้า อาการไข้ลดลงและหยกคุ้มชีพกลายเป็นของวิเศษประจำตัว', true); } },
-        { text: 'ให้ผู้ดูแลนำหยกไปให้หมอตรวจ', note: 'ได้ความรู้และเศษหยกจากห้องตรวจ', effect: s => { s.flags.infantWarmJade = true; s.flags.jadeExamined = true; s.hero.attributes.intellect += 2; s.hero.attributes.spirit += 2; s.hero.reputation += 1; addTreasure(s, 'เศษหยกเขียวจากห้องตรวจ', { intellect: 6, spirit: 5 }, { grade: 'rare' }); addLog('หมอไม่อาจบอกที่มาของหยก แต่บันทึกเส้นแสงภายในมันไว้ ทำให้ครอบครัวรู้จักผู้เชี่ยวชาญคนหนึ่ง', true); } },
-        { text: 'ฝังหยกไว้ใต้ต้นไม้หน้าบ้าน', note: 'ไม่รับของวิเศษ แต่ฝากความอุ่นไว้กับผืนดิน', effect: s => { s.flags.infantWarmJade = true; s.hero.karma += 2; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 5); s.materials.herb += 1; addLog('หยกถูกฝังใต้ต้นไม้และทำให้ดินรอบรากอุ่นขึ้น สมุนไพรต้นแรกจึงงอกขึ้นในเช้าวันต่อมา', true); } }
-      ]
-    },
-    {
-      id: 'infant_crane_gift', activity: 'any', rarity: 'epic', minMonth: 2, maxMonth: 23,
-      unlock: s => !s.flags?.infantCraneGift && (s.hero?.ageMonths || 0) >= 2 && (s.hero?.ageMonths || 0) <= 23,
-      tag: 'มหากาพย์ · วัยทารก', art: 'white-crane', title: 'นกกระเรียนเหนือชายคา',
-      text: 'ยามรุ่งสาง นกกระเรียนขาวตัวหนึ่งบินวนเหนือเรือนสามรอบ ปีกของมันสะท้อนแสงอาทิตย์จนผู้คนต้องยกมือบังตา\n\nก่อนจากไป มันปล่อยกิ่งสมุนไพรสีเงินลงตรงหน้าต่าง แล้วหันกลับมามองเจ้าเป็นครั้งสุดท้าย ไม่มีใครรู้ว่ามันมาจากภูเขาใด แต่กลิ่นหอมจากกิ่งไม้นั้นช่วยให้ลมหายใจของเจ้าสงบลงตลอดทั้งคืน',
-      choices: [
-        { text: 'เก็บกิ่งสมุนไพรไว้ต้มยา', note: 'ได้วัตถุดิบและฟื้นสุขภาพอย่างมาก', effect: s => { s.flags.infantCraneGift = true; s.materials.herb += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 16); s.hero.attributes.spirit += 2; addLog('กิ่งสมุนไพรกระเรียนถูกต้มเป็นยา ลมหายใจของเจ้าสงบลงและชีพจรแข็งแรงขึ้น', true); } },
-        { text: 'นำกิ่งไม้ไปปักไว้ข้างเปล', note: 'ได้รับของวิเศษที่ช่วยเสริมจิตใจและการพักฟื้น', effect: s => { s.flags.infantCraneGift = true; addTreasure(s, 'ขนกระเรียนขาว', { spirit: 8, luck: 8, restHealth: 5 }, { grade: 'epic' }); s.hero.attributes.spirit += 3; addLog('กิ่งไม้สลายเป็นขนกระเรียนขาวเมื่อรุ่งอรุณ ของวิเศษนั้นทำให้การพักฟื้นของเจ้าดีขึ้น', true); } },
-        { text: 'วางกิ่งไม้คืนไว้บนหลังคา', note: 'ไม่เก็บของไว้กับตัว แต่เพิ่ม Karma และชื่อเสียง', effect: s => { s.flags.infantCraneGift = true; s.hero.karma += 3; s.hero.reputation += 2; s.hero.attributes.luck += 2; addLog('ครอบครัววางกิ่งไม้คืนบนหลังคา นกกระเรียนบินกลับมารับมันและทิ้งเสียงร้องใสกังวานไว้เหนือหมู่บ้าน', true); } }
-      ]
-    },
-    {
-      id: 'infant_rain_laugh', activity: 'any', rarity: 'epic', minMonth: 3, maxMonth: 23,
-      unlock: s => !s.flags?.infantRainLaugh && (s.hero?.ageMonths || 0) >= 3 && (s.hero?.ageMonths || 0) <= 23,
-      tag: 'มหากาพย์ · วัยทารก', art: 'rain-bell', title: 'เสียงหัวเราะในคืนฝน',
-      text: 'ฝนตกหนักจนหลังคาสั่นสะเทือน ทว่าเสียงหัวเราะของเจ้ากลับดังขึ้นท่ามกลางเสียงฟ้าร้อง ราวกับได้ยินเรื่องสนุกจากผู้ที่ไม่มีใครมองเห็น\n\nเงาเล็ก ๆ เคลื่อนผ่านผนังห้องสามครั้ง ก่อนหยุดลงข้างเปลและวางกระดิ่งแก้วไว้บนพื้น เมื่อกระดิ่งดังขึ้น ฝนทั้งหมู่บ้านก็หยุดลงชั่วขณะ และความเงียบที่ตามมาทำให้ผู้ใหญ่ไม่มีใครกล้าหลับต่อ',
-      choices: [
-        { text: 'แขวนกระดิ่งไว้เหนือเปล', note: 'ได้ของวิเศษที่ช่วยเสริมโชคและจิตใจ', effect: s => { s.flags.infantRainLaugh = true; addTreasure(s, 'กระดิ่งฝนใส', { luck: 10, spirit: 6, defense: 5 }, { grade: 'epic' }); s.hero.attributes.luck += 3; addLog('กระดิ่งฝนใสถูกแขวนไว้เหนือเปล เสียงของมันทำให้ฝนไม่เคยตกหนักจนเจ้าหลับไม่ลงอีก', true); } },
-        { text: 'ให้ผู้ดูแลนำกระดิ่งไปเก็บในหีบ', note: 'เก็บกระดิ่งไว้ เพิ่มจิตใจและฟื้นสุขภาพ', effect: s => { s.flags.infantRainLaugh = true; s.flags.rainBellStored = true; s.hero.attributes.spirit += 2; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 6); addLog('กระดิ่งถูกเก็บในหีบเก่า เสียงหัวเราะที่ไม่มีที่มาหายไป แต่ความสงบก็กลับคืนสู่เรือน', true); } },
-        { text: 'หัวเราะตอบเสียงที่อยู่นอกหน้าต่าง', note: 'เพิ่มกรรม ปัญญา และจิตใจ', effect: s => { s.flags.infantRainLaugh = true; s.flags.heardRainVisitor = true; s.hero.karma += 3; s.hero.attributes.intellect += 2; s.hero.attributes.spirit += 3; addLog('เสียงหัวเราะของเจ้าตอบกลับไปยังความมืด เงานั้นจึงเลือนหายพร้อมทิ้งความรู้สึกว่ามีใครจดจำเจ้าไว้', true); } }
-      ]
-    },
-    {
-      id: 'infant_star_fragment', activity: 'any', rarity: 'epic', minMonth: 6, maxMonth: 23,
-      unlock: s => !s.flags?.infantStarFragment && (s.hero?.ageMonths || 0) >= 6 && (s.hero?.ageMonths || 0) <= 23,
-      tag: 'มหากาพย์ · วัยทารก', art: 'star-forge', title: 'เศษดาวจากเตาหลอม',
-      text: 'ช่างตีเหล็กพบโลหะสีดำชิ้นหนึ่งตกอยู่กลางลานบ้าน หลังจากดาวตกพาดผ่านท้องฟ้าเมื่อคืนก่อน\n\nแม้ถูกโยนลงในเตาหลอมหลายครั้ง มันกลับไม่ละลาย แต่กลับส่งเสียงคล้ายเด็กหัวเราะทุกครั้งที่เจ้าอยู่ใกล้\n\nช่างจึงเก็บมันไว้ให้ครอบครัว พร้อมกล่าวว่าโลหะชิ้นนี้อาจกลายเป็นอาวุธหรือเครื่องรางของเจ้าในวันที่เติบโตพอ',
-      choices: [
-        { text: 'ฝากช่างตีเหล็กเก็บรักษาไว้', note: 'ได้เหล็ก หินปราณ และเศษเหล็กจากฟ้า', effect: s => { s.flags.infantStarFragment = true; s.materials.iron += 3; s.materials.spiritStone += 1; addTreasure(s, 'เศษเหล็กจากฟ้า', { attack: 10, defense: 8 }, { grade: 'epic', craftingMaterial: true }); s.hero.attributes.body += 2; addLog('ช่างตีเหล็กเก็บเศษเหล็กจากฟ้าไว้ให้เจ้า โลหะนี้ยังรอวันที่จะถูกตีขึ้นเป็นของคู่กาย', true); } },
-        { text: 'ให้ช่างขึ้นรูปเป็นของเล่นชิ้นเล็ก', note: 'เพิ่มพละกำลังและความกล้า พร้อมได้รับของวิเศษ', effect: s => { s.flags.infantStarFragment = true; addTreasure(s, 'ลูกข่างเหล็กจากดาว', { body: 8, luck: 5, defense: 6 }, { grade: 'epic' }); s.hero.attributes.body += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 8); addLog('เศษดาวถูกตีเป็นลูกข่างเหล็ก แม้หมุนช้า แต่ไม่เคยล้มลงแม้ถูกผลักด้วยแรงใด', true); } },
-        { text: 'นำโลหะไปคืนจุดที่ดาวตก', note: 'นำเศษดาวกลับไป เพิ่มกรรม ปัญญา และชื่อเสียง', effect: s => { s.flags.infantStarFragment = true; s.flags.starfallSiteKnown = true; s.hero.karma += 4; s.hero.attributes.intellect += 2; s.hero.reputation += 1; addLog('ครอบครัวนำเศษดาวกลับไปยังจุดที่มันตกลงมา ดินตรงนั้นยังอุ่น และมีรอยแร่ประหลาดซ่อนอยู่ใต้ดิน', true); } }
-      ]
-    },
-    {
-      id: 'infant_snow_fever', activity: 'any', rarity: 'epic', minMonth: 1, maxMonth: 23,
-      unlock: s => !s.flags?.infantSnowFever && (s.hero?.ageMonths || 0) >= 1 && (s.hero?.ageMonths || 0) <= 23,
-      tag: 'มหากาพย์ · วัยทารก', art: 'snow-fever', title: 'ไข้คืนหิมะ',
-      text: 'ในคืนที่หิมะตกหนัก เจ้าตัวร้อนจนผู้ดูแลคิดว่าอาจไม่รอดถึงเช้า เปลวไฟในเตาผิงเองยังสั่นไหวราวกับหวาดกลัว\n\nผู้ดูแลนำยาสามัญทุกอย่างที่มีมาผสมกันโดยไม่มีทางเลือกอื่น และหยดแรกที่แตะริมฝีปากของเจ้ากลับเปล่งแสงสีทอง\n\nก่อนรุ่งเช้า ไข้ของเจ้าลดลง เหลือเพียงรอยแสงบาง ๆ บนข้อมือ ราวกับร่างกายได้จดจำความตายไว้เป็นบทเรียนแรก',
-      choices: [
-        { text: 'ดื่มยาที่ผู้ดูแลปรุงต่อจนหมด', note: 'ฟื้นสุขภาพ เพิ่มสุขภาพสูงสุดและพละกำลัง พร้อมได้รับเม็ดยา', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 10); s.hero.maxHealth += 5; s.hero.attributes.body += 3; addTreasure(s, 'เม็ดยาเกล็ดหิมะ', { body: 8, health: 5 }, { grade: 'rare', consumable: true }); addLog('ยาสามัญที่รวมกันอย่างสิ้นหวังช่วยให้เจ้ารอด และร่างกายจดจำคืนไข้หิมะไว้เป็นภูมิคุ้มกัน', true); } },
-        { text: 'หยุดยาและใช้ความอบอุ่นของครอบครัวรักษาเจ้า', note: 'ปลอดภัยกว่า และเพิ่มความผูกพันกับครอบครัว', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 6); s.relations.parents += 5; s.relations.relatives += 2; s.hero.attributes.spirit += 2; addLog('อ้อมแขนของครอบครัวช่วยพาเจอผ่านคืนหิมะ ความทรงจำเรื่องการถูกปกป้องฝังแน่นอยู่ในจิตใจ', true); } },
-        { text: 'เก็บหยดแสงสีทองไว้ในขวดหยก', note: 'ได้รับไอเทมและเพิ่มจิตใจ แต่สุขภาพลดลงสูงสุด 4', effect: s => { s.flags.infantSnowFever = true; s.hero.health = Math.max(1, s.hero.health - 4); addTreasure(s, 'หยดแสงจากไข้หิมะ', { spirit: 10, luck: 6, defense: 6 }, { grade: 'epic', sealed: true }); s.hero.attributes.spirit += 4; addLog('หยดแสงสีทองถูกเก็บในขวดหยก กลายเป็นของวิเศษที่ยังเต้นเบา ๆ เมื่อเจ้าหลับ', true); } }
-      ]
-    },
-    {
-      id: 'infant_moon_shadow', activity: 'any', rarity: 'epic', minMonth: 4, maxMonth: 23,
-      unlock: s => !s.flags?.infantMoonShadow && (s.hero?.ageMonths || 0) >= 4 && (s.hero?.ageMonths || 0) <= 23,
-      tag: 'มหากาพย์ · วัยทารก', art: 'moon-water', title: 'เงาจันทร์ในอ่างน้ำ',
-      text: 'ระหว่างอาบน้ำ ผู้ดูแลพบว่าเงาจันทร์บนผิวน้ำไม่เคลื่อนตามเมฆเหมือนเงาทั่วไป แต่มันกลับลอยเข้ามาใกล้เจ้าอย่างช้า ๆ\n\nเมื่อมือเล็ก ๆ ของเจ้าตีน้ำ เงาจันทร์ก็แตกออกเป็นประกายสีเงินและเกาะอยู่บนปลายนิ้ว\n\nประกายนั้นหายไปก่อนผู้ใดจะจับต้องได้ ทิ้งไว้เพียงความรู้สึกเย็นสบายและดวงตาที่สว่างขึ้นกว่าทุกวัน',
-      choices: [
-        { text: 'เก็บน้ำในอ่างไว้ในขวด', note: 'ได้ของวิเศษที่ช่วยเสริมการพักฟื้นและจิตใจ', effect: s => { s.flags.infantMoonShadow = true; addTreasure(s, 'น้ำค้างเงาจันทร์', { spirit: 8, restHealth: 6, luck: 6 }, { grade: 'epic', sealed: true }); s.hero.attributes.spirit += 2; addLog('น้ำในอ่างถูกเก็บไว้ในขวดหยก ประกายจันทร์ยังคงลอยอยู่ข้างในจนถึงรุ่งเช้า', true); } },
-        { text: 'ปล่อยให้น้ำไหลกลับลงดิน', note: 'ไม่ได้รับไอเทม แต่เพิ่ม Karma และสุขภาพ', effect: s => { s.flags.infantMoonShadow = true; s.hero.karma += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 7); s.hero.attributes.luck += 2; addLog('ครอบครัวปล่อยเงาจันทร์กลับคืนสู่ผืนดิน น้ำค้างสีเงินจึงเกาะตามใบไม้ทั่วเรือน', true); } },
-        { text: 'ยื่นมือแตะประกายบนผิวน้ำอีกครั้ง', note: 'เพิ่มปัญญา จิตใจ และได้รับประกายจันทร์ติดนิ้ว', effect: s => { s.flags.infantMoonShadow = true; s.flags.moonShadowTouched = true; s.hero.attributes.intellect += 3; s.hero.attributes.spirit += 3; addTreasure(s, 'ประกายจันทร์ติดนิ้ว', { intellect: 8, spirit: 8, luck: 5 }, { grade: 'rare' }); addLog('ประกายจันทร์แตะปลายนิ้วของเจ้าอีกครั้ง ก่อนซึมเข้าไปในผิวหนังและทิ้งความเย็นไว้ในชีพจร', true); } }
-      ]
-    }
-  ];
 
   function scopedEpicEvent(def) {
     return {
@@ -9131,308 +6246,13 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
       choices: def.choices.map(choice => ({ ...choice, effect: s => { s.flags[def.flag] = true; choice.effect(s); } }))
     };
   }
-
-  const SCOPED_EPIC_EVENTS = [
-    {
-      id: 'young_child_lantern_footprint', flag: 'youngChildLanternFootprint', phase: 'วัยเด็กเล็ก', minAge: 2, maxAge: 5,
-      when: s => ['roadside', 'owned', 'rented', 'shelter'].includes(s.locations?.current || 'roadside'), title: 'รอยเท้าใต้โคม',
-      text: 'คืนหนึ่ง ผู้ดูแลจุดโคมไว้หน้าประตูเพื่อรอคนในเรือนกลับบ้าน แต่แสงโคมกลับทอดเงารอยเท้าเล็ก ๆ ที่ไม่มีเจ้าของเดินผ่าน\n\nรอยเท้านั้นหยุดอยู่ข้างเตียงของเจ้า ก่อนค่อย ๆ เลือนหายไปตามผนัง ขณะเดียวกันเสียงเคาะประตูก็ดังขึ้นสามครั้ง\n\nเมื่อเปิดออก ไม่มีใครอยู่ด้านนอก มีเพียงเหรียญทองแดงเย็นจัดวางอยู่บนพื้นและกลิ่นดินหลังฝนที่ไม่ควรมีในคืนแล้ง',
-      choices: [
-        { text: 'เก็บเหรียญไว้ใต้หมอน', note: 'ได้ของวิเศษเล็กน้อยและเพิ่มโชค', effect: s => { addTreasure(s, 'เหรียญโคมไร้เงา', { luck: 7, defense: 4 }, { grade: 'rare' }); s.hero.attributes.luck += 2; addLog('เหรียญโคมไร้เงาถูกเก็บไว้ใต้หมอน และไม่เคยเย็นลงอีกเลย', true); } },
-        { text: 'นำเหรียญไปวางคืนหน้าประตู', note: 'ได้ Karma และความสัมพันธ์กับผู้ดูแล', effect: s => { s.hero.karma += 2; s.relations.parents += 3; s.hero.attributes.spirit += 1; addLog('เหรียญหายไปก่อนรุ่งเช้า เหลือเพียงรอยเท้าจาง ๆ ที่หันกลับไปทางถนน', true); } },
-        { text: 'เรียกผู้ใหญ่ทุกคนมาดูพร้อมกัน', note: 'ชื่อเสียงเพิ่ม แต่ความสงบของเรือนลดลง', effect: s => { s.hero.reputation += 2; s.relations.relatives += 2; s.hero.health = Math.max(1, s.hero.health - 2); addLog('เรื่องรอยเท้าแพร่ไปทั่วเรือน ผู้ใหญ่เริ่มระวังทุกเสียงเคาะประตูหลังจากคืนนั้น', true); } }
-      ]
-    },
-    {
-      id: 'young_child_hidden_ledger', flag: 'youngChildHiddenLedger', phase: 'วัยเด็กเล็ก', minAge: 3, maxAge: 5,
-      when: s => s.activity === 'study' || (s.hero?.attributes?.intellect || 0) >= 13, title: 'บัญชีลับหลังชั้นหนังสือ',
-      text: 'ระหว่างที่ผู้ใหญ่กำลังจัดหีบตำรา เจ้าพบสมุดบัญชีบาง ๆ ซ่อนอยู่หลังชั้นหนังสือ หน้ากระดาษเต็มไปด้วยชื่อคนและจำนวนเงินที่ไม่ตรงกับบัญชีของบ้าน\n\nตรงหน้าสุดท้ายมีตราประทับของคนจากเมืองชายแดน และบรรทัดหนึ่งเขียนถึงเด็กคนหนึ่งที่ควรตายไปแล้ว\n\nผู้ใหญ่รีบปิดสมุดทันทีเมื่อเห็นเจ้า แต่เจ้าจำรอยหมึกสีแดงและกลิ่นน้ำมันสนบนปกได้แล้ว',
-      choices: [
-        { text: 'จำชื่อและซ่อนสมุดกลับที่เดิม', note: 'ได้รับเบาะแสระยะยาว', effect: s => { s.paths.insight += 2; s.hero.attributes.intellect += 2; s.flags.hiddenLedgerClue = true; addLog('เจ้าจำชื่อในบัญชีไว้โดยไม่ถาม ผู้ใหญ่ไม่รู้ว่าความลับถูกพบเห็นแล้ว', true); } },
-        { text: 'นำสมุดไปให้พ่อแม่ดู', note: 'ความปลอดภัยของครอบครัวเพิ่มขึ้น แต่ศัตรูอาจรู้ตัว', effect: s => { s.relations.parents += 5; s.hero.reputation += 1; s.flags.familyWarnedLedger = true; addLog('สมุดบัญชีถูกเผาในคืนนั้น ครอบครัวเริ่มเปลี่ยนเส้นทางเดินทางและไม่รับแขกแปลกหน้า', true); } },
-        { text: 'ฉีกหน้าที่มีชื่อเด็กคนนั้นออกมา', note: 'เสี่ยงทำลายหลักฐาน แต่ได้เบาะแสไว้กับตัว', effect: s => { s.paths.freedom += 1; s.paths.insight += 1; s.hero.health -= 2; addTreasure(s, 'เศษบัญชีหมึกแดง', { intellect: 5, luck: 4 }, { grade: 'rare' }); addLog('หน้ากระดาษถูกซ่อนไว้ในเสื้อของเจ้า และกลายเป็นหลักฐานชิ้นแรกที่ไม่มีใครรู้ว่าถูกนำออกมา', true); } }
-      ]
-    },
-    {
-      id: 'young_child_market_mask', flag: 'youngChildMarketMask', phase: 'วัยเด็กเล็ก', minAge: 4, maxAge: 5,
-      when: s => (s.hero?.money || 0) <= 8 || s.activity === 'work', title: 'หน้ากากจากตลาดเช้า',
-      text: 'ในตลาดเช้า ช่างเร่คนหนึ่งยื่นหน้ากากไม้ให้เจ้าโดยไม่คิดเงิน เขาบอกว่าหน้ากากนี้แกะจากไม้ที่ลอยมาจากแม่น้ำและไม่เคยมีผู้ใดสวมได้นาน\n\nทันทีที่เจ้ารับมัน เสียงจอแจรอบตัวกลับเงียบลง เหลือเพียงเสียงคนผู้หนึ่งกระซิบเรียกชื่อที่ไม่ใช่ชื่อของเจ้า\n\nช่างเร่หายไปก่อนผู้ดูแลจะหันกลับมา เหลือเพียงรอยสีดำบนฝ่ามือของเจ้า',
-      choices: [
-        { text: 'สวมหน้ากากกลับบ้าน', note: 'ได้ของวิเศษสำหรับซ่อนตัว แต่สุขภาพเสียเล็กน้อย', effect: s => { addTreasure(s, 'หน้ากากไม้หลบสายตา', { agility: 7, luck: 5, defense: 5 }, { grade: 'epic' }); s.hero.health -= 3; s.hero.attributes.luck += 1; addLog('หน้ากากไม้ไม่ยอมหลุดจากมือจนถึงบ้าน และเงาของเจ้าในคืนนั้นไม่มีใบหน้า', true); } },
-        { text: 'คืนหน้ากากให้แม่น้ำ', note: 'ได้ Karma และลบรอยผิดปกติออกจากตัว', effect: s => { s.hero.karma += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 4); s.relations.parents += 2; addLog('หน้ากากจมหายไปในแม่น้ำ และเสียงกระซิบก็ไม่กลับมาอีก', true); } },
-        { text: 'ให้ผู้ดูแลต่อรองกับช่างเร่', note: 'ได้เงินเล็กน้อยและได้ข่าวจากตลาด', effect: s => { s.hero.money += 5; s.hero.reputation += 2; s.paths.insight += 1; addLog('ช่างเร่ยอมแลกหน้ากากกับข่าวสารหนึ่งเรื่อง ก่อนหายไปในฝูงชนราวกับไม่เคยมีตัวตน', true); } }
-      ]
-    },
-    {
-      id: 'child_bamboo_whistle', flag: 'childBambooWhistle', phase: 'วัยเด็ก', minAge: 6, maxAge: 12,
-      when: s => s.activity === 'explore' || s.locations?.current === 'roadside', title: 'เสียงขลุ่ยจากป่าไผ่',
-      text: 'ระหว่างเดินตามทางป่า เจ้าพบขลุ่ยไม้ไผ่แขวนอยู่บนกิ่งที่สูงเกินกว่าเด็กทั่วไปจะเอื้อมถึง ทว่าเมื่อเจ้าหันหลัง เสียงทำนองกลับดังขึ้นเองจากภายในป่า\n\nทำนองนั้นไม่ได้เรียกเจ้าไปข้างหน้า แต่นำทางกลับบ้านอย่างแม่นยำ แม้เส้นทางที่เดินอยู่จะไม่ใช่ทางเดิม\n\nเมื่อกลับถึงเรือน ขลุ่ยในมือกลับมีรอยสลักรูปเส้นทางที่ไม่เคยเห็นบนแผนที่ใด',
-      choices: [
-        { text: 'เก็บขลุ่ยไว้ใช้ยามหลงทาง', note: 'ได้ไอเทมช่วยสำรวจและเพิ่มว่องไว', effect: s => { addTreasure(s, 'ขลุ่ยนำทางป่าไผ่', { agility: 8, luck: 6, intellect: 4 }, { grade: 'epic' }); s.hero.attributes.luck += 2; addLog('ขลุ่ยนำทางป่าไผ่ส่งเสียงเบา ๆ ทุกครั้งที่เจ้าหันผิดทาง', true); } },
-        { text: 'เป่าทำนองตอบกลับไป', note: 'อาจได้ยินเสียงตอบกลับ แต่เสียสุขภาพ 3', effect: s => { s.paths.insight += 2; s.hero.attributes.intellect += 3; s.hero.health -= 3; s.flags.bambooPathKnown = true; addLog('เสียงจากป่าตอบกลับมาเพียงครั้งเดียว แล้วทิ้งเส้นทางลับไว้ในความทรงจำของเจ้า', true); } },
-        { text: 'แขวนขลุ่ยคืนไว้บนกิ่งเดิม', note: 'ได้ Karma และหลีกเลี่ยงอันตราย', effect: s => { s.hero.karma += 3; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 3); s.hero.reputation += 1; addLog('เมื่อขลุ่ยถูกแขวนคืน เสียงในป่าก็เงียบลง เหลือเพียงลมพัดผ่านใบไผ่', true); } }
-      ]
-    },
-    {
-      id: 'child_wounded_traveler', flag: 'childWoundedTraveler', phase: 'วัยเด็ก', minAge: 7, maxAge: 12,
-      when: s => s.activity === 'explore' || s.hero?.health < s.hero?.maxHealth * .7, title: 'คนเจ็บใต้ต้นสน',
-      text: 'ใต้ต้นสนริมทาง เจ้าพบคนเดินทางคนหนึ่งนอนกอดถุงผ้าไว้แน่น เลือดซึมผ่านชายเสื้อ แต่เขายังพยายามยิ้มให้เจ้า\n\nเขาไม่ได้ขอให้ช่วยรักษา เพียงถามว่าข้างหน้ามีหมู่บ้านหรือไม่ และขอให้เจ้ารับของชิ้นหนึ่งไว้ก่อนที่คนตามล่าจะมาถึง\n\nเสียงม้าดังมาจากทางไกล ขณะที่ถุงผ้าในมือเขาสั่นเบา ๆ ราวกับมีบางสิ่งยังมีชีวิตอยู่ข้างใน',
-      choices: [
-        { text: 'พาเขากลับไปหาผู้ใหญ่', note: 'เสียสุขภาพเล็กน้อย แต่ได้ของวิเศษและชื่อเสียง', effect: s => { addTreasure(s, 'เข็มกลัดผู้เดินทาง', { defense: 7, luck: 6 }, { grade: 'rare' }); s.hero.health -= 5; s.hero.reputation += 3; s.hero.karma += 2; addLog('คนเจ็บรอดถึงมือผู้ใหญ่ เขาทิ้งเข็มกลัดผู้เดินทางไว้เป็นคำขอบคุณก่อนจากไป', true); } },
-        { text: 'รับถุงผ้าแล้วชี้ทางผิดให้ผู้ตามล่า', note: 'ได้ห่อผนึก แต่เสียสุขภาพ 4', effect: s => { s.flags.travelerSecret = true; s.paths.freedom += 2; s.paths.insight += 1; s.hero.health -= 4; addTreasure(s, 'ห่อผนึกของคนพเนจร', { agility: 8, intellect: 5 }, { grade: 'epic', sealed: true }); addLog('เจ้าชี้ทางผิดให้คนชุดดำ และคนเจ็บหายไปพร้อมถุงผ้าที่ไม่ยอมเปิดออก', true); } },
-        { text: 'เดินผ่านไปเหมือนไม่เห็น', note: 'รักษาสุขภาพ แต่เสีย Karma', effect: s => { s.hero.karma -= 2; s.hero.attributes.luck -= 1; addLog('เมื่อเจ้าหันกลับมา คนเจ็บหายไปแล้ว เหลือเพียงรอยเลือดที่ถูกฝนชะล้าง', true); } }
-      ]
-    },
-    {
-      id: 'child_first_potion', flag: 'childFirstPotion', phase: 'วัยเด็ก', minAge: 8, maxAge: 12,
-      when: s => s.activity === 'craft' || s.activity === 'study' || (s.materials?.herb || 0) >= 2, title: 'ยาขวดแรกของเจ้า',
-      text: 'ในห้องครัวเล็ก ๆ เจ้าเห็นผู้ใหญ่พยายามต้มยาจากสมุนไพรที่เก็บมาทั้งวัน แต่ไฟอ่อนเกินไปและน้ำในหม้อเริ่มขุ่น\n\nเมื่อเจ้าขยับช้อนตามจังหวะที่ได้ยินจากเสียงลม ยากลับใสขึ้นและมีกลิ่นหอมเย็นกระจายทั่วเรือน\n\nไม่มีใครรู้ว่านั่นเป็นเพียงความบังเอิญ หรือมือเล็ก ๆ ของเจ้าจดจำวิธีปรุงบางอย่างจากที่ใด',
-      choices: [
-        { text: 'ปรุงยาต่อจนเสร็จ', note: 'ใช้สมุนไพร 2 ชิ้น ได้ยาและความรู้คราฟต์', requires: s => (s.materials?.herb || 0) >= 2, effect: s => { s.materials.herb -= 2; s.crafting.knowledge.alchemy += 1; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 12); addTreasure(s, 'ยาหอมลมหายใจแรก', { body: 6, spirit: 6 }, { grade: 'rare', consumable: true }); addLog('ยาหอมลมหายใจแรกสำเร็จเป็นครั้งแรก ช่างยาในเรือนเริ่มมองเจ้าไม่เหมือนเด็กทั่วไป', true); } },
-        { text: 'เก็บตัวยาไว้ให้ผู้เชี่ยวชาญตรวจ', note: 'ได้ความรู้และเพิ่มโอกาสเรียนรู้วิชาในอนาคต', effect: s => { s.hero.attributes.intellect += 3; s.hero.attributes.spirit += 2; s.flags.potionKnowledge = true; s.hero.reputation += 1; addLog('ผู้เชี่ยวชาญยืนยันว่าตัวยาไม่มีพิษ และจดชื่อส่วนผสมไว้ในตำราให้ครอบครัว', true); } },
-        { text: 'เทยาทิ้งก่อนเกิดอันตราย', note: 'ปลอดภัยที่สุด แต่เสียวัตถุดิบ', effect: s => { s.materials.herb = Math.max(0, (s.materials.herb || 0) - 1); s.hero.attributes.spirit += 1; addLog('เจ้าเทยาที่มีกลิ่นผิดปกติทิ้ง ก่อนที่ไอร้อนจากหม้อจะเปลี่ยนเป็นควันสีดำ', true); } }
-      ]
-    },
-    {
-      id: 'youth_sect_invitation', flag: 'youthSectInvitation', phase: 'วัยหนุ่มสาว', minAge: 13, maxAge: 18,
-      when: s => s.flags?.metSect || s.activity === 'sect' || s.locations?.current === 'sect', title: 'จดหมายเชิญใต้ตราเมฆา',
-      text: 'จดหมายผนึกขี้ผึ้งสีฟ้าถูกส่งมาถึงในคืนที่เมฆปกคลุมยอดเขา ตราบนซองเป็นของสำนักที่ไม่เคยส่งคำเชิญให้คนทั่วไป\n\nผู้ส่งเขียนเพียงว่าเคยเห็นชื่อของเจ้าปรากฏในบันทึกเก่า และต้องการให้เจ้าไปพบผู้ดูแลหอคัมภีร์ก่อนที่ฤดูหนาวจะมาถึง\n\nคำเชิญไม่มีตรารับรองจากอาจารย์ผู้ใด แต่กระดาษกลับมีปราณไหลเวียนอยู่จริง',
-      choices: [
-        { text: 'รับคำเชิญและเดินทางไปพบผู้ส่ง', note: 'เพิ่มชื่อเสียงและเปิดโอกาสเรียนรู้', effect: s => { s.flags.sectLetterAccepted = true; s.hero.reputation += 4; s.hero.attributes.intellect += 2; s.hero.cultivation += s.hero.cultivationAccess ? 8 : 0; addTreasure(s, 'ตราผนึกคำเชิญเมฆา', { intellect: 8, spirit: 6 }, { grade: 'rare' }); addLog('เจ้ารับจดหมายและได้พบผู้ดูแลหอคัมภีร์ เขาไม่สอนวิชา แต่เปิดประตูให้เจ้าอ่านบันทึกที่คนทั่วไปไม่มีสิทธิ์เห็น', true); } },
-        { text: 'นำจดหมายไปให้อาจารย์ตรวจ', note: 'เพิ่มความสัมพันธ์กับอาจารย์และลดความเสี่ยง', effect: s => { s.relations.master += 6; s.flags.sectLetterVerified = true; s.hero.attributes.spirit += 2; addLog('อาจารย์ตรวจตราผนึกอยู่นาน ก่อนบอกว่าจดหมายนี้ไม่ได้มาจากศัตรู แต่ก็ไม่ควรเชื่อทั้งหมด', true); } },
-        { text: 'เผาจดหมายทิ้ง', note: 'หลีกเลี่ยงความเสี่ยง แต่เสียโอกาสและชื่อเสียง 1', effect: s => { s.paths.freedom += 2; s.hero.reputation -= 1; addLog('จดหมายกลายเป็นเถ้าในมือเจ้า เส้นทางหนึ่งปิดลงโดยไม่มีใครรู้ว่าเคยเปิดอยู่', true); } }
-      ]
-    },
-    {
-      id: 'youth_duel_token', flag: 'youthDuelToken', phase: 'วัยหนุ่มสาว', minAge: 14, maxAge: 18,
-      when: s => s.activity === 'train' || s.activity === 'social' || (s.hero?.power || 0) >= 40, title: 'ป้ายท้าประลองหน้าฝน',
-      text: 'ป้ายไม้สีแดงถูกตอกไว้หน้าสำนักในเช้าวันฝนตก ชื่อของเจ้าถูกเขียนไว้ด้วยหมึกดำ ทั้งที่เจ้าไม่เคยรับคำท้าจากผู้ใด\n\nผู้คนมารวมตัวรอบลานประลอง บางคนต้องการเห็นเจ้าชนะ บางคนเพียงรอหัวเราะเมื่อเจ้าถอยหนี\n\nคู่แข่งไม่เผยหน้า แต่ทิ้งถ้อยคำไว้ว่า เพลงกระบี่ของเจ้ามีรอยต่อที่คนในอดีตเคยใช้ทำลายตระกูลหนึ่ง',
-      choices: [
-        { text: 'รับคำท้าและขึ้นลานประลอง', note: 'เสี่ยงบาดเจ็บ แต่ได้ชื่อเสียงและพลัง', effect: s => { s.flags.duelWitnessed = true; s.hero.powerBonus += 28; s.hero.reputation += 5; s.hero.health -= 6; s.relations.senior += 3; addTreasure(s, 'เหรียญผู้ผ่านลานประลอง', { attack: 8, agility: 6 }, { grade: 'rare' }); addLog('เจ้ารับคำท้าต่อหน้าฝูงชน แม้ยังไม่รู้ว่าใครส่งป้ายมา แต่ชื่อของเจ้าถูกจดจำในฐานะผู้ไม่ถอย', true); } },
-        { text: 'ตรวจสอบที่มาของคำท้าก่อน', note: 'พบเบาะแสศัตรูและเพิ่มปัญญา', effect: s => { s.paths.insight += 3; s.flags.duelOriginKnown = true; s.hero.attributes.intellect += 2; addLog('เบาะแสบนป้ายเชื่อมไปถึงศัตรูเก่าของคนในสำนัก การประลองครั้งนี้อาจไม่ใช่เรื่องส่วนตัวของเจ้า', true); } },
-        { text: 'ฉีกป้ายทิ้งต่อหน้าฝูงชน', note: 'รักษาสุขภาพ แต่ชื่อเสียงเปลี่ยนไป', effect: s => { s.paths.freedom += 2; s.hero.reputation += 1; s.relations.senior -= 2; addLog('เจ้าฉีกป้ายท้าประลองต่อหน้าทุกคน บางคนเรียกมันว่าขี้ขลาด บางคนกลับเรียกมันว่าการเลือกสนามของตนเอง', true); } }
-      ]
-    },
-    {
-      id: 'youth_old_letter', flag: 'youthOldLetter', phase: 'วัยหนุ่มสาว', minAge: 15, maxAge: 18,
-      when: s => s.activity === 'social' || (s.relations?.friend || 0) >= 3, title: 'จดหมายจากผู้ที่จากไป',
-      text: 'จดหมายฉบับหนึ่งถูกส่งมาถึงเจ้าหลังจากผู้เขียนหายไปจากเมืองนานหลายปี กระดาษมีกลิ่นดอกไม้แห้งและรอยน้ำตาที่ลบไม่ออก\n\nข้อความด้านในไม่ได้กล่าวถึงความรักหรือการจากลา แต่เตือนว่าอย่าเชื่อคนที่เอ่ยชื่อของเจ้าในงานเลี้ยงคืนนี้\n\nท้ายจดหมายมีแผนที่ครึ่งแผ่นและประโยคสั้น ๆ ว่า หากเจ้าจำข้าได้ จงอย่ามาตามหา',
-      choices: [
-        { text: 'ไปงานเลี้ยงและสังเกตคนที่เอ่ยชื่อเจ้า', note: 'ได้ชื่อเสียงและแผนที่ แต่เสี่ยงมีศัตรู', effect: s => { s.flags.oldLetterFollowed = true; s.paths.insight += 3; s.hero.reputation += 3; s.relations.enemy += 1; addTreasure(s, 'แผนที่ครึ่งใบจากคนเก่า', { intellect: 8, luck: 5 }, { grade: 'rare' }); addLog('ที่งานเลี้ยงมีคนเอ่ยชื่อเจ้าจริง และเขารีบออกจากงานทันทีเมื่อสบตาเจ้า', true); } },
-        { text: 'เผาจดหมายและเก็บแผนที่ไว้', note: 'รักษาความลับและได้ไอเทมเบาะแส', effect: s => { s.flags.oldLetterBurned = true; s.paths.freedom += 2; addTreasure(s, 'เศษแผนที่ไร้นาม', { luck: 7, agility: 5 }, { grade: 'rare', sealed: true }); addLog('จดหมายถูกเผา เหลือเพียงแผนที่ครึ่งใบที่ไม่บอกว่าพาไปหาใคร', true); } },
-        { text: 'เล่าเรื่องนี้ให้สหายฟัง', note: 'เพิ่มความสัมพันธ์และลดความเสี่ยงจากการรับมือคนเดียว', effect: s => { s.relations.friend += 8; s.relations.companion += 3; s.hero.attributes.charm += 2; addLog('สหายของเจ้าช่วยจำรายละเอียดในจดหมาย และสัญญาว่าจะไม่ปล่อยให้เจ้าตามรอยนี้เพียงลำพัง', true); } }
-      ]
-    },
-    {
-      id: 'builder_debt_seal', flag: 'builderDebtSeal', phase: 'วัยสร้างตัว', minAge: 19, maxAge: 30,
-      when: s => (s.household?.debt || 0) > 0 || (s.hero?.money || 0) < 10, title: 'ตราประทับหนี้เก่า',
-      text: 'เจ้าพบตราประทับสีชาดบนเอกสารหนี้ที่ไม่มีชื่อเจ้าของ แต่ทุกบรรทัดกลับระบุทรัพย์สินของเจ้าได้ถูกต้อง\n\nเจ้าหนี้ยืนยันว่าหนี้นี้สืบทอดมาจากคนที่เคยช่วยครอบครัวของเจ้า และกำหนดให้ชำระภายในเจ็ดวัน\n\nหากปฏิเสธ บ้านอาจถูกยึด หากยอมรับ เจ้าจะได้รู้ว่าความช่วยเหลือในอดีตมีราคาสูงเพียงใด',
-      choices: [
-        { text: 'ชำระหนี้เท่าที่มี', note: 'ใช้เงินเพื่อลดหนี้และรักษาชื่อเสียง', requires: s => (s.hero?.money || 0) >= 6, effect: s => { s.hero.money -= 6; s.household.debt = Math.max(0, (s.household.debt || 0) - 8); s.hero.reputation += 3; s.hero.karma += 2; addLog('เงินก้อนเล็กถูกวางลงบนโต๊ะ เจ้าหนี้ยอมลดตราประทับและเลื่อนกำหนดส่วนที่เหลือ', true); } },
-        { text: 'ตรวจสอบว่าใครเป็นเจ้าของหนี้ตัวจริง', note: 'พบเบาะแสของตระกูลและเพิ่มปัญญา', effect: s => { s.flags.inheritedDebtTruth = true; s.paths.insight += 3; s.hero.attributes.intellect += 2; addTreasure(s, 'ใบรับรองหนี้เก่าของตระกูล', { intellect: 8, reputation: 5 }, { grade: 'rare', sealed: true }); addLog('เอกสารอีกชุดเผยว่าหนี้นี้ถูกขยายตัวเลขโดยมือที่สาม และตราประทับเดิมไม่ใช่ของเจ้าหนี้คนปัจจุบัน', true); } },
-        { text: 'ฉีกเอกสารต่อหน้าเจ้าหนี้', note: 'รักษาเงิน แต่เพิ่มศัตรูและความเสี่ยง', effect: s => { s.relations.enemy += 4; s.hero.reputation -= 3; s.hero.karma -= 1; s.flags.debtProvoked = true; addLog('เอกสารถูกฉีกเป็นชิ้น เจ้าหนี้ไม่พูดอะไร เพียงส่งคนติดตามเจ้าออกจากตรอก', true); } }
-      ]
-    },
-    {
-      id: 'builder_forge_oath', flag: 'builderForgeOath', phase: 'วัยสร้างตัว', minAge: 20, maxAge: 30,
-      when: s => s.activity === 'craft' || s.locations?.current === 'owned' || s.locations?.current === 'estate', title: 'ค้อนแรกของโรงช่าง',
-      text: 'ช่างตีเหล็กเก่าที่บ้านของเจ้าขอให้ช่วยเฝ้าเตาหลอมในคืนที่เขาจะตีอาวุธชิ้นสุดท้ายของชีวิต\n\nประกายไฟทุกเม็ดสะท้อนภาพของสิ่งที่เจ้าสร้างไว้ในช่วงหลายปีที่ผ่านมา ทั้งบ้าน หนี้ ผู้คน และคำสัญญาที่เคยให้\n\nเมื่อค้อนตกลงครั้งสุดท้าย เหล็กในเตากลับมีรูปร่างตามความตั้งใจที่เจ้าซ่อนไว้ลึกที่สุด',
-      choices: [
-        { text: 'ตีอาวุธตามคำสัตย์ของตน', note: 'ได้อาวุธเกรด Epic และเพิ่มพลังรบ', effect: s => { addTreasure(s, 'ค้อนคำสัตย์แห่งเตาหลอม', { attack: 16, defense: 10, body: 8 }, { grade: 'epic' }); s.hero.powerBonus += 35; s.hero.reputation += 2; s.flags.forgeWeaponMade = true; addLog('อาวุธจากเตาหลอมมีรูปร่างตามคำสัตย์ของเจ้า และช่างเฒ่าก็ยอมรับว่าเจ้าสร้างสิ่งหนึ่งขึ้นมาด้วยตนเองแล้ว', true); } },
-        { text: 'ตีเครื่องมือสำหรับคนในบ้าน', note: 'เพิ่มความมั่นคงครัวเรือนและลดค่าใช้จ่าย', effect: s => { s.hero.money += 8; s.household.monthlyCost = Math.max(0, (s.household.monthlyCost || 0) - 1); s.family.legacyScore += 3; addTreasure(s, 'เครื่องมือเหล็กประจำเรือน', { body: 8, defense: 6 }, { grade: 'rare' }); addLog('ค้อนของเจ้าสร้างเครื่องมือที่ทำให้คนในบ้านทำงานง่ายขึ้น และค่าใช้จ่ายบางส่วนลดลง', true); } },
-        { text: 'ดับเตาก่อนงานเสร็จ', note: 'ไม่รับไอเทม แต่รักษาสุขภาพและเปิดทางใหม่', effect: s => { s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 6); s.paths.freedom += 2; addLog('เจ้าดับเตาก่อนโลหะจะได้รูปร่าง ช่างเฒ่าไม่โกรธ เพียงบอกว่าบางครั้งการวางค้อนก็เป็นการตัดสินใจเช่นกัน', true); } }
-      ]
-    },
-    {
-      id: 'builder_border_contract', flag: 'builderBorderContract', phase: 'วัยสร้างตัว', minAge: 22, maxAge: 30,
-      when: s => s.activity === 'travel' || s.activity === 'work' || s.locations?.current === 'roadside', title: 'สัญญาจากด่านตะวันตก',
-      text: 'กองคาราวานจากด่านตะวันตกเสนอสัญญาให้เจ้านำสินค้าไปส่งยังเมืองที่ไม่มีชื่ออยู่บนแผนที่ทั่วไป\n\nค่าตอบแทนสูงกว่าค่าจ้างหลายเท่า แต่ผู้คุมขบวนไม่ยอมบอกว่าสินค้าในหีบคืออะไร และกำชับว่าห้ามเปิดแม้ได้ยินเสียงจากด้านใน\n\nเส้นทางนี้อาจสร้างชื่อให้เจ้า หรือทำให้คนทั้งด่านจำชื่อของเจ้าในฐานะผู้ทรยศ',
-      choices: [
-        { text: 'รับสัญญาและคุมขบวนไปจนสุดทาง', note: 'ได้เงินและชื่อเสียง แต่เสี่ยงสุขภาพ', effect: s => { s.hero.money += 18; s.hero.reputation += 4; s.hero.health -= 8; s.paths.freedom += 2; addTreasure(s, 'ตราคาราวานตะวันตก', { agility: 10, luck: 6 }, { grade: 'rare' }); addLog('คาราวานถึงด่านปลายทางโดยไม่เปิดหีบ เจ้ากลับมาพร้อมเงินก้อนใหญ่และตราที่เปิดทางให้เดินทางไกลขึ้น', true); } },
-        { text: 'ขอตรวจสินค้าและเงื่อนไขก่อนออกเดินทาง', note: 'ตรวจเงื่อนไขสัญญาและเพิ่มปัญญา', effect: s => { s.paths.insight += 3; s.hero.attributes.intellect += 2; s.flags.caravanContractRead = true; s.hero.reputation += 1; addLog('เจ้าพบว่าหีบมีของต้องห้ามปะปนอยู่ จึงต่อรองสัญญาใหม่ก่อนยอมเดินทาง', true); } },
-        { text: 'ปฏิเสธและแจ้งทางการ', note: 'ได้ Karma แต่สร้างศัตรูกับคนในคาราวาน', effect: s => { s.hero.karma += 3; s.hero.reputation += 2; s.relations.enemy += 2; addLog('ทางการยึดคาราวานไว้ตรวจสอบ แต่คนคุมขบวนจำหน้าของเจ้าได้และไม่คิดให้อภัย', true); } }
-      ]
-    },
-    {
-      id: 'middle_old_enemy', flag: 'middleOldEnemy', phase: 'วัยกลางคน', minAge: 31, maxAge: 50,
-      when: s => (s.relations?.enemy || 0) > 0 || (s.hero?.reputation || 0) >= 10, title: 'ศัตรูเก่ามาเคาะประตู',
-      text: 'คนผู้หนึ่งมาหยุดอยู่หน้าบ้านในคืนที่ลมแรง ใบหน้าของเขาแก่ลงกว่าความทรงจำ แต่ท่าทางตอนวางมือบนด้ามอาวุธยังเหมือนเดิม\n\nเขาไม่ได้มาท้าสู้ เพียงนำของชิ้นหนึ่งที่เคยเป็นของผู้ตายมาวางไว้ และบอกว่าคนรุ่นใหม่กำลังจะรื้อฟื้นความแค้นเก่า\n\nหากเจ้ารับของไว้ เรื่องที่ควรจบอาจเริ่มต้นอีกครั้ง หากปฏิเสธ ความจริงบางส่วนอาจสูญหายไปตลอดกาล',
-      choices: [
-        { text: 'รับของและฟังความจริงจนจบ', note: 'ได้ไอเทมและเปิดเบาะแสศัตรูเก่า', effect: s => { s.flags.oldEnemyTruth = true; s.relations.enemy = Math.max(0, s.relations.enemy - 3); s.paths.insight += 3; addTreasure(s, 'ตราประทับจากศัตรูเก่า', { attack: 12, intellect: 8 }, { grade: 'epic' }); addLog('ศัตรูเก่าวางตราประทับลงบนโต๊ะ และความจริงที่ถูกฝังมานานก็มีพยานเพิ่มขึ้นอีกหนึ่งคน', true); } },
-        { text: 'คืนของและขอให้เรื่องจบลงที่หน้าประตู', note: 'รักษาความสงบ แต่พลาดข้อมูลสำคัญ', effect: s => { s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 4); s.hero.reputation += 1; s.paths.freedom += 2; addLog('ของชิ้นนั้นถูกส่งคืน ประตูปิดลง และเจ้าตัดสินใจไม่ให้ความแค้นของคนรุ่นก่อนกำหนดวันพรุ่งนี้', true); } },
-        { text: 'เรียกพยานและคนของตระกูลมาร่วมฟัง', note: 'เพิ่มความปลอดภัย แต่ความสัมพันธ์ศัตรูอาจรุนแรงขึ้น', effect: s => { s.hero.reputation += 4; s.relations.enemy += 2; s.family.legacyScore += 4; s.flags.oldEnemyWitnessed = true; addLog('ความจริงถูกเปิดเผยต่อหน้าพยานหลายฝ่าย ไม่มีใครฆ่าใครในคืนนั้น แต่หนี้แค้นก็ถูกจดชื่อไว้อย่างเป็นทางการ', true); } }
-      ]
-    },
-    {
-      id: 'middle_heir_scroll', flag: 'middleHeirScroll', phase: 'วัยกลางคน', minAge: 32, maxAge: 50,
-      when: s => (s.family?.children?.length || 0) > 0 || s.activity === 'family', title: 'ม้วนคัมภีร์ของผู้สืบทอด',
-      text: 'ในหีบเก่าของตระกูล เจ้าพบม้วนคัมภีร์ที่เขียนด้วยลายมือของบรรพบุรุษ แต่เนื้อหากลับไม่ใช่วิชา เป็นเพียงบันทึกว่าคนรุ่นก่อนเลือกอะไรเมื่อไม่มีทางเลือกที่ดี\n\nหน้าสุดท้ายเว้นที่ว่างไว้สำหรับชื่อของผู้สืบทอดคนต่อไป และหมึกบนพู่กันยังไม่แห้งสนิททั้งที่ไม่มีใครแตะต้องมัน\n\nทายาทของเจ้ามองม้วนคัมภีร์ด้วยแววตาคาดหวัง ขณะที่เจ้ารู้ว่าทุกคำที่เขียนลงไปจะกลายเป็นภาระของคนรุ่นหลัง',
-      choices: [
-        { text: 'เขียนความผิดพลาดของตนลงไปตามจริง', note: 'เพิ่ม Legacy และความสัมพันธ์กับครอบครัว', effect: s => { s.family.legacyScore += 8; s.family.bond += 5; s.relations.parents += 1; s.hero.karma += 2; addLog('เจ้าจารึกทั้งชัยชนะและความผิดพลาดลงในม้วนคัมภีร์ ทายาทจะไม่ต้องเรียนรู้จากคำโกหกของคนรุ่นก่อน', true); } },
-        { text: 'เขียนเฉพาะสิ่งที่ทำให้ตระกูลภาคภูมิใจ', note: 'ชื่อเสียงเพิ่ม แต่ความจริงบางส่วนถูกปิดบัง', effect: s => { s.family.legacyScore += 5; s.hero.reputation += 5; s.flags.legacyBeautified = true; addTreasure(s, 'ตราหมึกบันทึกตระกูล', { charm: 8, reputation: 8 }, { grade: 'rare' }); addLog('ม้วนคัมภีร์เล่าเรื่องที่งดงามที่สุดของตระกูล ส่วนความจริงที่หนักกว่านั้นถูกเก็บไว้ในใจของเจ้า', true); } },
-        { text: 'เผาม้วนคัมภีร์และให้ทายาทเริ่มใหม่', note: 'ให้ทายาทเริ่มใหม่ แต่ลดชื่อเสียงสืบทอดของตระกูล', effect: s => { s.family.legacyScore = Math.max(0, s.family.legacyScore - 3); s.paths.freedom += 3; s.hero.karma -= 1; addLog('เปลวไฟลบชื่อของคนรุ่นก่อนออกจากกระดาษ เหลือเพียงโอกาสให้ผู้สืบทอดเขียนเส้นทางของตนเอง', true); } }
-      ]
-    },
-    {
-      id: 'middle_broken_banner', flag: 'middleBrokenBanner', phase: 'วัยกลางคน', minAge: 35, maxAge: 50,
-      when: s => s.flags?.metSect || s.activity === 'sect' || s.hero?.cultivationAccess, title: 'ธงที่ขาดเหนือยอดเขา',
-      text: 'ธงสำนักที่เคยปักอยู่เหนือยอดเขาถูกส่งมาถึงเรือนของเจ้าในสภาพขาดครึ่งหนึ่ง ไม่มีจดหมาย ไม่มีผู้ส่ง และไม่มีใครกล้าบอกว่ามันหลุดมาจากสนามรบใด\n\nบนผืนผ้ามีรอยเลือดเก่าและชื่อของศิษย์หลายคนที่เจ้าจำได้ แม้เวลาจะผ่านไปนานจนบางคนกลายเป็นเพียงชื่อในพงศาวดาร\n\nธงผืนนี้รอให้เจ้าตัดสินใจว่าจะซ่อม เก็บ หรือเผา เพื่อให้เรื่องของสำนักจบลงพร้อมคนรุ่นนั้น',
-      choices: [
-        { text: 'ซ่อมธงและนำไปปักใหม่', note: 'เพิ่มชื่อเสียงและพลังใจของผู้คน', effect: s => { s.flags.sectBannerRestored = true; s.hero.reputation += 6; s.hero.powerBonus += 30; s.relations.master += 2; addTreasure(s, 'ธงเมฆาที่เย็บคืน', { defense: 12, spirit: 8 }, { grade: 'epic' }); addLog('ธงที่ขาดถูกเย็บใหม่ แม้รอยต่อยังมองเห็น แต่คนที่เห็นมันรู้ว่าสำนักยังไม่ถูกลืม', true); } },
-        { text: 'เก็บธงไว้ในหอความทรงจำ', note: 'เพิ่ม Legacy และรักษาความสงบ', effect: s => { s.family.legacyScore += 4; s.hero.karma += 2; s.flags.sectBannerArchived = true; addLog('ธงถูกเก็บไว้ในหอความทรงจำ ไม่มีใครต้องตายเพื่อมันอีก แต่ชื่อของผู้ล่วงลับยังไม่ถูกลืม', true); } },
-        { text: 'เผาธงตามธรรมเนียมผู้ตาย', note: 'ปล่อยอดีต แต่เสียชื่อเสียงบางส่วน', effect: s => { s.paths.freedom += 2; s.hero.reputation -= 2; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 5); addLog('ธงกลายเป็นเถ้าเหนือยอดเขา และเจ้าปล่อยให้เสียงลมพูดแทนคนที่ไม่มีโอกาสกลับมา', true); } }
-      ]
-    },
-    {
-      id: 'elder_last_herb', flag: 'elderLastHerb', phase: 'วัยชรา', minAge: 51, maxAge: 150,
-      when: s => (s.hero?.health || 0) < (s.hero?.maxHealth || 100) * .55 || s.activity === 'rest', title: 'สมุนไพรต้นสุดท้าย',
-      text: 'สมุนไพรต้นหนึ่งงอกขึ้นข้างบ่อน้ำในปีที่ไม่มีสิ่งใดเติบโต มันมีใบเพียงสามใบและดอกเดียว แต่กลิ่นของมันทำให้ความเจ็บปวดตามข้อกระดูกเบาบางลง\n\nผู้คนบอกให้เจ้าเก็บมันไว้กินในคืนสุดท้าย เพราะยานี้อาจยืดลมหายใจได้อีกหลายปี\n\nแต่เจ้ารู้ดีว่า หากถอนมันในวันนี้ จะไม่มีใครได้เห็นว่าพืชต้นนี้จะออกดอกอีกครั้งหรือไม่',
-      choices: [
-        { text: 'ถอนมาต้มเป็นยาให้ตนเอง', note: 'ฟื้นสุขภาพและเพิ่มอายุขัยเล็กน้อย', effect: s => { s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 22); ensureLifespanState(s); s.hero.lifespanMonths += 24; s.hero.lifespan = s.hero.lifespanMonths / 12; addTreasure(s, 'เม็ดยาสมุนไพรต้นสุดท้าย', { body: 8, spirit: 8 }, { grade: 'epic', consumable: true }); addLog('ยาจากสมุนไพรต้นสุดท้ายช่วยให้เจ้าหายใจได้ลึกขึ้นอีกครั้ง แม้รู้ว่าทุกสิ่งย่อมมีวันหมดลง', true); } },
-        { text: 'ฝากให้ผู้สืบทอดดูแลต่อ', note: 'เพิ่ม Legacy และ Karma แต่ไม่ได้ฟื้นสุขภาพทันที', effect: s => { s.family.legacyScore += 7; s.hero.karma += 4; s.flags.lastHerbInherited = true; addLog('เจ้าฝากสมุนไพรต้นสุดท้ายไว้กับคนรุ่นหลัง และสอนว่าการรักษาชีวิตไม่จำเป็นต้องเริ่มจากการเด็ดทุกสิ่งมาเป็นของตน', true); } },
-        { text: 'แบ่งรากให้ผู้ป่วยในหมู่บ้าน', note: 'เพิ่ม Karma และชื่อเสียง แต่เสียโอกาสยืดชีวิต', effect: s => { s.hero.karma += 7; s.hero.reputation += 5; s.hero.health = Math.max(1, s.hero.health - 4); addLog('รากสมุนไพรถูกแบ่งเป็นชิ้นเล็ก ๆ หลายส่วน ผู้ป่วยรอดชีวิต แม้เวลาของเจ้าจะไม่เพิ่มขึ้นเลย', true); } }
-      ]
-    },
-    {
-      id: 'elder_chronicle', flag: 'elderChronicle', phase: 'วัยชรา', minAge: 55, maxAge: 150,
-      when: s => s.activity === 'family' || (s.family?.legacyScore || 0) > 5, title: 'หน้าว่างในพงศาวดาร',
-      text: 'พงศาวดารตระกูลมาถึงหน้าสุดท้ายที่ยังว่างอยู่ ชื่อของคนรุ่นก่อนเต็มทุกบรรทัด ตั้งแต่ผู้ก่อตั้งจนถึงคนที่หายไปโดยไม่มีใครรู้ชะตา\n\nคนในเรือนนำพู่กันมาให้เจ้า และถามว่าควรเขียนอะไรไว้เพื่อให้ผู้สืบทอดจดจำ\n\nนอกหน้าต่าง แสงเย็นกำลังเลื่อนผ่านหลังคาอย่างช้า ๆ ราวกับเวลาเองก็กำลังรอคำตอบของเจ้า',
-      choices: [
-        { text: 'เขียนเรื่องราวทั้งหมดตามจริง', note: 'เพิ่ม Legacy และชื่อเสียงตระกูล', effect: s => { s.family.legacyScore += 10; s.hero.reputation += 4; s.hero.karma += 2; addLog('หน้าสุดท้ายถูกเติมด้วยเรื่องจริง ทั้งชัยชนะ ความสูญเสีย และสิ่งที่เจ้าปรารถนาให้คนรุ่นหลังไม่ทำซ้ำ', true); } },
-        { text: 'เขียนคำสอนสั้น ๆ ไว้เพียงหนึ่งประโยค', note: 'ได้ไอเทมพงศาวดารและเพิ่มจิตใจ', effect: s => { s.family.legacyScore += 6; s.hero.attributes.spirit += 4; addTreasure(s, 'พู่กันพงศาวดารปลายชีวิต', { spirit: 10, charm: 6 }, { grade: 'epic' }); addLog('เจ้าวางพู่กันหลังเขียนประโยคเดียว แต่คนในเรือนกลับจดจำมันได้แม่นกว่าพงศาวดารทั้งเล่ม', true); } },
-        { text: 'ปล่อยให้หน้าว่างอยู่เช่นนั้น', note: 'ให้ผู้สืบทอดเลือกอนาคตของตน', effect: s => { s.paths.freedom += 3; s.family.legacyScore += 1; s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 5); addLog('หน้าสุดท้ายยังคงว่าง ผู้สืบทอดจึงมีสิทธิ์เขียนคำตอบของตนเองโดยไม่ต้องเดินตามเงาของเจ้า', true); } }
-      ]
-    },
-    {
-      id: 'elder_empty_seat', flag: 'elderEmptySeat', phase: 'วัยชรา', minAge: 60, maxAge: 150,
-      when: s => s.hero?.health < s.hero?.maxHealth * .7 || (s.hero?.reputation || 0) >= 15, title: 'ที่นั่งว่างใต้แสงจันทร์',
-      text: 'ในงานรวมญาติปีนี้ มีที่นั่งหนึ่งตัวถูกเว้นไว้ให้คนที่ไม่มีวันกลับมา ทุกคนรู้ว่าควรเก็บมันไว้ แต่ไม่มีใครรู้ว่าควรพูดถึงเจ้าของที่นั่งหรือไม่\n\nเมื่อแสงจันทร์ตกกระทบโต๊ะ ถ้วยชาที่วางอยู่ตรงนั้นกลับมีไอน้ำลอยขึ้น ทั้งที่ไม่มีใครรินชา\n\nคนในเรือนหันมามองเจ้า เพราะรู้ว่าคำพูดสุดท้ายเกี่ยวกับที่นั่งนี้ควรเป็นของผู้ที่ผ่านชีวิตมานานที่สุด',
-      choices: [
-        { text: 'เล่าเรื่องของผู้จากไปให้คนรุ่นหลังฟัง', note: 'เพิ่มความสัมพันธ์และ Legacy', effect: s => { s.family.legacyScore += 6; s.relations.relatives += 5; s.hero.karma += 2; addLog('ชื่อของผู้จากไปถูกเรียกอีกครั้งในเรือน ไม่ใช่เพื่อรั้งเขาไว้ แต่เพื่อไม่ให้ชีวิตของเขาหายไปจากความทรงจำ', true); } },
-        { text: 'เก็บถ้วยชาไว้เป็นของระลึก', note: 'ได้รับถ้วยชาของผู้ล่วงลับ', effect: s => { addTreasure(s, 'ถ้วยชาของผู้ล่วงลับ', { spirit: 12, intellect: 7, defense: 5 }, { grade: 'epic' }); s.paths.insight += 2; addLog('ถ้วยชาถูกเก็บไว้ในหอความทรงจำ ไอน้ำหายไปแล้ว แต่กลิ่นชาคืนเดิมยังคงอยู่', true); } },
-        { text: 'ยกที่นั่งนั้นให้ผู้มาใหม่', note: 'เพิ่ม Karma และเปิดทางให้ครอบครัวเดินต่อ', effect: s => { s.hero.karma += 4; s.family.bond += 4; s.hero.reputation += 2; addLog('ที่นั่งว่างถูกมอบให้เด็กคนหนึ่งในเรือน ค่ำคืนนี้จึงไม่ใช่เพียงการไว้อาลัย แต่เป็นการยอมให้ชีวิตเดินหน้าต่อ', true); } }
-      ]
-    }
-  ].map(scopedEpicEvent);
-
-  // เหตุการณ์สุ่มและ Bond Events
-  const RANDOM_EVENTS = [
-    // Bond Event: อาจารย์เหวิน
-    {
-      id: 'master_bond', minAge: 12, storyCharacter: 'lin-an', activity: 'train', minMonth: 90, unlock: s => s.relations.master >= 20, title: 'ชาน้ำชาบนผาเมฆา', text: 'อาจารย์เหวินรินชาสมุนไพรโบราณให้เจ้า “ในบรรดาศิษย์รุ่นนี้ แววตาของเจ้าหนักแน่นที่สุด” ท่านยื่นจี้หยกเก่าแก่ที่ลงอักขระคุ้มกายไว้ให้', choices: [
-        { text: 'คุกเข่ารับจี้หยกและคำสอน', note: 'ได้รับจี้หยก · สวมใส่ต้องถึงหลอมกาย', effect: s => { s.flags.masterBondGiven = true; addTreasure(s, 'จี้หยกคุ้มชีพอาจารย์เหวิน', { defense: 10, body: 8 }); s.relations.master += 15; s.hero.cultivation += 25; addLog('จี้หยกไออุ่นของอาจารย์ปกป้องชีพจร ทำให้รากฐานมั่นคงขึ้น', true); } },
-        { text: 'ขอเรียนเคล็ดลมปราณเสริมแทน', note: 'ความเร็วฝึกตน +15%', effect: s => { s.hero.combat.training += 15; s.relations.master += 10; addLog('อาจารย์ปรับชีพจรลมหายใจให้ ความเร็วในการบำเพ็ญเพิ่มขึ้นอย่างมาก', true); } }
-      ]
-    },
-    // Bond Event: ศิษย์พี่เซี่ยหลัน
-    {
-      id: 'senior_bond', minAge: 12, storyCharacter: 'lin-an', activity: 'train', minMonth: 92, unlock: s => s.relations.senior >= 20, title: 'กระบี่ใต้แสงจันทร์', text: 'เซี่ยหลันเรียกเจ้าไปที่ลานกระบี่หลังเที่ยงคืน “เพลงกระบี่สำนักมีท่าลับที่บันทึกไว้เพียงนอกตำรา เจ้าพร้อมจะเรียนหรือไม่?”', choices: [
-        { text: 'ฝึกกระบวนท่าลับจนรุ่งสาง', note: 'กระบี่หายาก · ขั้นต่ำหลอมกาย · เมื่อสวมใส่ โจมตี +30 · ว่องไว +10', effect: s => { s.flags.seniorBondGiven = true; addTreasure(s, 'กระบี่ธารเมฆาประสาน', { attack: 14, agility: 5 }); s.relations.senior += 15; s.hero.powerBonus += 80; addLog('เจ้ากับศิษย์พี่ประสานกระบี่ใต้แสงจันทร์ กระบวนท่าไหลลื่นไร้ช่องโหว่', true); } },
-        { text: 'ขอให้ศิษย์พี่ช่วยฝึกเสริมร่างกาย', note: 'กายา +6 · สุขภาพสูงสุด +15', effect: s => { s.hero.combat.body += 6; s.hero.maxHealth += 15; s.hero.health = s.hero.maxHealth; s.relations.senior += 10; addLog('การฝึกเคี่ยวกรำของศิษย์พี่ทำให้กล้ามเนื้อและกระดูกแข็งแกร่งขึ้น', true); } }
-      ]
-    },
-    // Bond Event: สหายเฉินหยู
-    {
-      id: 'friend_bond', minAge: 12, storyCharacter: 'lin-an', activity: 'explore', minMonth: 95, unlock: s => s.flags.helpedFriend === true, title: 'สัญญาใต้ต้นสน', text: 'เฉินหยูนำผลึกสมุนไพรหายากจากตระกูลของเขามามอบให้ “ถ้าวันนั้นเจ้าไม่ช่วยข้า ข้าคงกลายเป็นศพในป่าไปแล้ว สิ่งนี้ข้ามอบให้เจ้า”', choices: [
-        { text: 'รับสมุนไพรและดื่มร่วมกัน', note: 'ฟื้นฟูสุขภาพเต็ม · สุขภาพสูงสุด +20', effect: s => { s.flags.friendBondGiven = true; s.hero.maxHealth += 20; s.hero.health = s.hero.maxHealth; s.relations.friend += 15; addLog('โอสถของเฉินหยูชำระล้างสิ่งสกปรกในชีพจร สุขภาพสมบูรณ์พร้อม', true); } },
-        { text: 'แบ่งปันเคล็ดวิชาให้แก่กัน', note: 'พลัง +60 · ว่องไว +4', effect: s => { s.hero.combat.agility += 4; s.hero.powerBonus += 60; s.relations.friend += 18; addLog('มิตรภาพระหว่างศิษย์ร่วมรุ่นแน่นแฟ้น ทั้งสองต่างพัฒนาฝีมือร่วมกัน', true); } }
-      ]
-    },
-    {
-      id: 'street_instinct', activity: 'train', maxMonth: 83, title: 'บทเรียนจากตรอกแคบ', text: 'เด็กโตกว่าสามคนล้อมแย่งอาหาร เจ้าสังเกตว่าคนหัวโจกลงน้ำหนักที่ขาซ้ายไม่เต็ม การตัดสินใจครั้งนี้คือบทเรียนต่อสู้จริงครั้งแรก', choices: [
-        { text: 'ใช้ทรายกับทางแคบเล่นงานทีละคน', effects: [{ type: 'stat', path: 'hero.powerBonus', value: 15 }, { type: 'stat', path: 'hero.reputation', value: -1 }, { type: 'stat', path: 'hero.health', value: -5 }], effect: () => addLog('เจ้าเรียนรู้ว่าชัยชนะไม่จำเป็นต้องงดงาม ขอเพียงมีชีวิตรอด', true) },
-        { text: 'จำท่าทางแล้วถอยหนี ไม่เสี่ยงบาดเจ็บ', effects: [{ type: 'stat', path: 'hero.cultivation', value: 12 }, { type: 'stat', path: 'hero.health', value: 3 }], effect: () => addLog('เจ้าจำช่องโหว่ของทุกคนไว้ และเลือกไม่ต่อสู้ในวันที่เสียเปรียบ') }
-      ]
-    },
-    {
-      id: 'retainer_lesson', storyCharacter: 'lin-an', activity: 'train', maxMonth: 83, title: 'มีดไม้ของลุงโจว', text: 'ลุงโจวเหลาไม้เป็นมีดสั้น เขาบอกว่าทายาทตระกูลไม่ต้องชนะทุกครั้ง แต่ต้องรู้ว่าจะปกป้องสิ่งใดและหนีเมื่อใด', choices: [
-        { text: 'ฝึกจนมือแตก', requires: s => s.flags.retainerAlive, locked: 'ลุงโจวไม่ได้อยู่สอนเจ้า', effect: s => { s.hero.powerBonus += 25; s.hero.health -= 7; addLog('แผลที่ฝ่ามือกลายเป็นพื้นฐานของทุกอาวุธที่เจ้าจับภายหลัง', true); } },
-        { text: 'ขอเรียนวิธีอ่านทางหนีแทน', effect: s => { s.flags.escapePrepared = true; s.paths.insight += 1; addLog('เจ้าฝึกอ่านรอยล้อ ทิศลม และประตูที่ไม่มีคนเฝ้า'); } }
-      ]
-    },
-    {
-      id: 'enlightenment', minAge: 12, activity: 'train', minMonth: 84, unlock: s => !!s.hero?.cultivationAccess && !!equippedCultivationTechnique(s), title: 'หนึ่งลมหายใจ หนึ่งโลก', text: 'ระหว่างโคจรปราณ เสียงรอบกายเงียบหาย เจ้าสัมผัสประตูด่านที่ไม่เคยเห็นมาก่อน โอกาสตื่นรู้เช่นนี้อาจมีเพียงครั้งเดียว', choices: [
-        { text: 'ปล่อยจิตตามกระแสเต๋า', note: 'ตื่นรู้ฉับพลัน: เปิดเผยวิชาบำเพ็ญ เพิ่มความก้าวหน้า และได้รอยตื่นรู้ช่วยฝึก', effect: s => { s.flags.enlightenment = true; s.hero.cultivation += 55; addTreasure(s, 'รอยตื่นรู้แห่งเมฆา', { training: 12 }); addLog('เจ้าตื่นรู้กลางลานฝึก ปราณก้าวหน้าเท่ากับหลายเดือน', true); } },
-        { text: 'ถอนสมาธิ เก็บความมั่นคงไว้ก่อน', note: 'ปลอดภัย ฟื้นสุขภาพเล็กน้อย', effect: s => { s.hero.health = Math.min(s.hero.maxHealth, s.hero.health + 10); addLog('เจ้าไม่ไล่ตามภาพลวง รากฐานจึงมั่นคงขึ้น'); } }
-      ]
-    },
-    {
-      id: 'deviation', minAge: 12, activity: 'train', minMonth: 84, requires: s => s.hero && s.hero.cultivationAccess !== false, title: 'ปราณย้อนเข้าหัวใจ', text: 'การฝึกต่อเนื่องทำให้ลมปราณปั่นป่วน หากฝืนทะลวงด่านอาจก้าวหน้าในคืนเดียว—หรือชีพจรแตกดับ', choices: [
-        { text: 'ฝืนทะลวงเดี๋ยวนี้', note: 'ต้องติดตั้งวิชาบำเพ็ญ · อันตรายถึงตาย: ควรมีพลัง 900 และสุขภาพ 45', requires: s => !!equippedCultivationTechnique(s) && !cultivationAtCeiling(s), locked: 'ต้องติดตั้งวิชาบำเพ็ญที่ยังไม่ถึงเพดานก่อน', effect: s => { if (s.hero.power >= 900 && s.hero.health >= 45) { advanceCultivationStage(s, 1, true); s.hero.health -= 22; addLog('เจ้าฝืนผ่านด่านสำเร็จ แม้เลือดไหลจากมุมปาก', true); } else { s.hero.health = 0; endGame('death_deviation', { cause: 'ฝืนทะลวงด่านทั้งที่รากฐานและสุขภาพไม่พอ ชีพจรระเบิดดับสิ้น' }); } } },
-        { text: 'หยุดฝึกและระบายปราณ', note: 'เสียความก้าวหน้า 15 แต่ไม่เสี่ยงชีวิต', effect: s => { s.hero.cultivation = Math.max(0, s.hero.cultivation - 15); s.hero.health = Math.max(1, s.hero.health - 6); addLog('เจ้ารักษาชีพจรไว้ได้ แต่ต้องเริ่มสะสมปราณใหม่บางส่วน'); } }
-      ]
-    },
-    {
-      id: 'elder_lesson', minAge: 12, activity: 'train', minMonth: 84, title: 'ผู้เฒ่ากวาดลาน', text: 'ชายชราผู้กวาดลานชี้ว่าท่าของเจ้ามีช่องโหว่ เขาดูเหมือนคนธรรมดา แต่ไม้กวาดในมือไม่เคยแตะพื้นผิดจังหวะ', choices: [
-        { text: 'คำนับขอคำชี้แนะ', effect: s => { s.hero.powerBonus += 40; s.hero.cultivation += 20; s.hero.reputation += 2; addLog('สามคำของผู้เฒ่าแก้สิ่งที่เจ้าติดขัดมาหลายเดือน', true); } },
-        { text: 'ไม่สนใจ ฝึกตามตำราต่อไป', effect: s => { s.hero.cultivation += 8; addLog('ผู้เฒ่ายิ้มบาง ๆ แล้วไม่กล่าวอะไรอีก'); } }
-      ]
-    },
-    {
-      id: 'spar', minAge: 12, storyCharacter: 'lin-an', activity: 'train', minMonth: 84, title: 'คำท้าจากศิษย์พี่', text: 'เซี่ยหลันชวนเจ้าประลองเพื่อดูความก้าวหน้า การต่อสู้ครั้งนี้ไม่มีเดิมพันนอกจากศักดิ์ศรี', choices: [
-        { text: 'รับคำท้า', note: 'พลัง 600 ขึ้นไปจึงมีโอกาสชนะ', requires: s => s.hero.power >= 600, locked: 'พลังยังไม่ถึง 600 (ขั้นรวบรวมวิญญาณ)', effect: s => { s.hero.reputation += 8; s.relations.senior += 8; s.hero.powerBonus += 40; addLog('เจ้ารับมือกระบี่ของเซี่ยหลันได้ครบสิบกระบวนท่า', true); } },
-        { text: 'ขอฝึกด้วยกันแทน', effect: s => { s.relations.senior += 6; s.hero.cultivation += 12; addLog('การชี้แนะของศิษย์พี่ช่วยแก้จุดติดขัด'); } }
-      ]
-    },
-    {
-      id: 'work_investigation', minAge: 12, activity: 'work', minMonth: 60, conditions: { flag: { key: 'workWanted', value: true } }, title: 'เงาตามบัญชี', text: 'ข่าวการทำงานผิดกฎหมายเริ่มย้อนกลับมาหาเจ้า ทางการและสำนักต่างจับตาเส้นทางเงินของเจ้า', choices: [
-        { text: 'ยอมคืนเงินและให้การ', note: 'ลดความเสี่ยง รักษาชีวิตและชื่อเสียงบางส่วน', effect: s => { s.flags.workWanted = false; s.hero.money = Math.max(0, s.hero.money - 12); s.hero.reputation += 5; s.household.workRisk = 0; addLog('เจ้าคืนเงินและเปิดเผยเครือข่ายบางส่วน ทางการยอมลดโทษ', true); } },
-        { text: 'หนีต่อกับเครือข่ายใต้ดิน', note: 'ได้เงินเพิ่ม แต่ชื่อเสียงและความเสี่ยงร้ายขึ้น', effect: s => { s.flags.workedUnderworld = true; s.hero.money += 10; s.hero.reputation -= 10; s.hero.health -= 8; addLog('เจ้าหลบหนีการไล่ล่า กลายเป็นคนที่โลกปกติไม่อาจรับรอง', true); } }
-      ]
-    },
-    {
-      id: 'crooked_job', minAge: 12, activity: 'work', unlock: s => !!s.flags?.metSect, title: 'บัญชีที่ไม่ควรถาม', text: 'ผู้ดูแลคลังเสนอค่าจ้างก้อนใหญ่ให้แก้ตัวเลขสมุนไพรที่หายไป ไม่มีใครตรวจพบง่าย ๆ และเขาสัญญาว่าจะจำบุญคุณนี้', choices: [
-        { text: 'รับงาน ปลอมบัญชีให้แนบเนียน', note: 'ได้เงินมาก ชื่อเสียงยุทธภพลด แต่พรรคงูดำเริ่มรู้จัก', effect: s => { s.flags.workedUnderworld = true; s.hero.money += 24; s.hero.reputation -= 12; addLog('เงินเต็มถุง แต่ชื่อของเจ้าถูกกระซิบในวงคนค้าของเถื่อน', true); } },
-        { text: 'ปฏิเสธและนำเรื่องแจ้งอาจารย์', effect: s => { s.hero.reputation += 9; s.relations.master += 8; s.hero.money += 3; addLog('ผู้ดูแลคลังถูกสอบสวน สำนักเริ่มไว้ใจเจ้ามากขึ้น'); } }
-      ]
-    },
-    {
-      id: 'mine_collapse', minAge: 12, activity: 'work', minMonth: 24, title: 'อุโมงค์เหมืองถล่ม', text: 'เสียงหินแตกดังสนั่น คนงานสามคนติดอยู่หลังแนวไม้ค้ำที่กำลังหัก การเข้าไปต้องใช้ทั้งกำลังและเวลา', choices: [
-        { text: 'ยกหินเปิดทางช่วยคนงาน', note: 'ต้องมีพลัง 120 (หลอมกายขั้นปลาย)', requires: s => s.hero.power >= 120, locked: 'พลังไม่ถึง 120 จึงยกหินไม่ไหว', effect: s => { s.hero.health -= 12; s.hero.reputation += 12; s.hero.money += 10; addLog('คนงานทั้งสามรอด ชื่อของเจ้าถูกเล่าทั่วหมู่บ้าน', true); } },
-        { text: 'ถอยออกมาก่อนเหมืองพัง', note: 'ปลอดภัย แต่ผู้คนมองว่าเจ้าทอดทิ้งพวกเขา', effect: s => { s.hero.reputation -= 8; s.hero.health -= 2; addLog('อุโมงค์พังลงหลังเจ้าถอยออกมา เสียงขอความช่วยเหลือเงียบหาย'); } }
-      ]
-    },
-    {
-      id: 'forge', minAge: 12, activity: 'work', minMonth: 24, title: 'เหล็กดาวตกในเตาหลอม', text: 'ช่างตีเหล็กเมาพลาดทิ้งก้อนเหล็กดาวตกไว้ เจ้าช่วยประคองไฟจนมันหลอมได้ เขายอมตีของให้หนึ่งชิ้นแทนค่าจ้าง', choices: [
-        { text: 'ตีเป็นกระบี่ดาวตก', note: 'กระบี่หายาก · ขั้นต่ำหลอมกาย · เมื่อสวมใส่ โจมตี +35 · ว่องไว +5', effect: s => { s.flags.spiritWeapon = true; addTreasure(s, 'กระบี่ดาวตก', { attack: 12 }); addLog('กระบี่ดาวตกส่งเสียงกังวานเมื่อปราณไหลผ่าน', true); } },
-        { text: 'ขายเหล็ก แบ่งเงินกับช่าง', effect: s => { s.hero.money += 30; s.hero.reputation += 3; addLog('เงินก้อนใหญ่มาถึงมือโดยไม่มีผู้ใดเสียเปรียบ'); } }
-      ]
-    },
-    {
-      id: 'caravan', minAge: 12, activity: 'work', minMonth: 36, title: 'งานคุ้มกันขบวนสินค้า', text: 'พ่อค้าขอให้เจ้าคุ้มกันขบวนผ่านหุบเขา ค่าจ้างดี แต่ข่าวโจรป่าทำให้คนคุ้มกันคนอื่นถอนตัว', choices: [
-        { text: 'รับงานคุ้มกัน', note: 'พลังต่ำกว่า 160 จะบาดเจ็บหนัก', effect: s => { if (s.hero.power >= 160) { s.hero.money += 18; s.hero.reputation += 5; addLog('ขบวนสินค้าถึงเมืองโดยปลอดภัย'); } else { s.hero.money += 5; s.hero.health -= 28; s.hero.reputation -= 3; addLog('โจรปล้นสินค้าไปกว่าครึ่ง เจ้ารอดกลับมาพร้อมบาดแผลหนัก', true); } } },
-        { text: 'ปฏิเสธงานเสี่ยง', effect: s => { s.hero.money += 2; addLog('เจ้ารับงานเล็กในหมู่บ้านแทน วันนั้นผ่านไปอย่างเงียบสงบ'); } }
-      ]
-    },
-    {
-      id: 'spirit_fruit', minAge: 12, activity: 'explore', minMonth: 24, title: 'ผลชาดพันปี', text: 'บนหน้าผาที่ไม่ปรากฏในแผนที่ มีผลไม้สีชาดส่งกลิ่นปราณเข้มข้น เถาวัลย์รอบมันมีรอยกระดูกสัตว์กองอยู่', choices: [
-        { text: 'กินผลชาดทันที', note: 'พรสวรรค์ดวงตาเฉียบคมหรือสุขภาพ 55 ช่วยต้านพิษ · กายา +8 · พักฟื้นดีขึ้น', effect: s => { if (s.hero.talent === 'keen' || s.hero.health >= 55) { s.flags.spiritFruit = true; s.hero.maxHealth += 16; s.hero.health = s.hero.maxHealth; addTreasure(s, 'แก่นผลชาด', { body: 8, restHealth: 8, restQi: 12 }); addLog('ปราณจากผลชาดหลอมเข้ากระดูก พลังเพิ่มพูนมหาศาล และเนื้อผลที่เหลือช่วยฟื้นตัวเมื่อพัก', true); } else { s.hero.health = 0; endGame('death_poison', { cause: 'กินผลวิเศษที่มีพิษร้ายแรงโดยไม่ตรวจสอบ พิษแทรกซึมเข้าสู่หัวใจ' }); } } },
-        { text: 'เก็บตัวอย่างกลับไปตรวจสอบ', effect: s => { s.hero.money += 12; s.flags.savedHerbs = true; s.hero.reputation += 3; addLog('หอยายืนยันว่าผลชาดมีทั้งปราณและพิษรุนแรง'); } }
-      ]
-    },
-    {
-      id: 'ancient_blade', minAge: 12, activity: 'explore', minMonth: 36, title: 'กระบี่หักในสุสานไร้นาม', text: 'ใต้กองหิน เจ้าพบกระบี่หักที่ยังปล่อยไอสังหาร เจ้าของเดิมอาจเป็นยอดฝีมือ—หรือฆาตกรที่ถูกลบชื่อ', choices: [
-        { text: 'หยดเลือดทำพันธสัญญา', note: 'พลัง 350 ขึ้นไปควบคุมได้ · สวมใส่ต้องถึงรวบรวมวิญญาณ · กระบี่มหากาพย์เพิ่มโจมตีและว่องไว แต่ลดกายา', effect: s => { if (s.hero.power >= 350) { s.flags.spiritWeapon = true; addTreasure(s, 'กระบี่หักกินโลหิต', { attack: 14, agility: 4 }); s.hero.reputation -= 5; addLog('กระบี่หักยอมสงบในมือ แต่ไอสังหารทำให้ผู้คนหวาดกลัว', true); } else { s.hero.health -= 35; s.hero.powerBonus += 30; addLog('กระบี่ต่อต้านและดูดเลือดไปมาก ก่อนเจ้าจะสะกดมันได้'); } } },
-        { text: 'ฝังมันกลับตามเดิม', effect: s => { s.hero.reputation += 4; addLog('บางพลังไม่ควรถูกปลุก เจ้าจดจำตำแหน่งสุสานไว้'); } }
-      ]
-    },
-    {
-      id: 'beast_den', minAge: 12, activity: 'explore', minMonth: 60, title: 'รังพยัคฆ์เกราะดำ', text: 'พยัคฆ์ปีศาจขวางทางกลับ ด้านหลังมันมีหีบหยกโบราณ แต่กรงเล็บเดียวก็อาจฉีกร่างผู้ฝึกตนที่อ่อนแอได้', choices: [
-        { text: 'สังหารพยัคฆ์ชิงหีบหยก', note: 'ต้องมีพลัง 400 · สวมใส่ต้องถึงหลอมกาย · เกราะเพิ่มป้องกัน +25 และกายา +15', requires: s => s.hero.power >= 400, locked: 'พลังไม่ถึง 400 การต่อสู้คือความตาย', effect: s => { s.hero.health -= 18; s.hero.money += 24; addTreasure(s, 'เกราะพยัคฆ์ดำ', { defense: 10, body: 6 }); addLog('หลังศึกหนัก เกราะพยัคฆ์กลายเป็นสมบัติของเจ้า', true); } },
-        { text: 'โปรยอาหารล่อแล้วหลบหนี', effect: s => { s.hero.money = Math.max(0, s.hero.money - 4); s.hero.health -= 5; addLog('เจ้ารอดออกมาโดยไม่เห็นว่าภายในหีบมีสิ่งใด'); } }
-      ]
-    },
-    {
-      id: 'cave', minAge: 12, activity: 'explore', minMonth: 12, title: 'ถ้ำสะท้อนเสียง', text: 'ลึกเข้าไปในป่า เจ้าพบถ้ำที่มีปราณไหลเวียนผิดปกติ เสียงคล้ายคนเรียกดังมาจากความมืด', choices: [
-        { text: 'เข้าไปสำรวจ', effect: s => { const good = s.hero.talent === 'keen' || s.hero.power >= 200; if (good) { revealRoot(s, 'ผลึกสะท้อนรากวิญญาณ'); if (s.hero.cultivationAccess) s.hero.cultivation += 22; else s.hero.bodyFoundation = Math.min(100, s.hero.bodyFoundation + 8); s.hero.money += 9; addLog(s.hero.cultivationAccess ? 'เจ้าพบผลึกปราณซ่อนอยู่ในผนังถ้ำ' : 'ผลึกสะท้อนรากวิญญาณเผยให้เห็นศักยภาพที่ซ่อนอยู่ แต่ยังไม่มีวิชาให้โคจรปราณ', true); } else { s.hero.health -= 16; s.hero.powerBonus += 15; addLog('ค้างคาวพิษทำให้เจ้าต้องหนีออกมา'); } } },
-        { text: 'ทำเครื่องหมายไว้แล้วกลับ', effect: s => { s.flags.escapePrepared = true; s.hero.reputation += 2; addLog('ความรอบคอบอาจช่วยชีวิตในวันหน้า'); } }
-      ]
-    }
-  ];
-
+  let SOCIAL_EVENTS;
+  let INFANT_LEGENDARY_EVENTS;
+  let INFANT_EPIC_EVENTS;
+  let SCOPED_EPIC_EVENTS;
+  let RANDOM_EVENTS;
   function unlockedTechniques(s) { return TECHNIQUES.filter(t => t.unlock(s)); }
-  // A single equipped combat technique may match the equipped weapon. The
-  // bonus multiplies attack after the ordinary technique/equipment bonuses.
+
   function weaponTechniqueCompatibility(s) {
     const weapons = activeTreasures(s).filter(item => {
       const normalized = normalizeItemGrade(typeof item === 'object' ? item : { name: item, bonus: {} });
@@ -9480,81 +6300,8 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   function treasureBonuses(s) {
     return activeTreasures(s).reduce((sum, item) => { const bonus = effectiveTreasureBonus(s, item); Object.entries(bonus).forEach(([key, value]) => sum[key] = (sum[key] || 0) + value); return sum; }, { attack: 0, defense: 0, body: 0, agility: 0, training: 0 });
   }
-  const EXPLORATION_EVENTS = [
-    {
-      id: 'explore_waystone_news', activity: 'explore', explorationTier: 'normal', rarity: 'normal', minMonth: 0,
-      title: 'หลักหินบอกทาง', text: s => `ระหว่างสำรวจ${explorationRoute(s).name} เจ้าพบหลักหินเก่าที่คนเดินทางใช้ฝากข่าว และมีคนเดินทางกำลังอ่านข่าวอยู่`,
-      choices: [
-        { text: 'จดแผนที่และถามข่าวจากคนเดินทาง', effects: [{ type: 'path', key: 'insight', value: 2 }, { type: 'stat', path: 'hero.reputation', value: 1 }], effect: s => { ensureExplorationState(s).news.push('หลักหินชี้ทางไปหุบเขาเถ้าถ่าน'); addLog('ข่าวจากหลักหินถูกบันทึกเป็นความรู้สำหรับการสำรวจครั้งต่อไป', true); } },
-        { text: 'ทำเครื่องหมายไว้แล้วเก็บสมุนไพรกลับ', effects: [{ type: 'material', key: 'herb', value: 2 }], effect: s => addLog('เจ้ากลับจากทางป่าโดยไม่เสี่ยงเกินจำเป็น') }
-      ]
-    },
-    {
-      id: 'explore_lost_scout', activity: 'explore', explorationTier: 'uncommon', rarity: 'uncommon', minMonth: 24, risk: true,
-      title: 'ผู้ลาดตระเวนที่หายไป', text: s => `รอยเลือดพาเจ้าไปพบผู้ลาดตระเวนบาดเจ็บใน${explorationRoute(s).name}`,
-      unlock: s => explorationRoute(s).tier !== 'safe' || s.paths?.insight >= 4,
-      choices: [
-        { text: 'พากลับไปหาคนของเขา', effects: [{ type: 'relation', key: 'companion', value: 8 }, { type: 'stat', path: 'hero.health', value: -8 }, { type: 'stat', path: 'hero.reputation', value: 5 }], effect: s => { s.flags.helpedScout = true; ensureExplorationState(s).news.push('กองลาดตระเวนพบการเคลื่อนกำลังของงูดำ'); addLog('ผู้ลาดตระเวนรอดชีวิตและสัญญาจะตอบแทนด้วยข่าวสาร', true); } },
-        { text: 'ชิงม้วนข่าวและเงินจากคนเจ็บแล้วแยกตัว', effects: [{ type: 'path', key: 'freedom', value: 2 }, { type: 'stat', path: 'hero.money', value: 6 }, { type: 'stat', path: 'hero.reputation', value: -2 }], effect: s => { s.flags.scoutScroll = true; addLog('เจ้าชิงม้วนข่าวและเงินมาได้ แต่ทิ้งคนเจ็บไว้เบื้องหลัง'); } }
-      ]
-    },
-    {
-      id: 'explore_hidden_archive', activity: 'explore', explorationTier: 'extraordinary', rarity: 'extraordinary', minMonth: 36,
-      title: 'หอจารึกใต้บ่อน้ำ', text: 'ทางลับเปิดสู่หอจารึกที่เก็บชื่อผู้เดินทาง เส้นทางของสำนักเก่า และหินปราณสองเม็ด',
-      unlock: s => getAvailableExplorationAreas(s).some(area => area.tier === 'secret') && ((s.paths?.insight || 0) >= 6 || s.hero?.talent === 'keen'),
-      choices: [
-        { text: 'นำแผ่นจารึกเส้นทางและหินปราณกลับไป', effects: [{ type: 'path', key: 'insight', value: 5 }, { type: 'material', key: 'spiritStone', value: 2 }], effect: s => { s.flags.ancientArchive = true; s.flags.foundMap = true; addTreasure(s, 'แผ่นจารึกเส้นทางโบราณ', { agility: 3, training: 4 }); addLog('แผ่นจารึกทำให้เส้นทางลับหลายสายปรากฏขึ้น', true); } },
-        { text: 'นำหลักฐานไปมอบให้สำนัก', requires: s => s.flags.metSect, locked: 'ต้องมีความสัมพันธ์กับสำนัก', effects: [{ type: 'faction', key: 'sect', value: 5 }, { type: 'stat', path: 'hero.reputation', value: 8 }, { type: 'relation', key: 'master', value: 5 }], effect: s => { s.flags.archivesToSect = true; addLog('สำนักรับรองความน่าเชื่อถือของเจ้าและเปิดเส้นทางข่าวสาร', true); } }
-      ]
-    },
-    {
-      id: 'explore_serpent_cache', activity: 'explore', explorationTier: 'main', rarity: 'epic', minMonth: 72,
-      title: 'คลังลับใต้เงางู', text: 'ในอุโมงค์งูดำ เจ้าพบคลังเสบียง เงิน และบัญชีรายชื่อคนที่ส่งข่าวให้ศัตรู',
-      unlock: s => s.mode === 'story' && s.flags.serpentTunnelFound === true,
-      choices: [
-        { text: 'นำบัญชีกลับไปเปิดโปง', effects: [{ type: 'flag', key: 'knowsTraitor', value: true }, { type: 'stat', path: 'hero.reputation', value: 12 }, { type: 'relation', key: 'master', value: 8 }, { type: 'faction', key: 'sect', value: 6 }], effect: s => { s.flags.houseEnemyKnown = true; addLog('บัญชีคลังลับกลายเป็นหลักฐานชิ้นสำคัญของสำนัก', true); } },
-        { text: 'ทำลายคลังแล้วเก็บเงินกับเสบียงไว้ใช้เอง', effects: [{ type: 'stat', path: 'hero.money', value: 24 }, { type: 'stat', path: 'hero.reputation', value: -5 }, { type: 'path', key: 'freedom', value: 4 }], effect: s => { s.flags.escapePrepared = true; addLog('คลังลับถูกทำลาย เหลือเพียงเสบียงที่เจ้าขนออกมาได้'); } }
-      ]
-    }
-  ];
-  const REST_EVENTS = [
-    {
-      id: 'rest_whispered_news', activity: 'rest', rarity: 'uncommon', minMonth: 0,
-      title: 'ข่าวลือใต้ชายคา', text: s => `ระหว่างพักที่${restRoute(s).location} เจ้าได้ยินข่าวเรื่องเส้นทางและผู้คนที่กำลังเคลื่อนไหว ข่าวนี้อาจไม่มีค่าในวันนี้ แต่วันหนึ่งอาจช่วยชีวิตเจ้าได้`,
-      choices: [
-        { text: 'ตั้งใจฟังและจดจำรายละเอียด', effects: [{ type: 'path', key: 'insight', value: 2 }, { type: 'stat', path: 'hero.reputation', value: 1 }], effect: s => addLog('เจ้าจดจำข่าวลือจากสถานที่พักไว้เป็นเบาะแส', true) },
-        { text: 'ปล่อยให้ข่าวผ่านไป นอนต่อ', effects: [{ type: 'stat', path: 'hero.health', value: 4 }], effect: s => addLog('เจ้าปล่อยให้โลกวุ่นวายอยู่ข้างนอก แล้วพักต่ออย่างสงบ') }
-      ]
-    },
-    {
-      id: 'rest_ambush', activity: 'rest', rarity: 'uncommon', minMonth: 12, risk: true,
-      title: 'เสียงฝีเท้ายามดึก', text: s => `ความปลอดภัยของ${restRoute(s).location}ไม่เพียงพอ เสียงฝีเท้าหยุดอยู่หน้าที่พักก่อนเงาดำจะค่อย ๆ แทรกเข้ามา`,
-      unlock: s => restRoute(s).safety < 60,
-      choices: [
-        { text: 'ตื่นขึ้นแล้วหนีออกทางด้านหลัง', note: 'ใช้ความว่องไวและเสียสุขภาพเล็กน้อย', effects: [{ type: 'stat', path: 'hero.health', value: -4 }, { type: 'path', key: 'freedom', value: 2 }], effect: s => addLog('เจ้าหนีออกจากที่พักก่อนผู้บุกรุกจะเห็นหน้า', true) },
-        { text: 'ซ่อนตัวและรอให้พวกมันไป', note: 'ถ้าสุขภาพต่ำ เหตุการณ์อาจรุนแรงขึ้น', effect: s => { if (s.hero.health < 30) { s.hero.health -= 14; addLog('ผู้บุกรุกค้นพบร่องรอย เจ้าบาดเจ็บก่อนหนีรอด', true); } else addLog('เจ้ากลั้นลมหายใจจนเสียงฝีเท้าหายไป'); } }
-      ]
-    },
-    {
-      id: 'rest_healer', activity: 'rest', rarity: 'uncommon', minMonth: 24,
-      title: 'หมอเร่ร่อนหน้าประตู', text: s => `หมอเร่ร่อนเห็นสภาพของเจ้าที่${restRoute(s).location} และเสนอจะตรวจชีพจรแลกกับสมุนไพรหรือเงินเล็กน้อย`,
-      choices: [
-        { text: 'จ่ายค่าตรวจและรับการรักษา', requires: s => s.hero.money >= 4, locked: 'ต้องมี 4 ตำลึง', effects: [{ type: 'stat', path: 'hero.money', value: -4 }, { type: 'stat', path: 'hero.health', value: 16 }, { type: 'stat', path: 'hero.qi', value: 10 }], effect: s => addLog('หมอเร่ร่อนจัดยาให้ ชีพจรของเจ้าสงบลง', true) },
-        { text: 'แลกสมุนไพรกับคำแนะนำ', requires: s => (s.materials?.herb || 0) >= 2, locked: 'ต้องมีสมุนไพร 2 ชิ้น', effects: [{ type: 'material', key: 'herb', value: -2 }, { type: 'stat', path: 'hero.health', value: 12 }, { type: 'stat', path: 'hero.qi', value: 8 }], effect: s => addLog('หมอรับสมุนไพรแล้วสอนวิธีประคองลมปราณ', true) },
-        { text: 'ปฏิเสธและรักษาตัวเอง', effects: [{ type: 'stat', path: 'hero.health', value: 3 }], effect: s => addLog('เจ้าระวังคนแปลกหน้าและพักต่อด้วยวิธีของตน') }
-      ]
-    },
-    {
-      id: 'rest_sect_array', activity: 'rest', rarity: 'extraordinary', minMonth: 84,
-      title: 'ห้องพักที่ไม่เปิดให้ทุกคน', text: 'ค่ายกลพักฟื้นชั้นในเปิดช่องว่างเพียงหนึ่งคืน ผู้ดูแลเสนอให้เจ้าเข้าไปพัก แต่ชื่อของเจ้าจะถูกบันทึกไว้ในทะเบียนสำนัก',
-      unlock: s => restLocationKey(s) === 'sect' && (s.flags?.sectFormationLevel || 1) >= 3,
-      choices: [
-        { text: 'เข้าไปพักในค่ายกลชั้นใน', effects: [{ type: 'stat', path: 'hero.qi', value: 18 }, { type: 'stat', path: 'hero.health', value: 12 }, { type: 'faction', key: 'sect', value: 2 }], effect: s => addLog('ค่ายกลชั้นในฟื้นทั้งร่างกายและปราณ แต่สำนักจดจำการเข้าใช้ของเจ้าไว้', true) },
-        { text: 'ปฏิเสธเพื่อไม่ติดหนี้สำนัก', effects: [{ type: 'path', key: 'freedom', value: 2 }], effect: s => addLog('เจ้าเลือกไม่รับความช่วยเหลือที่อาจกลายเป็นหนี้บุญคุณ') }
-      ]
-    }
-  ];
-
+  let EXPLORATION_EVENTS;
+  let REST_EVENTS;
   function addTreasure(s, name, bonus, meta = {}) {
     if (meta.recipeId || !(s.treasures || []).some(item => (typeof item === 'string' ? item : item.name) === name)) {
       const item = normalizeItemGrade({ name, bonus: bonus || {}, ...meta });
@@ -11628,6 +8375,126 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
     }
 
     renderLog(); renderRelations(); renderQuests(); renderTechniques(); renderCrafting(); renderHousehold(); renderFamily(); renderLegacy();
+    renderMobileNavigation();
+  }
+
+  function applyMobileSections() {
+    const gameScreen = $('game-screen');
+    if (!gameScreen) return;
+    const mobile = window.matchMedia('(max-width: 760px)').matches;
+    const topbar = gameScreen.querySelector('.topbar');
+    if (mobile) {
+      if (topbar) gameScreen.style.setProperty('--mobile-topbar-height', `${topbar.offsetHeight}px`);
+      gameScreen.dataset.mobileView = mobileView;
+      document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
+        panel.hidden = panel.dataset.mobilePanel !== mobileView;
+      });
+      return;
+    }
+    gameScreen.style.removeProperty('--mobile-topbar-height');
+    gameScreen.removeAttribute('data-mobile-view');
+    document.querySelectorAll('[data-mobile-panel]').forEach(panel => {
+      panel.hidden = panel.hasAttribute('data-tab-panel')
+        ? panel.dataset.tabPanel !== activeInfoPanelTab
+        : false;
+    });
+  }
+
+  function renderMobileNavigation() {
+    if (!state) return;
+    if (mobileUnlockState !== state) {
+      mobileUnlockState = state;
+      mobileView = 'summary';
+      activeInfoPanelTab = 'overview';
+      knownMobileActivities = new Set(Object.keys(ACTIVITY).filter(id => activityAvailability(state, id).ok));
+      newlyUnlockedMobileActivities = new Set();
+    } else {
+      Object.keys(ACTIVITY).forEach(id => {
+        if (activityAvailability(state, id).ok && !knownMobileActivities.has(id)) {
+          knownMobileActivities.add(id);
+          newlyUnlockedMobileActivities.add(id);
+        }
+      });
+    }
+
+    const availableActivities = Object.keys(ACTIVITY).filter(id => activityAvailability(state, id).ok);
+    document.querySelectorAll('[data-mobile-activity]').forEach(button => {
+      const id = button.dataset.mobileActivity;
+      const availability = activityAvailability(state, id);
+      const isNew = newlyUnlockedMobileActivities.has(id);
+      button.setAttribute('aria-disabled', String(!availability.ok));
+      button.setAttribute('aria-pressed', String(state.activity === id));
+      button.dataset.newUnlock = String(isNew);
+      button.title = availability.ok ? (isNew ? 'เพิ่งปลดล็อก · แตะเพื่อเริ่มกิจกรรม' : `เปลี่ยนเป็น${ACTIVITY[id].name}`) : availability.reason;
+      button.setAttribute('aria-label', `${ACTIVITY[id].name}${isNew ? ' เพิ่งปลดล็อก' : ''}${availability.ok ? '' : ` ยังใช้ไม่ได้: ${availability.reason}`}`);
+    });
+
+    const activityName = ACTIVITY[state.activity]?.name || 'กิจกรรม';
+    const activityLocation = LOCATION_DEFS[state.locations?.current]?.name || ACTIVITY[state.activity]?.location || '';
+    const activityLabel = $('mobile-current-activity');
+    const locationLabel = $('mobile-current-location');
+    if (activityLabel) activityLabel.textContent = activityName;
+    if (locationLabel) locationLabel.textContent = activityLocation;
+    const nextAction = $('mobile-next-action');
+    if (nextAction) {
+      const quests = ensureQuestState(state);
+      const breakthroughReady = state.activity === 'train' && state.breakthroughState?.ready;
+      nextAction.textContent = breakthroughReady
+        ? 'ถึงเวลาตัดสินใจเรื่องทะลวงขั้นแล้ว กิจกรรมฝึกตนจะเปิดเหตุการณ์พิเศษ'
+        : quests.available.length
+          ? `มีภารกิจใหม่ ${quests.available.length} รายการ · ดูและรับได้ในหมวดผู้คน`
+          : `กิจกรรม${activityName}จะดำเนินต่อเมื่อเวลาเดิน · ใช้แถบด้านบนเปลี่ยนกิจกรรมได้ทันที`;
+    }
+    const timeToggle = $('mobile-time-toggle');
+    if (timeToggle) {
+      timeToggle.textContent = state.paused ? '▶ เริ่มเดินเวลา' : 'Ⅱ หยุดชั่วคราว';
+      timeToggle.disabled = !!state.pendingEvent || !!state.ending;
+    }
+
+    const availableQuestCount = ensureQuestState(state).available.length;
+    const availableManualCount = availableTechniqueManuals(state).length;
+    const inventoryCount = (state.treasures || []).length + (state.consumables || []).length;
+    const healthNeedsCare = (Number(state.hero?.health) || 0) <= (Number(state.hero?.maxHealth) || 100) * .3;
+    const badgeValues = {
+      summary: healthNeedsCare ? '!' : '',
+      activities: newlyUnlockedMobileActivities.size ? String(newlyUnlockedMobileActivities.size) : state.breakthroughState?.ready ? '!' : '',
+      people: availableQuestCount ? String(availableQuestCount) : '',
+      techniques: availableManualCount ? String(availableManualCount) : '',
+      items: inventoryCount ? String(Math.min(99, inventoryCount)) : '',
+      world: ''
+    };
+    document.querySelectorAll('#mobile-category-nav [data-mobile-view]').forEach(button => {
+      const view = button.dataset.mobileView;
+      if (view === mobileView) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+      const badge = button.querySelector('small');
+      if (badge) badge.textContent = badgeValues[view] || '';
+    });
+
+    const hint = $('mobile-unlock-hint');
+    if (hint) {
+      const newNames = [...newlyUnlockedMobileActivities].map(id => ACTIVITY[id].name);
+      hint.textContent = newNames.length
+        ? `ปลดล็อกใหม่: ${newNames.join(' · ')} · แตะกิจกรรมด้านบนเพื่อเริ่ม หรือเปิดคู่มือดูเงื่อนไข`
+        : `เปิดใช้แล้ว ${availableActivities.length} จาก ${Object.keys(ACTIVITY).length} กิจกรรม · แตะรายการที่ล็อกเพื่ออ่านเงื่อนไข`;
+    }
+
+    const featureList = $('mobile-feature-list');
+    if (featureList) {
+      featureList.replaceChildren();
+      Object.entries(ACTIVITY).forEach(([id, definition]) => {
+        const availability = activityAvailability(state, id);
+        const row = document.createElement('div');
+        row.className = `mobile-feature-row${availability.ok ? '' : ' is-locked'}`;
+        const name = document.createElement('strong');
+        name.textContent = definition.name;
+        const note = document.createElement('small');
+        note.textContent = availability.ok ? 'พร้อมใช้' : availability.reason;
+        row.append(name, note);
+        featureList.append(row);
+      });
+    }
+    applyMobileSections();
   }
 
   function renderLog() {
@@ -12891,11 +9758,34 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   $('hero-name').addEventListener('input', updateSetupSummary);
   document.querySelectorAll('[data-panel-tab]').forEach(button => button.onclick = () => {
     const tab = button.dataset.panelTab;
+    activeInfoPanelTab = tab;
     document.querySelectorAll('[data-panel-tab]').forEach(item => { const active = item === button; item.classList.toggle('active', active); item.setAttribute('aria-selected', String(active)); });
     document.querySelectorAll('[data-tab-panel]').forEach(panel => { panel.hidden = tab !== panel.dataset.tabPanel; });
   });
-  const chooseActivityFromInput = e => { if (!state || state.pendingEvent) return; const activity = ACTIVITY[e.target.value] ? e.target.value : 'train'; if (state.activity === activity) return; if (!setActivity(state, activity)) { toast(activity === 'study' ? 'เรื่องราวยังไม่เปิดทางให้เรียนรู้ในตอนนี้' : 'กิจกรรมนี้ยังใช้ไม่ได้'); render(); return; } state.paused = false; addLog(`เปลี่ยนกิจกรรมเป็น “${ACTIVITY[activity].name}”`); saveGame(); render(); };
-  document.querySelectorAll('.activity-card').forEach(b => b.onclick = () => { if (!state || state.pendingEvent || b.disabled) return; if (state.activity === b.dataset.activity) return; if (!setActivity(state, b.dataset.activity)) { toast(b.dataset.activity === 'study' ? 'เรื่องราวยังไม่เปิดทางให้เรียนรู้ในตอนนี้' : b.dataset.activity === 'free' && state.mode === 'story' ? 'โหมดเนื้อเรื่องยังไม่เปิดกิจกรรมอิสระ' : 'กิจกรรมนี้ยังใช้ไม่ได้'); render(); return; } state.paused = false; addLog(`เปลี่ยนกิจกรรมเป็น “${ACTIVITY[state.activity].name}”`); saveGame(); render(); });
+  const activateActivity = activity => {
+    if (!state || state.pendingEvent || !ACTIVITY[activity]) return;
+    const availability = activityAvailability(state, activity);
+    if (!availability.ok) { toast(availability.reason || 'กิจกรรมนี้ยังใช้ไม่ได้'); return; }
+    if (state.activity === activity) { newlyUnlockedMobileActivities.delete(activity); renderMobileNavigation(); return; }
+    if (!setActivity(state, activity)) { toast(availability.reason || 'กิจกรรมนี้ยังใช้ไม่ได้'); render(); return; }
+    newlyUnlockedMobileActivities.delete(activity);
+    state.paused = false;
+    addLog(`เปลี่ยนกิจกรรมเป็น “${ACTIVITY[state.activity].name}”`);
+    saveGame(); render();
+  };
+  const chooseActivityFromInput = e => activateActivity(ACTIVITY[e.target.value] ? e.target.value : 'train');
+  document.querySelectorAll('.activity-card').forEach(button => button.onclick = () => activateActivity(button.dataset.activity));
+  document.querySelectorAll('[data-mobile-activity]').forEach(button => button.onclick = () => activateActivity(button.dataset.mobileActivity));
+  document.querySelectorAll('[data-mobile-view]').forEach(button => button.onclick = () => {
+    mobileView = button.dataset.mobileView;
+    applyMobileSections();
+    renderMobileNavigation();
+  });
+  $('mobile-open-activities').onclick = () => { mobileView = 'activities'; applyMobileSections(); renderMobileNavigation(); };
+  $('mobile-time-toggle').onclick = () => { if (!state || state.pendingEvent || state.ending) return; state.paused = !state.paused; saveGame(); render(); };
+  window.addEventListener('resize', applyMobileSections);
+  const mobileTopbar = $('game-screen')?.querySelector('.topbar');
+  if (mobileTopbar && typeof ResizeObserver !== 'undefined') new ResizeObserver(applyMobileSections).observe(mobileTopbar);
   $('activity-mobile-select').onchange = chooseActivityFromInput;
   $('activity-mobile-select').oninput = chooseActivityFromInput;
   $('training-goal-select').onchange = e => { if (!state) return; ensureTrainingState(state); if (TRAINING_GOALS[e.target.value]) { state.trainingGoal = e.target.value; saveGame(); render(); } };
@@ -12952,6 +9842,11 @@ ${masterState} ${proof} ชื่อเหวินจงอยู่ในร�
   $('font-toggle').onclick = e => { const on = !document.body.classList.contains('large-text'); document.body.classList.toggle('large-text', on); e.currentTarget.textContent = on ? 'ใหญ่' : 'ปกติ'; };
   $('expand-log-btn').onclick = () => { const el = $('life-log'); const expanded = el.dataset.expanded !== 'true'; el.dataset.expanded = String(expanded); el.style.maxHeight = expanded ? '520px' : ''; $('expand-log-btn').textContent = expanded ? 'ย่อ' : 'ดูทั้งหมด'; renderLog(); };
   window.addEventListener('beforeunload', saveGame); document.addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
+  ({ TRAINING_EVENTS, TRAVEL_EVENTS, QUEST_EVENTS, CRAFT_EVENTS, WORLD_EVENTS, OFFICIAL_EVENTS, LEARNING_EVENTS, FAMILY_EVENTS, FREE_LIFE_EVENTS, MIDDLE_GAME_EVENTS, DEBT_EVENTS, SOCIAL_EVENTS, INFANT_LEGENDARY_EVENTS, INFANT_EPIC_EVENTS, SCOPED_EPIC_EVENTS, RANDOM_EVENTS, EXPLORATION_EVENTS, REST_EVENTS, EXPLORATION_DISCOVERIES } = window.OneLifeEventPoolCatalog.createEventPools({ $: $, addFamilyChronicle: addFamilyChronicle, addLog: addLog, addTreasure: addTreasure, advanceCultivationStage: advanceCultivationStage, canCraft: canCraft, clamp: clamp, cultivationAtCeiling: cultivationAtCeiling, effectiveCraftCost: effectiveCraftCost, endGame: endGame, ensureExplorationState: ensureExplorationState, ensureFamilyState: ensureFamilyState, ensureHousehold: ensureHousehold, ensureLifespanState: ensureLifespanState, ensureQuestState: ensureQuestState, ensureRelationshipState: ensureRelationshipState, ensureSocialState: ensureSocialState, equippedCultivationTechnique: equippedCultivationTechnique, explorationRoute: explorationRoute, extendTravel: extendTravel, familyAllowed: familyAllowed, freeLifeLocationWeight: freeLifeLocationWeight, getAvailableExplorationAreas: getAvailableExplorationAreas, hasLearningItem: hasLearningItem, learningLocationKey: learningLocationKey, learningTeacher: learningTeacher, restLocationKey: restLocationKey, restRoute: restRoute, revealRoot: revealRoot, scopedEpicEvent: scopedEpicEvent, socialRoute: socialRoute }));
+  EXPLORATION_DISCOVERIES.push(...EXTRA_MANUAL_SCENES);
+  Object.entries(EXTRA_GRADED_SCENES).forEach(([rarity, phases]) => {
+    Object.entries(phases).forEach(([phase, scenes]) => UNIQUE_GRADED_SCENES[rarity][phase].push(...scenes));
+  });
   window.__game__ = { getState: () => state, render, beginTechniqueLoadout, processMonth, continueLife, createLifeSummary, advanceAgePhase, applyOfflineProgress, showOfflineSummary, setAutoMedicineRule, applyAutoMedicine, EVENTS, saveGame, continueGame, setActivity, craftItem, studyCraft, planCraft, planStudyCraft, executeCraft, executeStudyCraft, selectChoice: (i) => {
     if (state.pendingEvent) {
       const id = state.pendingEvent;

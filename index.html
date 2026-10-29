@@ -178,9 +178,13 @@
         <button id="menu-btn" class="icon-btn menu-btn" aria-label="เมนู">☰</button>
       </header>
 
+      <nav id="mobile-activity-nav" class="mobile-activity-nav" aria-label="เลือกกิจกรรมอย่างรวดเร็ว">
+        <button type="button" data-mobile-activity="train">ฝึกตน</button><button type="button" data-mobile-activity="work">ทำงาน</button><button type="button" data-mobile-activity="explore">สำรวจ</button><button type="button" data-mobile-activity="rest">พักฟื้น</button><button type="button" data-mobile-activity="study">เรียนรู้</button><button type="button" data-mobile-activity="social">เข้าสังคม</button><button type="button" data-mobile-activity="craft">สร้างของ</button><button type="button" data-mobile-activity="family">ครอบครัว</button><button type="button" data-mobile-activity="quest">ภารกิจ</button><button type="button" data-mobile-activity="sect">สำนัก</button><button type="button" data-mobile-activity="travel">เดินทาง</button><button type="button" data-mobile-activity="free">อิสระ</button>
+      </nav>
+
       <div class="game-grid">
         <aside class="left-column">
-          <section class="hero-card panel">
+          <section class="hero-card panel" data-mobile-panel="summary">
             <div class="hero-info">
               <h2 id="hero-display-name">หลินอัน</h2>
               <p id="hero-subtitle">ศิษย์นอก · หลอมกาย ขั้น 1</p>
@@ -237,7 +241,7 @@
             </div>
           </section>
 
-          <section class="panel goal-panel">
+          <section class="panel goal-panel" data-mobile-panel="summary">
             <div class="panel-heading"><span class="heading-glyph">目</span><div><small>เป้าหมายปัจจุบัน</small><h3 id="goal-title">หนีออกจากเมืองที่ถูกเผา</h3></div></div>
             <p id="goal-text">เอาชีวิตรอด ค้นหาคนที่ไว้ใจได้ และรักษาร่องรอยสุดท้ายของตระกูลหลิน</p>
             <div class="deadline"><span>คืนตัดสินอยู่ข้างหน้า</span><b id="months-left">216 เดือน</b></div>
@@ -252,7 +256,7 @@
         </aside>
 
         <section class="center-column">
-          <div id="scene" class="scene scene-sect">
+          <div id="scene" class="scene scene-sect" data-mobile-panel="summary">
             <div class="sun"></div><div class="cloud c1"></div><div class="cloud c2"></div>
             <div class="far-mountain m1"></div><div class="far-mountain m2"></div>
             <div class="temple"><i class="roof roof-top"></i><i class="roof roof-main"></i><i class="wall"></i><i class="door"></i></div>
@@ -267,7 +271,15 @@
             <div class="scene-caption"><span id="location-name">สำนักเมฆาคราม</span><small id="weather-text">เช้าอากาศแจ่มใส · เดือน 1 ปี 1</small></div>
           </div>
 
-          <section class="panel activity-panel">
+          <section class="panel mobile-action-summary" data-mobile-panel="summary" aria-live="polite">
+            <div class="section-title compact"><div><small>ทำอะไรต่อดี</small><h2 id="mobile-current-activity">ฝึกตน</h2></div><span id="mobile-current-location">สำนักเมฆาคราม</span></div>
+            <p id="mobile-next-action">กิจกรรมจะเดินหน้าเมื่อเวลาเดิน</p>
+            <div class="mobile-action-buttons"><button id="mobile-time-toggle" type="button" class="btn btn-primary">เริ่มเดินเวลา</button><button id="mobile-open-activities" type="button" class="btn btn-secondary">ดูทุกกิจกรรม</button></div>
+            <p id="mobile-unlock-hint" class="mobile-unlock-hint" aria-live="polite"></p>
+            <details class="mobile-feature-guide"><summary>ดูระบบทั้งหมดและเงื่อนไขที่ปลดล็อก</summary><div id="mobile-feature-list" class="mobile-feature-list"></div></details>
+          </section>
+
+          <section class="panel activity-panel" data-mobile-panel="activities">
             <div class="section-title"><div><small>กิจกรรมประจำเดือน</small><h2>เลือกเส้นทางของเจ้า</h2></div><span id="current-activity-note">กำลังฝึกตน</span></div>
             <label class="activity-mobile-picker" for="activity-mobile-select">กิจกรรมเดือนนี้<select id="activity-mobile-select" aria-label="เลือกกิจกรรมประจำเดือน">
               <option value="train">ฝึกตน</option><option value="work">ทำงาน</option><option value="explore">สำรวจ</option><option value="rest">พักฟื้น</option><option value="study">เรียนรู้</option><option value="social">เข้าสังคม</option><option value="craft">สร้างของ</option><option value="family">ดูแลครอบครัว</option><option value="quest">รับภารกิจ</option><option value="sect">สำนัก/ราชการ</option><option value="travel">เดินทาง</option><option value="free">ใช้ชีวิตอิสระ</option>
@@ -308,27 +320,27 @@
             </div>
           </section>
 
-          <section class="panel log-panel">
+          <section class="panel log-panel" data-mobile-panel="activities">
             <div class="section-title compact"><div><small>สิ่งที่เกิดขึ้น</small><h2>บันทึกชีวิต</h2></div><button id="expand-log-btn" class="text-btn">ดูทั้งหมด</button></div>
             <div id="life-log" class="life-log"></div>
           </section>
         </section>
 
         <aside class="right-column">
-          <section class="panel relations-panel" data-tab-panel="overview">
+          <section class="panel relations-panel" data-mobile-panel="people" data-tab-panel="overview">
             <div class="section-title compact"><div><small>ผู้คนในชะตา</small><h2>ความสัมพันธ์</h2></div></div>
             <div id="relations-list" class="relations-list"></div>
             <div class="section-title compact faction-title"><div><small>ชื่อเสียงแยกฝ่าย</small><h2>สามฝ่ายยุทธภพ</h2></div></div>
             <div id="factions-list" class="factions-list"></div>
           </section>
-          <section class="panel quests-panel" data-tab-panel="overview">
+          <section class="panel quests-panel" data-mobile-panel="people" data-tab-panel="overview">
             <div class="section-title compact"><div><small>เส้นทางที่ยังไม่จบ</small><h2>เควส</h2></div><span id="quest-slots-label">0/3</span></div>
             <div id="quests-list" class="quests-list"></div>
             <div id="quests-available" class="quests-list quests-available"></div>
             <div id="quests-history" class="quests-history"></div>
           </section>
           <div class="panel-tabbar" role="tablist" aria-label="แผงจัดการตัวละคร"><button type="button" class="panel-tab active" data-panel-tab="overview" role="tab" aria-selected="true">ภาพรวม</button><button type="button" class="panel-tab" data-panel-tab="techniques" role="tab" aria-selected="false">วิชา</button><button type="button" class="panel-tab" data-panel-tab="items" role="tab" aria-selected="false">ไอเทม</button><button type="button" class="panel-tab" data-panel-tab="life" role="tab" aria-selected="false">ชีวิต</button><button type="button" class="panel-tab" data-panel-tab="world" role="tab" aria-selected="false">โลก</button></div>
-          <section class="panel techniques-panel" data-tab-panel="techniques" hidden>
+          <section class="panel techniques-panel" data-mobile-panel="techniques" data-tab-panel="techniques" hidden>
             <div class="section-title compact"><div><small>วิชาที่ฝึกฝน</small><h2>เคล็ดวิชา</h2></div></div>
             <div class="training-focus-head"><strong>โฟกัสการฝึก</strong><span id="training-selection-count">0/2</span></div>
             <div id="training-selection" class="training-selection"></div>
@@ -337,7 +349,7 @@
             <h3 class="inventory-section-heading">วิชาที่เรียนรู้แล้ว</h3>
             <div id="techniques-list" class="techniques-list"></div>
           </section>
-          <section class="panel treasures-panel" data-tab-panel="items" hidden>
+          <section class="panel treasures-panel" data-mobile-panel="items" data-tab-panel="items" hidden>
             <div class="section-title compact"><div><small>สมบัติและอาวุธ</small><h2>ของวิเศษ</h2></div></div>
             <div id="item-loadout-status" class="item-loadout-status"></div>
             <h3 class="inventory-section-heading">คลังไอเท็มและคัมภีร์</h3>
@@ -349,7 +361,7 @@
             <p class="inventory-help">คัมภีร์ใช้เรียนรู้วิชา ส่วนวิชาที่เรียนแล้วอยู่ในแท็บวิชา · ยาและของใช้สิ้นเปลืองอยู่ด้านล่าง</p>
             <div id="treasures-list" class="techniques-list"></div>
           </section>
-          <section class="panel crafting-panel" data-tab-panel="items" hidden>
+          <section class="panel crafting-panel" data-mobile-panel="items" data-tab-panel="items" hidden>
             <div class="section-title compact"><div><small>วัตถุดิบและตำรับ</small><h2>สร้างของ</h2></div><span id="craft-month-label">เดือนนี้</span></div>
             <div id="materials-list" class="materials-list"></div>
             <div class="craft-auto-controls"><label>Auto Craft <select id="craft-auto-mode" aria-label="กฎสร้างของอัตโนมัติ"><option value="stop">หยุดเมื่อสูตรใช้ไม่ได้</option><option value="fallback">ใช้สูตรสำรอง</option><option value="learn">ฝึกความรู้</option></select></label><label>สูตรหลัก <select id="craft-auto-recipe" aria-label="สูตรหลักของ Auto Craft"></select></label></div>
@@ -359,19 +371,19 @@
             <div id="consumables-list" class="consumables-list"></div>
             <div id="selling-list" class="consumables-list"></div>
           </section>
-          <section class="panel household-panel" data-tab-panel="life" hidden>
+          <section class="panel household-panel" data-mobile-panel="world" data-tab-panel="life" hidden>
             <div class="section-title compact"><div><small>ชีวิตประจำวัน</small><h2>ครัวเรือน</h2></div><span id="household-debt-label">หนี้ 0</span></div>
             <div id="household-status" class="household-status"></div>
             <div class="household-controls"><select id="job-select" aria-label="เลือกอาชีพ"></select><select id="housing-select" aria-label="เลือกที่อยู่อาศัย"></select><label>Auto พักจากงาน<select id="auto-work-rule-select" aria-label="กฎพักจากงาน"><option value="off">ปิด</option><option value="6">เมื่อเหนื่อย 6</option><option value="4">เมื่อเหนื่อย 4</option><option value="2">เมื่อเหนื่อย 2</option></select></label></div>
             <button id="household-loan-btn" class="household-loan-btn" type="button">กู้เงิน 30 ตำลึง</button>
           </section>
-          <section class="panel family-panel" data-tab-panel="life" hidden>
+          <section class="panel family-panel" data-mobile-panel="world" data-tab-panel="life" hidden>
             <div class="section-title compact"><div><small>มรดกและคนรุ่นถัดไป</small><h2>ครอบครัว</h2></div><span id="family-building-label">0 อาคาร</span></div>
             <div id="family-status" class="family-status"></div>
             <div class="family-actions"><button id="marry-btn" type="button">แต่งงาน</button><button id="child-btn" type="button">มีบุตร</button></div>
             <div id="family-buildings" class="family-buildings"></div>
           </section>
-          <section class="panel legacy-panel" data-tab-panel="world" hidden>
+          <section class="panel legacy-panel" data-mobile-panel="world" data-tab-panel="world" hidden>
             <div class="section-title compact"><div><small>แกนเฉพาะของชีวิตนี้</small><h2>คำสัตย์และรอยแผล</h2></div></div>
             <div id="oath-status" class="oath-status"></div>
             <div id="world-pressure-status" class="world-pressure-status"></div>
@@ -383,14 +395,14 @@
               <div id="replay-unlocks" class="world-scars-list"></div>
             </section>
           </section>
-          <section class="panel omen-panel" data-tab-panel="world" hidden>
+          <section class="panel omen-panel" data-mobile-panel="world" data-tab-panel="world" hidden>
             <small>ลางแห่งโลก</small>
             <p id="world-omen">พ่อค้าเร่พูดถึงโจรชุดดำที่ปรากฏใกล้ชายแดน</p>
             <div id="world-timeline-status" class="world-timeline-status"></div>
             <div id="world-news-list" class="world-news-list"></div>
             <div id="life-direction-panel" class="life-direction-panel"></div>
           </section>
-          <section id="sect-defense-panel" class="panel defense-panel" data-tab-panel="world" hidden>
+          <section id="sect-defense-panel" class="panel defense-panel" data-mobile-panel="world" data-tab-panel="world" hidden>
             <div class="section-title compact">
               <div><small>แนวต้านเมฆาคราม</small><h2>ความพร้อมรับศึก</h2></div>
               <span id="sect-morale-badge" class="badge">มั่นคง</span>
@@ -405,6 +417,14 @@
           </section>
         </aside>
       </div>
+      <nav id="mobile-category-nav" class="mobile-category-nav" aria-label="หมวดหลักของเกม">
+        <button type="button" data-mobile-view="summary" aria-current="page"><span>สรุป</span><small></small></button>
+        <button type="button" data-mobile-view="activities"><span>กิจกรรม</span><small></small></button>
+        <button type="button" data-mobile-view="people"><span>ผู้คน</span><small></small></button>
+        <button type="button" data-mobile-view="techniques"><span>วิชา</span><small></small></button>
+        <button type="button" data-mobile-view="items"><span>ของ</span><small></small></button>
+        <button type="button" data-mobile-view="world"><span>โลก</span><small></small></button>
+      </nav>
     </main>
 
     <div id="event-modal" class="modal-backdrop" hidden>
@@ -500,6 +520,23 @@
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </div>
-  <script src="app.js?v=inventory-item-identity-1"></script>
+  <script src="data/workbook-catalogs.js?v=workbook-catalog-1"></script>
+  <script src="data/items.js?v=item-catalog-2"></script>
+  <script src="data/story-events.js?v=story-catalog-1"></script>
+  <script src="data/techniques.js?v=technique-catalog-2"></script>
+  <script src="data/event-pools/shared.js?v=event-pools-2"></script>
+  <script src="data/event-pools/training.js?v=training-events-1"></script>
+  <script src="data/event-pools/travel.js?v=event-pools-2"></script>
+  <script src="data/event-pools/quests.js?v=event-pools-2"></script>
+  <script src="data/event-pools/craft.js?v=event-pools-2"></script>
+  <script src="data/event-pools/sect.js?v=event-pools-2"></script>
+  <script src="data/event-pools/learning.js?v=event-pools-2"></script>
+  <script src="data/event-pools/family.js?v=event-pools-2"></script>
+  <script src="data/event-pools/free.js?v=event-pools-2"></script>
+  <script src="data/event-pools/social.js?v=event-pools-2"></script>
+  <script src="data/event-pools/exploration.js?v=event-pools-2"></script>
+  <script src="data/event-pools/rest.js?v=event-pools-2"></script>
+  <script src="data/event-pools.js?v=event-pools-2"></script>
+  <script src="app.js?v=event-pools-1"></script>
 </body>
 </html>
